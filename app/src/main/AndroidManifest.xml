@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.leffinger.crossyourheart">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/heart_outline"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/heart_outline_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity android:name=".activities.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:mimeType="*/*"
+                    android:scheme="content" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.PuzzleActivity"
+            android:parentActivityName=".activities.MainActivity" />
+    </application>
+
+</manifest>

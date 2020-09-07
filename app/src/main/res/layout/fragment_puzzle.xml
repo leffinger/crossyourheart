@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".activities.PuzzleFragment">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/puzzle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@color/colorBlackSquare"
+            android:overScrollMode="never"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/prev"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:backgroundTint="@color/colorHighlightedSquare"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_left_arrow"
+            app:layout_constraintBottom_toBottomOf="@id/clue"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/clue" />
+
+        <TextView
+            android:id="@+id/clue"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:minHeight="100dp"
+            android:text="@{@string/clue_format(viewModel.currentClueNumber, viewModel.currentClueText)}"
+            android:textSize="18sp"
+            app:layout_constraintTop_toBottomOf="@id/puzzle"
+            app:layout_constraintBottom_toTopOf="@id/keyboard"
+            app:layout_constraintEnd_toStartOf="@id/next"
+            app:layout_constraintStart_toEndOf="@id/prev"
+            tools:text="CLUE" />
+
+        <ImageButton
+            android:id="@+id/next"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:backgroundTint="@color/colorHighlightedSquare"
+            android:src="@drawable/ic_right_arrow"
+            app:layout_constraintBottom_toBottomOf="@id/clue"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/clue"
+            app:layout_constraintTop_toTopOf="@id/clue" />
+
+        <android.inputmethodservice.KeyboardView
+            android:id="@+id/keyboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hapticFeedbackEnabled="true"
+            android:keyPreviewLayout="@null"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</layout>

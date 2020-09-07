@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Cross Your Heart</string>
+    <string name="clue_format">%d. %s</string>
+    <string name="save">Save</string>
+    <string name="puzzle_info">Puzzle Info</string>
+    <string name="alert_solved">You did it!</string>
+    <string name="delete_puzzle">Delete this puzzle?</string>
+    <string name="open_file">Open Puzzle File...</string>
+</resources>
