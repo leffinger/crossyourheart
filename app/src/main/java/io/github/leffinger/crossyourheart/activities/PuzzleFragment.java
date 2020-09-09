@@ -26,7 +26,6 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleBinding;
-import io.github.leffinger.crossyourheart.io.PuzFile;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
@@ -50,12 +49,12 @@ public class PuzzleFragment extends Fragment {
     private static final String TAG = "PuzzleFragment";
 
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
-    private String mFilename;
     private PuzzleViewModel mViewModel;
 
-    public static PuzzleFragment newInstance(String filename) {
+    public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
         args.putString("filename", filename);
+        args.putSerializable("puzzle", puzzleFile);
         PuzzleFragment fragment = new PuzzleFragment();
         fragment.setArguments(args);
         return fragment;
@@ -66,15 +65,23 @@ public class PuzzleFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        Bundle args = requireNonNull(getArguments());
-        mFilename = args.getString("filename");
-        File file = new File(getActivity().getFilesDir(), mFilename);
-        try (FileInputStream inputStream = new FileInputStream(file)) {
-            PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
-            mViewModel = new PuzzleViewModel(puzzleLoader, file);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        Bundle bundle;
+        if (savedInstanceState != null) {
+            bundle = savedInstanceState;
+        } else {
+            bundle = requireNonNull(getArguments());
         }
+
+        mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
+                                         new File(getActivity().getFilesDir(),
+                                                  bundle.getString("filename")));
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("filename", mViewModel.getFile().getName());
+        outState.putSerializable("puzzle", mViewModel.getPuzzleFile());
     }
 
     @Override
@@ -88,7 +95,8 @@ public class PuzzleFragment extends Fragment {
         try {
             mViewModel.saveToFile();
         } catch (IOException e) {
-            Log.e(TAG, String.format("Saving puzzle file %s failed", mFilename), e);
+            Log.e(TAG,
+                  String.format("Saving puzzle file %s failed", mViewModel.getFile().getName()), e);
         }
     }
 
@@ -291,8 +299,8 @@ public class PuzzleFragment extends Fragment {
                             try {
                                 mViewModel.saveToFile();
                             } catch (IOException e) {
-                                Log.e(TAG, String.format("Saving puzzle file %s failed", mFilename),
-                                      e);
+                                Log.e(TAG, String.format("Saving puzzle file %s failed",
+                                                         mViewModel.getFile().getName()), e);
                             }
                         }
                     });

@@ -2,11 +2,12 @@ package io.github.leffinger.crossyourheart.io;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 
 /**
  * Generic API for an on-disk puzzle file.
  */
-public abstract class AbstractPuzzleFile {
+public abstract class AbstractPuzzleFile implements Serializable {
     public abstract int getNumClues();
 
     public abstract String getClue(int i);

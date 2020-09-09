@@ -61,7 +61,7 @@ public class PuzzleViewModel extends ViewModel {
      */
     private MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
 
-    public PuzzleViewModel(PuzFile puzzleFile, File file) {
+    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file) {
         mPuzzleFile = puzzleFile;
         mFile = file;
 
@@ -406,6 +406,14 @@ public class PuzzleViewModel extends ViewModel {
             mOldContents = oldContents;
             mNewContents = newContents;
         }
+    }
+
+    public File getFile() {
+        return mFile;
+    }
+
+    public AbstractPuzzleFile getPuzzleFile() {
+        return mPuzzleFile;
     }
 }
 
