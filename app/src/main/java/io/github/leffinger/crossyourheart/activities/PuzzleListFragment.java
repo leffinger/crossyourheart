@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -24,6 +25,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -59,22 +62,33 @@ public class PuzzleListFragment extends Fragment {
         setHasOptionsMenu(true);
 
         mPuzzles = new ArrayList<>();
-        File puzzleDir = getContext().getFilesDir();
-        File[] files = puzzleDir.listFiles();
-        Arrays.sort(files, new Comparator<File>() {
-            @Override
-            public int compare(File file1, File file2) {
-                return (int) (file2.lastModified() - file1.lastModified());
+        mAdapter = new PuzzleFileAdapter();
+        new FetchPuzzleFilesTask().execute();
+    }
+
+    private class FetchPuzzleFilesTask extends AsyncTask<Void, Void, List<PuzzleFileViewModel>> {
+
+        @Override
+        protected List<PuzzleFileViewModel> doInBackground(Void... voids) {
+            List<PuzzleFileViewModel> puzzles = new ArrayList<>();
+            File puzzleDir = getContext().getFilesDir();
+            File[] files = puzzleDir.listFiles();
+            for (File file : files) {
+                try (FileInputStream inputStream = new FileInputStream(file)) {
+                    PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
+                    puzzles.add(new PuzzleFileViewModel(file.getName(), puzzleLoader));
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to load puzzle file", e);
+                    e.printStackTrace();
+                }
             }
-        });
-        for (File file : files) {
-            try (FileInputStream inputStream = new FileInputStream(file)) {
-                PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
-                mPuzzles.add(new PuzzleFileViewModel(file.getName(), puzzleLoader));
-            } catch (IOException e) {
-                Log.e(TAG, "Failed to load puzzle file", e);
-                e.printStackTrace();
-            }
+            return puzzles;
+        }
+
+        @Override
+        protected void onPostExecute(List<PuzzleFileViewModel> puzzleFiles) {
+            mPuzzles.addAll(puzzleFiles);
+            mAdapter.notifyDataSetChanged();
         }
     }
 
@@ -84,7 +98,6 @@ public class PuzzleListFragment extends Fragment {
         FragmentPuzzleListBinding binding = DataBindingUtil
                 .inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
         binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
-        mAdapter = new PuzzleFileAdapter();
         binding.list.setAdapter(mAdapter);
         return binding.getRoot();
     }
