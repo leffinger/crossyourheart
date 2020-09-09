@@ -28,8 +28,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import io.github.leffinger.crossyourheart.R;
@@ -48,9 +48,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class PuzzleFragment extends Fragment {
     private static final String TAG = "PuzzleFragment";
-    private static final long SAVE_INTERVAL_MILLIS = 1000;
 
-    private final ScheduledExecutorService mExecutorService = Executors.newScheduledThreadPool(1);
+    private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private String mFilename;
     private PuzzleViewModel mViewModel;
 
@@ -76,25 +75,13 @@ public class PuzzleFragment extends Fragment {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        // Save puzzle state periodically.
-        mExecutorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    mViewModel.saveToFile();
-                } catch (IOException e) {
-                    Log.e(TAG, String.format("Saving puzzle file %s failed", mFilename), e);
-                }
-            }
-        }, SAVE_INTERVAL_MILLIS, SAVE_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         try {
-            mExecutorService.awaitTermination(SAVE_INTERVAL_MILLIS * 2, TimeUnit.MILLISECONDS);
+            mExecutorService.awaitTermination(1000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -298,6 +285,17 @@ public class PuzzleFragment extends Fragment {
                 @Override
                 public void onChanged(String s) {
                     mBinding.getViewModel().onContentsChanged();
+                    mExecutorService.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                mViewModel.saveToFile();
+                            } catch (IOException e) {
+                                Log.e(TAG, String.format("Saving puzzle file %s failed", mFilename),
+                                      e);
+                            }
+                        }
+                    });
                 }
             });
         }
