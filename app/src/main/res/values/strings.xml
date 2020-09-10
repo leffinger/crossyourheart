@@ -6,4 +6,5 @@
     <string name="alert_solved">You did it!</string>
     <string name="delete_puzzle">Delete this puzzle?</string>
     <string name="open_file">Open Puzzle File...</string>
+    <string name="solved">Solved</string>
 </resources>

@@ -27,4 +27,8 @@ public class PuzzleFileViewModel {
     public String getCopyright() {
         return mPuzzleFile.getCopyright();
     }
+
+    public boolean isSolved() {
+        return mPuzzleFile.isSolved();
+    }
 }
