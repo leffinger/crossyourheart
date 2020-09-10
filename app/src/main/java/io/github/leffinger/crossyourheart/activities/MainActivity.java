@@ -2,6 +2,7 @@ package io.github.leffinger.crossyourheart.activities;
 
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -12,6 +13,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Clock;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.UUID;
 
 import io.github.leffinger.crossyourheart.R;
@@ -25,6 +31,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class MainActivity extends AppCompatActivity implements PuzzleListFragment.Callbacks {
     public static final String TAG = "MainActivity";
+    private static final SimpleDateFormat FORMAT =
+            new SimpleDateFormat("yyMMddHHmmss", Locale.getDefault());
     private String mFilename;
 
     @Override
@@ -61,7 +69,8 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 // Check to see if we have already loaded this file.
                 String duplicateFilename = findDuplicate(puzzleLoader);
                 if (duplicateFilename == null) {
-                    String filename = String.format("%s.puz", UUID.randomUUID());
+                    String date = FORMAT.format(Calendar.getInstance().getTime());
+                    String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
                     try (FileOutputStream outputStream = new FileOutputStream(
                             new File(getFilesDir(), filename))) {
                         puzzleLoader.savePuzzleFile(outputStream);

@@ -128,6 +128,17 @@ public class PuzFile extends AbstractPuzzleFile {
                                                 headerChecksum, computedHeaderChecksum));
         }
 
+        // Verify masked checksums.
+        final byte[] maskedChecksums = puzzleLoader.getMaskedChecksums();
+        final byte[] computedMaskedChecksums = puzzleLoader.computeMaskedChecksums();
+        for (int i = 0; i < 8; i++) {
+            if (maskedChecksums[i] != computedMaskedChecksums[i]) {
+                throw new IOException(
+                        String.format("Bad masked checksum at bit %d. Expected 0x%02X, got 0x%02X",
+                                      i, maskedChecksums[i], computedMaskedChecksums[i]));
+            }
+        }
+
         // Verify file checksum.
         final int fileChecksum = puzzleLoader.getFileChecksum();
         final int computedFileChecksum = puzzleLoader.computeFileChecksum();
@@ -192,11 +203,14 @@ public class PuzFile extends AbstractPuzzleFile {
 
     private static boolean includeNoteInTextChecksum(byte[] versionStringBytes) throws IOException {
         final String versionString = new String(versionStringBytes, StandardCharsets.ISO_8859_1);
-        String[] versionParts = versionString.split(".", 2);
+        String[] versionParts = versionString.split("\\.", 2);
         if (versionParts.length < 2) {
             throw new IOException(String.format("Bad version string: \"%s\"", versionString));
         }
-        return versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0;
+        if (versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0) {
+            return true;
+        }
+        return false;
     }
 
     public boolean checkDuplicate(PuzFile other) {

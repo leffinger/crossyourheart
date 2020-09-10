@@ -73,6 +73,12 @@ public class PuzzleListFragment extends Fragment {
             List<PuzzleFileViewModel> puzzles = new ArrayList<>();
             File puzzleDir = getContext().getFilesDir();
             File[] files = puzzleDir.listFiles();
+            Arrays.sort(files, new Comparator<File>() {
+                @Override
+                public int compare(File file1, File file2) {
+                    return file2.getName().compareTo(file1.getName());
+                }
+            });
             for (File file : files) {
                 try (FileInputStream inputStream = new FileInputStream(file)) {
                     PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
