@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "415761287607",
+    "firebase_url": "https://cross-your-heart.firebaseio.com",
+    "project_id": "cross-your-heart",
+    "storage_bucket": "cross-your-heart.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:415761287607:android:ecf719b76a978fbd320032",
+        "android_client_info": {
+          "package_name": "io.github.leffinger.crossyourheart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "415761287607-99bp84tdpcc89c641s8gqkb92gf0hmje.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1igYKL-0K2o5mBrnZYDRW8KQ_t_jk49g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "415761287607-99bp84tdpcc89c641s8gqkb92gf0hmje.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

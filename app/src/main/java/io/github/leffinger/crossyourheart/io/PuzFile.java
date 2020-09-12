@@ -390,6 +390,12 @@ public class PuzFile extends AbstractPuzzleFile {
     }
 
     @Override
+    public String getCellSolution(int row, int col) {
+        byte solution = mSolution[getOffset(row, col)];
+        return new String(new byte[]{solution}, StandardCharsets.ISO_8859_1);
+    }
+
+    @Override
     public String getCellContents(int row, int col) {
         byte contents = mGrid[getOffset(row, col)];
         if (contents == '-') {
@@ -414,6 +420,24 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public boolean isSolved() {
-        return Arrays.equals(mSolution, mGrid);
+        if (mScrambledTag == 0) {
+            return Arrays.equals(mSolution, mGrid);
+        }
+
+        int computedScrambledChecksum = 0;
+        for (int i = 0; i < mWidth; i++) {
+            for (int j = 0; j < mHeight; j++) {
+                byte contents = mGrid[getOffset(j, i)];
+                if (contents == '.') {
+                    continue;
+                }
+                computedScrambledChecksum = cksum_byte(contents, computedScrambledChecksum);
+            }
+        }
+        return computedScrambledChecksum == mScrambledChecksum;
+    }
+
+    public int getScrambledChecksum() {
+        return mScrambledChecksum;
     }
 }

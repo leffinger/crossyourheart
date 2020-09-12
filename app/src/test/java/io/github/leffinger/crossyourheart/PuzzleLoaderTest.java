@@ -19,6 +19,7 @@ import java.util.List;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -30,36 +31,37 @@ public class PuzzleLoaderTest {
     private final String mFilename;
     private final String mTitle;
     private final String mVersionString;
+    private final boolean mScrambled;
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
     private PuzFile mPuzzleLoader;
 
-    public PuzzleLoaderTest(String filename, String title, String versionString) {
+    public PuzzleLoaderTest(String filename, String title, String versionString,
+                            boolean scrambled) {
         mFilename = filename;
         mTitle = title;
         mVersionString = versionString;
+        mScrambled = scrambled;
     }
 
     @Parameters(name = "{0}")
-    public static List<String[]> parameters() {
-        return Arrays.asList(new String[]{"/3x3.puz", "3x3", "1.2\0"},
-                             new String[]{"/3x4.puz", "3x4", "1.2\0"},
-                             new String[]{"/076_ExtremelyOnline.puz", "\"Extremely Online\"",
-                                          "1.3\0"},
-                             new String[]{"/mgwcc636.puz", "Team Meta", "1.2c"},
-                             new String[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c"},
-                             new String[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0"},
-                             new String[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
-                                          "1.3\0"});
+    public static List<Object[]> parameters() {
+        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", false},
+                             new Object[]{"/3x4.puz", "3x4", "1.2\0", false},
+                             new Object[]{"/076_ExtremelyOnline.puz", "\"Extremely Online\"",
+                                          "1.3\0", true},
+                             new Object[]{"/075_WoodenIdols.puz", "Wooden Idols", "1.3\0", true},
+                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c", true},
+                             new Object[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c",
+                                          true},
+                             new Object[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0",
+                                          false},
+                             new Object[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
+                                          "1.3\0", false});
     }
 
     private static void assertHexEquals(byte expected, byte actual) {
         assertEquals(String.format("\nExpected :0x%02X\nActual   :0x%02X", expected, actual),
-                     expected, actual);
-    }
-
-    private static void assertHexEquals(short expected, short actual) {
-        assertEquals(String.format("\nExpected :0x%04X\nActual   :0x%04X", expected, actual),
                      expected, actual);
     }
 
@@ -180,5 +182,20 @@ public class PuzzleLoaderTest {
         assertEquals(mPuzzleLoader.getAuthor(), savedPuzzle.getAuthor());
         assertTrue(mPuzzleLoader.checkDuplicate(savedPuzzle));
         assertTrue(savedPuzzle.checkDuplicate(mPuzzleLoader));
+    }
+
+    @Test
+    public void verifyScrambledTag() {
+        short scrambledTag = (short) mPuzzleLoader.getScrambledTag();
+        if (mScrambled) {
+            assertEquals(0x4, scrambledTag);
+        } else {
+            assertHexEquals(0, scrambledTag);
+        }
+    }
+
+    @Test
+    public void verifyScrambledChecksum() {
+        assertHexEquals(0, mPuzzleLoader.getScrambledChecksum());
     }
 }

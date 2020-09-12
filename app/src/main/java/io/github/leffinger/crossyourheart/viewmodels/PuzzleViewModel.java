@@ -69,6 +69,14 @@ public class PuzzleViewModel extends ViewModel {
 
         Log.i(TAG, "Puzzle width: " + getNumColumns());
         Log.i(TAG, "Puzzle height: " + getNumRows());
+        StringBuilder solution = new StringBuilder();
+        for (int row = 0; row < getNumRows(); row++) {
+            for (int col = 0; col < getNumColumns(); col++) {
+                solution.append(puzzleFile.getCellSolution(row, col));
+            }
+            solution.append('\n');
+        }
+        Log.i(TAG, "Solution:\n" + solution);
 
         mGrid = new CellViewModel[getNumRows()][getNumColumns()];
 
