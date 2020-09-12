@@ -25,8 +25,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -66,6 +64,54 @@ public class PuzzleListFragment extends Fragment {
         new FetchPuzzleFilesTask().execute();
     }
 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        FragmentPuzzleListBinding binding = DataBindingUtil
+                .inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
+        binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.list.setAdapter(mAdapter);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_puzzle_list, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.open_file:
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
+            break;
+        case R.id.download_file:
+            ((Callbacks) getActivity()).onDownloadSelected();
+            break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        if (requestCode == REQUEST_CODE_OPEN_FILE && resultCode == RESULT_OK) {
+            ((Callbacks) getActivity()).onUriSelected(data.getData());
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    public interface Callbacks {
+        void onFileSelected(String filename);
+
+        void onUriSelected(Uri uri);
+
+        void onDownloadSelected();
+    }
+
     private class FetchPuzzleFilesTask extends AsyncTask<Void, Void, List<PuzzleFileViewModel>> {
 
         @Override
@@ -96,48 +142,6 @@ public class PuzzleListFragment extends Fragment {
             mPuzzles.addAll(puzzleFiles);
             mAdapter.notifyDataSetChanged();
         }
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        FragmentPuzzleListBinding binding = DataBindingUtil
-                .inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
-        binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.list.setAdapter(mAdapter);
-        return binding.getRoot();
-    }
-
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.fragment_puzzle_list, menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.open_file:
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");
-            startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (requestCode == REQUEST_CODE_OPEN_FILE && resultCode == RESULT_OK) {
-            ((Callbacks) getActivity()).onUriSelected(data.getData());
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    public interface Callbacks {
-        void onFileSelected(String filename);
-
-        void onUriSelected(Uri uri);
     }
 
     private class PuzzleFileHolder extends RecyclerView.ViewHolder {

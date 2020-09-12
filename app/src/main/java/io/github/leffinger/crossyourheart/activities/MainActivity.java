@@ -2,7 +2,6 @@ package io.github.leffinger.crossyourheart.activities;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -13,9 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.Clock;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.UUID;
@@ -140,5 +137,11 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             mFilename = filename;
             startActivity(PuzzleActivity.newIntent(this, mFilename));
         }
+    }
+
+    @Override
+    public void onDownloadSelected() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.container, DownloadPuzzlesFragment.newInstance()).commitNow();
     }
 }

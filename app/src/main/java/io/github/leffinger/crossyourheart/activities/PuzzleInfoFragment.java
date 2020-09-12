@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,7 +35,6 @@ public class PuzzleInfoFragment extends DialogFragment {
         DialogPuzzleInfoBinding binding = DataBindingUtil
                 .inflate(LayoutInflater.from(getActivity()), R.layout.dialog_puzzle_info, null,
                          false);
-        Bundle args = getArguments();
         PuzzleInfoViewModel viewModel =
                 (PuzzleInfoViewModel) getArguments().getSerializable("viewModel");
         binding.setViewModel(viewModel);
