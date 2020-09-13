@@ -25,7 +25,6 @@ import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,6 +34,7 @@ import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleBinding;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
+import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
@@ -73,8 +73,8 @@ public class PuzzleFragment extends Fragment {
         }
 
         mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
-                                         new File(getActivity().getFilesDir(),
-                                                  bundle.getString("filename")));
+                                         IOUtil.getPuzzleFile(getContext(),
+                                                              bundle.getString("filename")));
     }
 
     @Override

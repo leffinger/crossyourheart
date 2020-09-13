@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
+import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 public class PuzzleActivity extends AppCompatActivity {
@@ -40,7 +41,7 @@ public class PuzzleActivity extends AppCompatActivity {
 
         @Override
         protected AbstractPuzzleFile doInBackground(Void... voids) {
-            File file = new File(getFilesDir(), mFilename);
+            File file = IOUtil.getPuzzleFile(PuzzleActivity.this, mFilename);
             try (FileInputStream inputStream = new FileInputStream(file)) {
                 return PuzFile.loadPuzFile(inputStream);
             } catch (IOException e) {

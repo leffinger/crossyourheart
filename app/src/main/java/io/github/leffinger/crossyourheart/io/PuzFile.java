@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 public class PuzFile extends AbstractPuzzleFile {
     private static final String MAGIC = "ACROSS&DOWN";
+    private static final int LOCKED = 0x2;
 
     final int mFileChecksum;
     final byte[] mMagic;
@@ -207,10 +208,7 @@ public class PuzFile extends AbstractPuzzleFile {
         if (versionParts.length < 2) {
             throw new IOException(String.format("Bad version string: \"%s\"", versionString));
         }
-        if (versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0) {
-            return true;
-        }
-        return false;
+        return versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0;
     }
 
     public boolean checkDuplicate(PuzFile other) {
@@ -435,6 +433,11 @@ public class PuzFile extends AbstractPuzzleFile {
             }
         }
         return computedScrambledChecksum == mScrambledChecksum;
+    }
+
+    @Override
+    public boolean isLocked() {
+        return mScrambledTag == LOCKED;
     }
 
     public int getScrambledChecksum() {

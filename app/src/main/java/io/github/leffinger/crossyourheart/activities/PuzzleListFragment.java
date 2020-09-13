@@ -33,6 +33,7 @@ import java.util.List;
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleFileBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleListBinding;
+import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleFileViewModel;
 
@@ -117,7 +118,7 @@ public class PuzzleListFragment extends Fragment {
         @Override
         protected List<PuzzleFileViewModel> doInBackground(Void... voids) {
             List<PuzzleFileViewModel> puzzles = new ArrayList<>();
-            File puzzleDir = getContext().getFilesDir();
+            File puzzleDir = IOUtil.getPuzzleDir(getContext());
             File[] files = puzzleDir.listFiles();
             Arrays.sort(files, new Comparator<File>() {
                 @Override
@@ -179,8 +180,9 @@ public class PuzzleListFragment extends Fragment {
                                                                String filename =
                                                                        mBinding.getViewModel()
                                                                                .getFilename();
-                                                               new File(getActivity().getFilesDir(),
-                                                                        filename).delete();
+                                                               IOUtil.getPuzzleFile(getContext(),
+                                                                                    filename)
+                                                                       .delete();
                                                            }
                                                        }).setCancelable(true).create();
                     alertDialog.show();

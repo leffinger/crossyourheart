@@ -26,8 +26,13 @@
                     android:scheme="content" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".activities.PuzzleActivity"
+            android:parentActivityName=".activities.MainActivity" />
+
+        <activity
+            android:name=".activities.DownloadPuzzlesActivity"
             android:parentActivityName=".activities.MainActivity" />
     </application>
 

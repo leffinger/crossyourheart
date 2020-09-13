@@ -6,11 +6,11 @@
         android:id="@+id/download_file"
         android:icon="@drawable/download"
         android:title="@string/download_file"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom|withText" />
 
     <item
         android:id="@+id/open_file"
         android:icon="@drawable/folder"
         android:title="@string/open_file"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom|withText" />
 </menu>

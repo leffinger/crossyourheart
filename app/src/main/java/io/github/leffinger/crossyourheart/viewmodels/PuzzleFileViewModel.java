@@ -31,4 +31,8 @@ public class PuzzleFileViewModel {
     public boolean isSolved() {
         return mPuzzleFile.isSolved();
     }
+
+    public boolean isLocked() {
+        return mPuzzleFile.isLocked();
+    }
 }

@@ -6,6 +6,6 @@
     <string name="description_mgwcc">Matt Gaffney\'s Weekly Crossword Contest (subscription required)</string>
     <string name="url_beq">https://www.brendanemmettquigley.com</string>
     <string name="description_beq">Brendan Emmett Quigley</string>
-    <string name="url_fiend">http://www.crosswordfiend.com</string>
+    <string name="url_fiend">https://crosswordfiend.com/download/</string>
     <string name="description_fiend">Crossword Fiend (daily blog with links)</string>
 </resources>

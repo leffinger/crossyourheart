@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import io.github.leffinger.crossyourheart.R;
+import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 import static java.util.Objects.requireNonNull;
@@ -36,6 +37,10 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_container);
+
+        if (IOUtil.getPuzzleDir(this).mkdir()) {
+            Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));
+        }
 
         mFilename = null;
         if (savedInstanceState != null && savedInstanceState.containsKey("filename")) {
@@ -69,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                     String date = FORMAT.format(Calendar.getInstance().getTime());
                     String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
                     try (FileOutputStream outputStream = new FileOutputStream(
-                            new File(getFilesDir(), filename))) {
+                            IOUtil.getPuzzleFile(this, filename))) {
                         puzzleLoader.savePuzzleFile(outputStream);
                         return filename;
                     } catch (IOException e) {
@@ -105,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         String[] files = puzzleDir.list();
         for (String filename : files) {
             try (FileInputStream inputStream = new FileInputStream(
-                    new File(getFilesDir(), filename))) {
+                    IOUtil.getPuzzleFile(this, filename))) {
                 PuzFile existingPuzzle = PuzFile.loadPuzFile(inputStream);
                 if (existingPuzzle.checkDuplicate(puzzleLoader)) {
                     return filename;
@@ -119,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
 
     @Override
     public void onFileSelected(String filename) {
-        try (InputStream inputStream = new FileInputStream(new File(getFilesDir(), filename))) {
+        try (InputStream inputStream = new FileInputStream(IOUtil.getPuzzleFile(this, filename))) {
             PuzFile.verifyPuzFile(inputStream);
             mFilename = filename;
             startActivity(PuzzleActivity.newIntent(this, mFilename));
@@ -141,7 +146,6 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
 
     @Override
     public void onDownloadSelected() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.container, DownloadPuzzlesFragment.newInstance()).commitNow();
+        startActivity(DownloadPuzzlesActivity.newIntent(this));
     }
 }

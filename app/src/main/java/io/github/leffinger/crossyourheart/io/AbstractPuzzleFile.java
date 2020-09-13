@@ -35,4 +35,6 @@ public abstract class AbstractPuzzleFile implements Serializable {
     public abstract void setCellContents(int row, int col, String value);
 
     public abstract boolean isSolved();
+
+    public abstract boolean isLocked();
 }
