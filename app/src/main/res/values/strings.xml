@@ -10,5 +10,8 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="download_header">Cross Your Heart supports puzzle files that end in \".puz\". Here are some sites where you can download puzzles!</string>
     <string name="download_file">Download Puzzles…</string>
-    <string name="mattgaffney">foo</string>
+    <string name="locked_message">Puzzle solution is not available</string>
+    <string name="solved_message">Puzzle is solved</string>
+    <string name="unsolved_message">Puzzle is in progress</string>
+    <string name="rebus_message">Rebus not supported yet :(</string>
 </resources>

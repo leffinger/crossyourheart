@@ -12,6 +12,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,7 +22,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -40,6 +40,7 @@ import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
 import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
 import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
+import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -50,6 +51,7 @@ public class PuzzleFragment extends Fragment {
 
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
+    private volatile boolean mSolved;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -75,6 +77,8 @@ public class PuzzleFragment extends Fragment {
         mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
                                          IOUtil.getPuzzleFile(getContext(),
                                                               bundle.getString("filename")));
+
+        mViewModel.isSolved().observe(this, solved -> mSolved = solved);
     }
 
     @Override
@@ -136,28 +140,19 @@ public class PuzzleFragment extends Fragment {
         binding.puzzle.setLayoutManager(layoutManager);
         binding.puzzle.setAdapter(new CellAdapter());
 
-        binding.clue.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.clue.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                mViewModel.toggleDirection();
-            }
+        binding.clue.setOnClickListener(view -> {
+            binding.clue.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.toggleDirection();
         });
 
-        binding.prev.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.prev.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                mViewModel.moveToPreviousClue();
-            }
+        binding.prev.setOnClickListener(view -> {
+            binding.prev.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToPreviousClue();
         });
 
-        binding.next.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.next.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                mViewModel.moveToNextClue();
-            }
+        binding.next.setOnClickListener(view -> {
+            binding.next.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToNextClue();
         });
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
@@ -177,12 +172,19 @@ public class PuzzleFragment extends Fragment {
 
             @Override
             public void onKey(int primaryCode, int[] keyCodes) {
+                if (mSolved) {
+                    return;
+                }
                 switch (primaryCode) {
                 case KEYCODE_DELETE:
                     mViewModel.doBackspace();
                     break;
                 case KEYCODE_CANCEL:
                     mViewModel.doUndo();
+                    break;
+                case KEYCODE_MODE_CHANGE:
+                    Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT)
+                            .show();
                     break;
                 default:
                     char letter = (char) primaryCode;
@@ -216,16 +218,12 @@ public class PuzzleFragment extends Fragment {
             }
         });
 
-        mViewModel.isSolved().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
-            @Override
-            public void onChanged(Boolean solved) {
-                Log.i(TAG, "isSolved changed: " + solved);
-                if (solved) {
-                    AlertDialog dialog =
-                            new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
-                                    .setPositiveButton(android.R.string.ok, null).create();
-                    dialog.show();
-                }
+        mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
+            if (solved) {
+                AlertDialog dialog =
+                        new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
+                                .setPositiveButton(android.R.string.ok, null).create();
+                dialog.show();
             }
         });
 
@@ -246,7 +244,7 @@ public class PuzzleFragment extends Fragment {
                 return;
             }
 
-            mBinding.setViewModel(viewModel);
+            mBinding.setCellViewModel(viewModel);
             mBinding.setLifecycleOwner(getActivity());
 
             // When a square is focused on, trigger updates to the UI (e.g. clue text).
@@ -254,57 +252,38 @@ public class PuzzleFragment extends Fragment {
                 @Override
                 public void onFocusChange(View view, boolean hasFocus) {
                     if (hasFocus) {
-                        mBinding.getViewModel().onFocus();
+                        mBinding.getCellViewModel().onFocus();
                     }
                 }
             });
 
             // Auto-focus on the first non-black square.
-            if (mBinding.getViewModel().getClueNumber() == 1) {
+            if (mBinding.getCellViewModel().getClueNumber() == 1) {
                 mBinding.entry.requestFocus();
             }
 
             // Listen for focus changes from the MainViewModel.
-            mBinding.getViewModel().setListener(new CellViewModel.Listener() {
-                @Override
-                public void requestFocus() {
-                    mBinding.entry.requestFocus();
-                }
-            });
+            mBinding.getCellViewModel().setListener(() -> mBinding.entry.requestFocus());
 
             // "Activate" squares in the same clue as the focused square.
-            mBinding.getViewModel().isHighlighted().observe(getActivity(), new Observer<Boolean>() {
-                @Override
-                public void onChanged(Boolean highlighted) {
-                    mBinding.entry.setActivated(highlighted);
-                }
-            });
+            mBinding.getCellViewModel().isHighlighted().observe(getActivity(),
+                                                                highlighted -> mBinding.entry
+                                                                        .setActivated(highlighted));
 
             // Toggle direction when a clue is clicked on (does not apply to first focusing click).
-            mBinding.entry.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mViewModel.toggleDirection();
-                }
-            });
+            mBinding.entry.setOnClickListener(view -> mViewModel.toggleDirection());
 
             // Persist changes in content to disk.
-            mBinding.getViewModel().getContents().observe(getActivity(), new Observer<String>() {
-                @Override
-                public void onChanged(String s) {
-                    mBinding.getViewModel().onContentsChanged();
-                    mExecutorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                mViewModel.saveToFile();
-                            } catch (IOException e) {
-                                Log.e(TAG, String.format("Saving puzzle file %s failed",
-                                                         mViewModel.getFile().getName()), e);
-                            }
-                        }
-                    });
-                }
+            mBinding.getCellViewModel().getContents().observe(getActivity(), s -> {
+                mBinding.getCellViewModel().onContentsChanged();
+                mExecutorService.submit(() -> {
+                    try {
+                        mViewModel.saveToFile();
+                    } catch (IOException e) {
+                        Log.e(TAG, String.format("Saving puzzle file %s failed",
+                                                 mViewModel.getFile().getName()), e);
+                    }
+                });
             });
         }
     }

@@ -1,7 +1,6 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -14,6 +13,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -169,25 +169,29 @@ public class PuzzleListFragment extends Fragment {
                     AlertDialog alertDialog =
                             new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle)
                                     .setPositiveButton(android.R.string.ok,
-                                                       new DialogInterface.OnClickListener() {
-                                                           @Override
-                                                           public void onClick(
-                                                                   DialogInterface dialogInterface,
-                                                                   int i) {
-                                                               int index = getAdapterPosition();
-                                                               mPuzzles.remove(index);
-                                                               mAdapter.notifyItemRemoved(index);
-                                                               String filename =
-                                                                       mBinding.getViewModel()
-                                                                               .getFilename();
-                                                               IOUtil.getPuzzleFile(getContext(),
-                                                                                    filename)
-                                                                       .delete();
-                                                           }
+                                                       (dialogInterface, i) -> {
+                                                           int index = getAdapterPosition();
+                                                           mPuzzles.remove(index);
+                                                           mAdapter.notifyItemRemoved(index);
+                                                           String filename = mBinding.getViewModel()
+                                                                   .getFilename();
+                                                           IOUtil.getPuzzleFile(getContext(),
+                                                                                filename).delete();
                                                        }).setCancelable(true).create();
                     alertDialog.show();
                     return true;
                 }
+            });
+            mBinding.solved.setOnClickListener(view -> {
+                int message;
+                if (viewModel.isLocked()) {
+                    message = R.string.locked_message;
+                } else if (viewModel.isSolved()) {
+                    message = R.string.solved_message;
+                } else {
+                    message = R.string.unsolved_message;
+                }
+                Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
             });
         }
     }

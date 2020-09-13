@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Stack;
 
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
-import io.github.leffinger.crossyourheart.io.PuzFile;
 
 public class PuzzleViewModel extends ViewModel {
     private static final String TAG = "PuzzleViewModel";
@@ -76,7 +75,6 @@ public class PuzzleViewModel extends ViewModel {
             }
             solution.append('\n');
         }
-        Log.i(TAG, "Solution:\n" + solution);
 
         mGrid = new CellViewModel[getNumRows()][getNumColumns()];
 

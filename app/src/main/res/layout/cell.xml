@@ -6,7 +6,7 @@
     <data>
 
         <variable
-            name="viewModel"
+            name="cellViewModel"
             type="io.github.leffinger.crossyourheart.viewmodels.CellViewModel" />
     </data>
 
@@ -21,12 +21,12 @@
             android:layout_height="0dp"
             android:background="@drawable/cell"
             android:clickable="true"
-            android:enabled="@{viewModel != null}"
+            android:enabled="@{cellViewModel != null}"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:gravity="center"
             android:padding="2dp"
-            android:text="@{viewModel.contents}"
+            android:text="@{cellViewModel.contents}"
             android:textColor="@color/colorEntryText"
             app:autoSizeMaxTextSize="100sp"
             app:autoSizeMinTextSize="12sp"
@@ -58,7 +58,7 @@
             android:layout_height="0dp"
             android:gravity="center"
             android:padding="0dp"
-            android:text="@{viewModel.clueNumber == 0 ? null : String.valueOf(viewModel.clueNumber)}"
+            android:text="@{cellViewModel.clueNumber == 0 ? null : String.valueOf(cellViewModel.clueNumber)}"
             app:autoSizeMaxTextSize="16sp"
             app:autoSizeMinTextSize="2sp"
             app:autoSizeStepGranularity="1sp"

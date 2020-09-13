@@ -102,7 +102,7 @@
     <Row>
         <Key
             android:codes="-2"
-            android:keyLabel="..."
+            android:keyLabel="…"
             android:keyWidth="15%p"
             android:keyEdgeFlags="left" />
 
