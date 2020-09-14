@@ -16,10 +16,10 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -31,13 +31,13 @@ public class PuzzleLoaderTest {
     private final String mFilename;
     private final String mTitle;
     private final String mVersionString;
-    private final boolean mScrambled;
+    private final ScrambleState mScrambled;
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
     private PuzFile mPuzzleLoader;
 
     public PuzzleLoaderTest(String filename, String title, String versionString,
-                            boolean scrambled) {
+                            ScrambleState scrambled) {
         mFilename = filename;
         mTitle = title;
         mVersionString = versionString;
@@ -46,18 +46,20 @@ public class PuzzleLoaderTest {
 
     @Parameters(name = "{0}")
     public static List<Object[]> parameters() {
-        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", false},
-                             new Object[]{"/3x4.puz", "3x4", "1.2\0", false},
+        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", ScrambleState.UNSCRAMBLED},
+                             new Object[]{"/3x4.puz", "3x4", "1.2\0", ScrambleState.UNSCRAMBLED},
                              new Object[]{"/076_ExtremelyOnline.puz", "\"Extremely Online\"",
-                                          "1.3\0", true},
-                             new Object[]{"/075_WoodenIdols.puz", "Wooden Idols", "1.3\0", true},
-                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c", true},
+                                          "1.3\0", ScrambleState.LOCKED},
+                             new Object[]{"/075_WoodenIdols.puz", "\"Wooden Idols\"", "1.4\0",
+                                          ScrambleState.LOCKED},
+                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c",
+                                          ScrambleState.SCRAMBLED},
                              new Object[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c",
-                                          true},
+                                          ScrambleState.SCRAMBLED},
                              new Object[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0",
-                                          false},
+                                          ScrambleState.UNSCRAMBLED},
                              new Object[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
-                                          "1.3\0", false});
+                                          "1.3\0", ScrambleState.UNSCRAMBLED});
     }
 
     private static void assertHexEquals(byte expected, byte actual) {
@@ -185,17 +187,7 @@ public class PuzzleLoaderTest {
     }
 
     @Test
-    public void verifyScrambledTag() {
-        short scrambledTag = (short) mPuzzleLoader.getScrambledTag();
-        if (mScrambled) {
-            assertEquals(0x4, scrambledTag);
-        } else {
-            assertHexEquals(0, scrambledTag);
-        }
-    }
-
-    @Test
-    public void verifyScrambledChecksum() {
-        assertHexEquals(0, mPuzzleLoader.getScrambledChecksum());
+    public void verifyScrambledState() {
+        assertEquals(mScrambled, mPuzzleLoader.getScrambleState());
     }
 }

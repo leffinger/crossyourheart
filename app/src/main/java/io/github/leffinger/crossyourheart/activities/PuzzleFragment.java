@@ -1,5 +1,6 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import android.content.Intent;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.Build;
@@ -38,6 +39,7 @@ import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
+import static android.app.Activity.RESULT_OK;
 import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
 import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
 import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
@@ -48,6 +50,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class PuzzleFragment extends Fragment {
     private static final String TAG = "PuzzleFragment";
+    static final int REQUEST_CODE_REBUS_ENTRY = 0;
 
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
@@ -183,8 +186,11 @@ public class PuzzleFragment extends Fragment {
                     mViewModel.doUndo();
                     break;
                 case KEYCODE_MODE_CHANGE:
-                    Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT)
-                            .show();
+                    FragmentManager fragmentManager = getParentFragmentManager();
+                    RebusFragment rebusFragment =
+                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
+                    rebusFragment.setTargetFragment(PuzzleFragment.this, REQUEST_CODE_REBUS_ENTRY);
+                    rebusFragment.show(fragmentManager, "Rebus");
                     break;
                 default:
                     char letter = (char) primaryCode;
@@ -228,6 +234,17 @@ public class PuzzleFragment extends Fragment {
         });
 
         return binding.getRoot();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        Toast.makeText(getActivity(), "onActivityResult", Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_CODE_REBUS_ENTRY && resultCode == RESULT_OK) {
+            String newContents = RebusFragment.getContents(data);
+            Toast.makeText(getActivity(), "Got contents: " + newContents, Toast.LENGTH_SHORT)
+                    .show();
+            mViewModel.setCurrentCellContents(newContents);
+        }
     }
 
     private class CellHolder extends RecyclerView.ViewHolder {

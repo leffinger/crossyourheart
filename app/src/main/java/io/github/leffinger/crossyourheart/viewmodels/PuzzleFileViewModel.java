@@ -1,6 +1,8 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 
 public class PuzzleFileViewModel {
 
@@ -28,11 +30,25 @@ public class PuzzleFileViewModel {
         return mPuzzleFile.getCopyright();
     }
 
-    public boolean isSolved() {
-        return mPuzzleFile.isSolved();
+    public int getSolvedStateResId() {
+        ScrambleState scrambleState = mPuzzleFile.getScrambleState();
+        if (scrambleState == ScrambleState.LOCKED || scrambleState == ScrambleState.UNKNOWN) {
+            return R.drawable.locked;
+        }
+        if (mPuzzleFile.isSolved()) {
+            return R.drawable.solved;
+        }
+        return R.drawable.in_progress;
     }
 
-    public boolean isLocked() {
-        return mPuzzleFile.isLocked();
+    public int getSolvedMessageResId() {
+        ScrambleState scrambleState = mPuzzleFile.getScrambleState();
+        if (scrambleState == ScrambleState.LOCKED || scrambleState == ScrambleState.UNKNOWN) {
+            return R.string.locked_message;
+        }
+        if (mPuzzleFile.isSolved()) {
+            return R.string.solved_message;
+        }
+        return R.string.unsolved_message;
     }
 }

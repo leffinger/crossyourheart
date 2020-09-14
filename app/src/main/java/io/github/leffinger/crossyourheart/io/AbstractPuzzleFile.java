@@ -36,5 +36,9 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract boolean isSolved();
 
-    public abstract boolean isLocked();
+    public abstract ScrambleState getScrambleState();
+
+    public enum ScrambleState {
+        UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
+    }
 }

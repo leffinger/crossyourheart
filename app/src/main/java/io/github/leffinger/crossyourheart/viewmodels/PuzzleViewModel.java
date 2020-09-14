@@ -173,11 +173,18 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     private static void linkClues(ClueViewModel[] clues) {
-        linkClues(clues, true);
-        linkClues(clues, false);
+        ClueViewModel firstAcrossClue = clues[0];
+        ClueViewModel firstDownClue = clues[1];
+        ClueViewModel lastAcrossClue = linkClues(clues, true);
+        ClueViewModel lastDownClue = linkClues(clues, false);
+
+        firstAcrossClue.setPreviousClue(lastDownClue);
+        lastDownClue.setNextClue(firstAcrossClue);
+        firstDownClue.setPreviousClue(lastAcrossClue);
+        lastAcrossClue.setNextClue(firstDownClue);
     }
 
-    private static void linkClues(ClueViewModel[] clues, boolean across) {
+    private static ClueViewModel linkClues(ClueViewModel[] clues, boolean across) {
         ClueViewModel firstClue = null;
         ClueViewModel previousClue = null;
         for (int i = 0; i < clues.length; i++) {
@@ -196,8 +203,7 @@ public class PuzzleViewModel extends ViewModel {
         }
 
         // Now "previousClue" should be the last clue.
-        firstClue.setPreviousClue(previousClue);
-        previousClue.setNextClue(firstClue);
+        return previousClue;
     }
 
     public CellViewModel getCellViewModel(int row, int col) {
@@ -297,6 +303,7 @@ public class PuzzleViewModel extends ViewModel {
             for (CellViewModel cell : prev.getCells()) {
                 if (cell.getContents().getValue().isEmpty()) {
                     cell.requestFocus();
+                    mAcrossFocus.setValue(prev.isAcross());
                     return;
                 }
             }
@@ -307,6 +314,7 @@ public class PuzzleViewModel extends ViewModel {
 
         // No empty clue available. Request first cell in previous clue.
         prev.getPreviousClue().getCells().get(0).requestFocus();
+        mAcrossFocus.setValue(prev.getPreviousClue().isAcross());
     }
 
     public void moveToNextClue() {
@@ -327,6 +335,11 @@ public class PuzzleViewModel extends ViewModel {
 
         // No empty clue available. Request first cell in next clue.
         next.getNextClue().getCells().get(0).requestFocus();
+        mAcrossFocus.setValue(next.getNextClue().isAcross());
+    }
+
+    public String getCurrentCellContents() {
+        return mCurrentCell.getValue().getContents().getValue();
     }
 
     public void setCurrentCellContents(String newContents) {
@@ -399,6 +412,14 @@ public class PuzzleViewModel extends ViewModel {
         return new PuzzleInfoViewModel(getTitle(), getAuthor(), getCopyright(), getNote());
     }
 
+    public File getFile() {
+        return mFile;
+    }
+
+    public AbstractPuzzleFile getPuzzleFile() {
+        return mPuzzleFile;
+    }
+
     private static class Action {
         CellViewModel mModifiedCell;
         CellViewModel mFocusedCell;
@@ -412,14 +433,6 @@ public class PuzzleViewModel extends ViewModel {
             mOldContents = oldContents;
             mNewContents = newContents;
         }
-    }
-
-    public File getFile() {
-        return mFile;
-    }
-
-    public AbstractPuzzleFile getPuzzleFile() {
-        return mPuzzleFile;
     }
 }
 

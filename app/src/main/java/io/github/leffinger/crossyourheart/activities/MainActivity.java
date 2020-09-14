@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class MainActivity extends AppCompatActivity implements PuzzleListFragment.Callbacks {
     public static final String TAG = "MainActivity";
+    public static final String ARG_FILENAME = "filename";
     private static final SimpleDateFormat FORMAT =
             new SimpleDateFormat("yyMMddHHmmss", Locale.getDefault());
     private String mFilename;
@@ -43,11 +44,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         }
 
         mFilename = null;
-        if (savedInstanceState != null && savedInstanceState.containsKey("filename")) {
-            mFilename = requireNonNull(savedInstanceState.getString("filename"));
+        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FILENAME)) {
+            mFilename = requireNonNull(savedInstanceState.getString(ARG_FILENAME));
         } else if (getIntent() != null && getIntent().getData() != null) {
-            // Open the input stream, try to parse it as a puzzle, and save it to a local file.
-            // If any of these steps fail, log/show an error.
             mFilename = loadUri(getIntent().getData());
         }
 
@@ -63,6 +62,14 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         startActivity(PuzzleActivity.newIntent(this, mFilename));
     }
 
+    /**
+     * Open the input stream, try to parse it as a puzzle, and save it to a local file.
+     * <p>
+     * If any of these steps fail, log/show an error and return null.
+     *
+     * @param uri data source
+     * @return name of the local file to which the puzzle was saved, or null.
+     */
     private String loadUri(Uri uri) {
         try (InputStream inputStream = requireNonNull(getContentResolver().openInputStream(uri))) {
             try {
@@ -79,8 +86,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                         return filename;
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to save puzzle file", e);
-                        Toast.makeText(this, "Failed to save puzzle file", Toast.LENGTH_LONG)
-                                .show();
+                        Toast.makeText(this, "Failed to save puzzle file", Toast.LENGTH_LONG).show();
                     }
                 } else {
                     Toast.makeText(this, "Reusing existing file", Toast.LENGTH_LONG).show();
@@ -100,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         if (mFilename != null) {
-            outState.putString("filename", mFilename);
+            outState.putString(ARG_FILENAME, mFilename);
         }
         super.onSaveInstanceState(outState);
     }

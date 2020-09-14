@@ -53,7 +53,6 @@
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="8dp"
                 android:contentDescription="@string/solved"
-                android:src="@{viewModel.locked ? @drawable/locked : viewModel.solved ? @drawable/solved : @drawable/in_progress}"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />

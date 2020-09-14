@@ -182,16 +182,10 @@ public class PuzzleListFragment extends Fragment {
                     return true;
                 }
             });
+            mBinding.solved.setImageResource(viewModel.getSolvedStateResId());
             mBinding.solved.setOnClickListener(view -> {
-                int message;
-                if (viewModel.isLocked()) {
-                    message = R.string.locked_message;
-                } else if (viewModel.isSolved()) {
-                    message = R.string.solved_message;
-                } else {
-                    message = R.string.unsolved_message;
-                }
-                Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), viewModel.getSolvedMessageResId(), Toast.LENGTH_SHORT)
+                        .show();
             });
         }
     }

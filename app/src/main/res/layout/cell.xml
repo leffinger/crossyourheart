@@ -29,7 +29,7 @@
             android:text="@{cellViewModel.contents}"
             android:textColor="@color/colorEntryText"
             app:autoSizeMaxTextSize="100sp"
-            app:autoSizeMinTextSize="12sp"
+            app:autoSizeMinTextSize="4sp"
             app:autoSizeStepGranularity="2sp"
             app:autoSizeTextType="uniform"
             app:layout_constraintBottom_toBottomOf="parent"

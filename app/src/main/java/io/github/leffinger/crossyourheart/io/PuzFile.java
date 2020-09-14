@@ -10,9 +10,14 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+/**
+ * Parses and updates Across Lite (puz) files.
+ *
+ * <p>Many thanks to the authors of this explainer for the file format:
+ * https://code.google.com/archive/p/puz/wikis/FileFormat.wiki
+ */
 public class PuzFile extends AbstractPuzzleFile {
     private static final String MAGIC = "ACROSS&DOWN";
-    private static final int LOCKED = 0x2;
 
     final int mFileChecksum;
     final byte[] mMagic;
@@ -34,10 +39,8 @@ public class PuzFile extends AbstractPuzzleFile {
     final byte[][] mClues;
     final byte[] mNote;
 
-    public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
-                   byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
-                   byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
-                   byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
+    public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums, byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
+                   byte width, byte height, int numClues, int unknownBitmask, int scrambledTag, byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
                    byte[][] clues, byte[] note) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
@@ -60,6 +63,14 @@ public class PuzFile extends AbstractPuzzleFile {
         mNote = note;
     }
 
+    /**
+     * Loads a puzzle file with minimal correctness checks. Useful when a file is known to be the
+     * correct format.
+     *
+     * @param inputStream puzzle file data
+     * @return parsed puz file
+     * @throws IOException if loading fails
+     */
     public static PuzFile loadPuzFile(InputStream inputStream) throws IOException {
         LittleEndianDataInputStream dataInputStream = new LittleEndianDataInputStream(inputStream);
 
@@ -118,6 +129,13 @@ public class PuzFile extends AbstractPuzzleFile {
                            copyright, clues, note);
     }
 
+    /**
+     * Loads a puz file and double checks all file checksums.
+     *
+     * @param inputStream puzzle file data
+     * @return parsed puz file
+     * @throws IOException if loading fails or any checksum is wrong
+     */
     public static PuzFile verifyPuzFile(InputStream inputStream) throws IOException {
         PuzFile puzzleLoader = loadPuzFile(inputStream);
 
@@ -152,8 +170,7 @@ public class PuzFile extends AbstractPuzzleFile {
         return puzzleLoader;
     }
 
-    private static byte[] readNullTerminatedByteString(
-            LittleEndianDataInputStream dataInputStream) throws IOException {
+    private static byte[] readNullTerminatedByteString(LittleEndianDataInputStream dataInputStream) throws IOException {
         byte[] bytes = new byte[8];
         int length = 0;
         while (true) {
@@ -169,20 +186,19 @@ public class PuzFile extends AbstractPuzzleFile {
         return Arrays.copyOf(bytes, length);
     }
 
-    private static void writeNullTerminatedByteString(byte[] bytes,
-                                                      LittleEndianDataOutputStream dataOutputStream) throws IOException {
+    private static void writeNullTerminatedByteString(byte[] bytes, LittleEndianDataOutputStream dataOutputStream) throws IOException {
         dataOutputStream.write(bytes);
         dataOutputStream.writeByte(0);
     }
 
-    private static int cksum_region(byte[] data, int cksum) {
+    private static int checksumRegion(byte[] data, int cksum) {
         for (int i = 0; i < data.length; i++) {
-            cksum = cksum_byte(data[i], cksum);
+            cksum = checksumByte(data[i], cksum);
         }
         return cksum;
     }
 
-    private static int cksum_byte(byte b, int cksum) {
+    private static int checksumByte(byte b, int cksum) {
         if ((cksum & 0x1) != 0) {
             cksum >>= 1;
             cksum += 0x8000;
@@ -194,14 +210,21 @@ public class PuzFile extends AbstractPuzzleFile {
         return cksum;
     }
 
-    private static int cksum_short(int i, int cksum) {
+    private static int checksumShort(int i, int cksum) {
         byte b1 = (byte) (i & 0xFF);
         byte b2 = (byte) ((i >> 8) & 0xFF);
-        cksum = cksum_byte(b1, cksum);
-        cksum = cksum_byte(b2, cksum);
+        cksum = checksumByte(b1, cksum);
+        cksum = checksumByte(b2, cksum);
         return cksum;
     }
 
+    /**
+     * Whether to include the note when checksumming the puzzle text (true for versions >= 1.3).
+     *
+     * @param versionStringBytes 4-byte version string
+     * @return true if version >= 1.3
+     * @throws IOException if version string cannot be parsed
+     */
     private static boolean includeNoteInTextChecksum(byte[] versionStringBytes) throws IOException {
         final String versionString = new String(versionStringBytes, StandardCharsets.ISO_8859_1);
         String[] versionParts = versionString.split("\\.", 2);
@@ -211,6 +234,9 @@ public class PuzFile extends AbstractPuzzleFile {
         return versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0;
     }
 
+    /**
+     * Checks whether we already have a copy of this file, possibly modified by the solver.
+     */
     public boolean checkDuplicate(PuzFile other) {
         return getHeaderChecksum() == other.getHeaderChecksum() &&
                 getTitle().equals(other.getTitle()) && getAuthor().equals(other.getAuthor());
@@ -233,8 +259,7 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public void savePuzzleFile(OutputStream outputStream) throws IOException {
-        LittleEndianDataOutputStream dataOutputStream =
-                new LittleEndianDataOutputStream(outputStream);
+        LittleEndianDataOutputStream dataOutputStream = new LittleEndianDataOutputStream(outputStream);
 
         dataOutputStream.writeShort(computeFileChecksum());
         writeNullTerminatedByteString(mMagic, dataOutputStream);
@@ -298,11 +323,11 @@ public class PuzFile extends AbstractPuzzleFile {
 
     public int computeHeaderChecksum() {
         int cksum;
-        cksum = cksum_byte(mWidth, 0);
-        cksum = cksum_byte(mHeight, cksum);
-        cksum = cksum_short(mNumClues, cksum);
-        cksum = cksum_short(mUnknownBitmask, cksum);
-        cksum = cksum_short(mScrambledTag, cksum);
+        cksum = checksumByte(mWidth, 0);
+        cksum = checksumByte(mHeight, cksum);
+        cksum = checksumShort(mNumClues, cksum);
+        cksum = checksumShort(mUnknownBitmask, cksum);
+        cksum = checksumShort(mScrambledTag, cksum);
         return cksum;
     }
 
@@ -314,34 +339,34 @@ public class PuzFile extends AbstractPuzzleFile {
         // For some reason, the title/author/copyright/note include the null terminator in the
         // computation, but not the clues.
         if (mTitle.length > 0) {
-            cksum = cksum_region(mTitle, cksum);
-            cksum = cksum_byte((byte) 0, cksum);
+            cksum = checksumRegion(mTitle, cksum);
+            cksum = checksumByte((byte) 0, cksum);
         }
         if (mAuthor.length > 0) {
-            cksum = cksum_region(mAuthor, cksum);
-            cksum = cksum_byte((byte) 0, cksum);
+            cksum = checksumRegion(mAuthor, cksum);
+            cksum = checksumByte((byte) 0, cksum);
         }
         if (mCopyright.length > 0) {
-            cksum = cksum_region(mCopyright, cksum);
-            cksum = cksum_byte((byte) 0, cksum);
+            cksum = checksumRegion(mCopyright, cksum);
+            cksum = checksumByte((byte) 0, cksum);
         }
         for (byte[] clue : mClues) {
-            cksum = cksum_region(clue, cksum);
+            cksum = checksumRegion(clue, cksum);
         }
 
         if (mIncludeNoteInTextChecksum && mNote.length > 0) {
-            cksum = cksum_region(mNote, cksum);
-            cksum = cksum_byte((byte) 0, cksum);
+            cksum = checksumRegion(mNote, cksum);
+            cksum = checksumByte((byte) 0, cksum);
         }
 
         return cksum;
     }
 
     public byte[] computeMaskedChecksums() {
-        final short headerChecksum = (short) computeHeaderChecksum();
-        final short solutionChecksum = (short) cksum_region(mSolution, 0);
-        final short gridChecksum = (short) cksum_region(mGrid, 0);
-        final short partialChecksum = (short) computeTextChecksum(0);
+        final int headerChecksum = computeHeaderChecksum();
+        final int solutionChecksum = checksumRegion(mSolution, 0);
+        final int gridChecksum = checksumRegion(mGrid, 0);
+        final int partialChecksum = computeTextChecksum(0);
 
         final byte[] computedMaskedChecksums = new byte[8];
         computedMaskedChecksums[0] = (byte) ('I' ^ (headerChecksum & 0xFF));
@@ -362,8 +387,8 @@ public class PuzFile extends AbstractPuzzleFile {
 
     public int computeFileChecksum() {
         int cksum = computeHeaderChecksum();
-        cksum = cksum_region(mSolution, cksum);
-        cksum = cksum_region(mGrid, cksum);
+        cksum = checksumRegion(mSolution, cksum);
+        cksum = checksumRegion(mGrid, cksum);
         cksum = computeTextChecksum(cksum);
         return cksum;
     }
@@ -411,17 +436,21 @@ public class PuzFile extends AbstractPuzzleFile {
             representation = value.toUpperCase().getBytes(StandardCharsets.ISO_8859_1)[0];
         }
         mGrid[getOffset(row, col)] = representation;
-
-        // Update checksums? (Will happen automatically when puzzle is reloaded from disk - maybe
-        // not needed here.)
     }
 
     @Override
     public boolean isSolved() {
-        if (mScrambledTag == 0) {
+        switch (getScrambleState()) {
+        case UNSCRAMBLED:
             return Arrays.equals(mSolution, mGrid);
+        case SCRAMBLED:
+            return getComputedScrambledChecksum() == mScrambledChecksum;
+        default:
+            return false;
         }
+    }
 
+    private int getComputedScrambledChecksum() {
         int computedScrambledChecksum = 0;
         for (int i = 0; i < mWidth; i++) {
             for (int j = 0; j < mHeight; j++) {
@@ -429,18 +458,27 @@ public class PuzFile extends AbstractPuzzleFile {
                 if (contents == '.') {
                     continue;
                 }
-                computedScrambledChecksum = cksum_byte(contents, computedScrambledChecksum);
+                computedScrambledChecksum = checksumByte(contents, computedScrambledChecksum);
             }
         }
-        return computedScrambledChecksum == mScrambledChecksum;
-    }
-
-    @Override
-    public boolean isLocked() {
-        return mScrambledTag == LOCKED;
+        return computedScrambledChecksum;
     }
 
     public int getScrambledChecksum() {
         return mScrambledChecksum;
+    }
+
+    @Override
+    public ScrambleState getScrambleState() {
+        switch (mScrambledTag) {
+        case 0x0:
+            return ScrambleState.UNSCRAMBLED;
+        case 0x2:
+            return ScrambleState.LOCKED;
+        case 0x4:
+            return ScrambleState.SCRAMBLED;
+        default:
+            return ScrambleState.UNKNOWN;
+        }
     }
 }
