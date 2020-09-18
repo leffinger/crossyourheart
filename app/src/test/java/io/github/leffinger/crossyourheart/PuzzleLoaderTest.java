@@ -19,6 +19,9 @@ import java.util.List;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
+import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.LOCKED;
+import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.SCRAMBLED;
+import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -32,34 +35,44 @@ public class PuzzleLoaderTest {
     private final String mTitle;
     private final String mVersionString;
     private final ScrambleState mScrambled;
+    private final int mNumRebusSquares;
+    private final String[] mRebuses;
+
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
     private PuzFile mPuzzleLoader;
 
     public PuzzleLoaderTest(String filename, String title, String versionString,
-                            ScrambleState scrambled) {
+                            ScrambleState scrambled, int numRebusSquares, String[] rebuses) {
         mFilename = filename;
         mTitle = title;
         mVersionString = versionString;
         mScrambled = scrambled;
+        mNumRebusSquares = numRebusSquares;
+        mRebuses = rebuses;
     }
 
     @Parameters(name = "{0}")
     public static List<Object[]> parameters() {
-        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", ScrambleState.UNSCRAMBLED},
-                             new Object[]{"/3x4.puz", "3x4", "1.2\0", ScrambleState.UNSCRAMBLED},
+        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", UNSCRAMBLED, 0, null},
+                             new Object[]{"/3x4.puz", "3x4", "1.2\0", UNSCRAMBLED, 0, null},
                              new Object[]{"/076_ExtremelyOnline.puz", "\"Extremely Online\"",
-                                          "1.3\0", ScrambleState.LOCKED},
+                                          "1.3\0", LOCKED, 0, null},
                              new Object[]{"/075_WoodenIdols.puz", "\"Wooden Idols\"", "1.4\0",
-                                          ScrambleState.LOCKED},
-                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c",
-                                          ScrambleState.SCRAMBLED},
+                                          LOCKED, 0, null},
+                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c", SCRAMBLED, 0, null},
                              new Object[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c",
-                                          ScrambleState.SCRAMBLED},
+                                          SCRAMBLED, 0, null},
                              new Object[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0",
-                                          ScrambleState.UNSCRAMBLED},
+                                          UNSCRAMBLED, 0, null},
                              new Object[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
-                                          "1.3\0", ScrambleState.UNSCRAMBLED});
+                                          "1.3\0", UNSCRAMBLED, 0, null},
+                             new Object[]{"/wsj200827.puz", "Financial Sectors", "1.4\0",
+                                          UNSCRAMBLED, 4,
+                                          new String[]{"STOCK", "BLACK", "FREE", "MASS"}},
+                             new Object[]{"/Mar2920.puz",
+                                          "NY Times, Sunday, March 29, 2020 Keep The Change",
+                                          "1.3\0", UNSCRAMBLED, 0, null});
     }
 
     private static void assertHexEquals(byte expected, byte actual) {
@@ -189,5 +202,13 @@ public class PuzzleLoaderTest {
     @Test
     public void verifyScrambledState() {
         assertEquals(mScrambled, mPuzzleLoader.getScrambleState());
+    }
+
+    @Test
+    public void verifyRebusSquares() {
+        assertEquals(mNumRebusSquares, mPuzzleLoader.getNumRebusSquares());
+        for (int i = 0; i < mNumRebusSquares; i++) {
+            assertEquals(mRebuses[i], mPuzzleLoader.getRebus(i));
+        }
     }
 }

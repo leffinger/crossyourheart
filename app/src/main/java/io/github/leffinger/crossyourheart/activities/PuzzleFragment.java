@@ -49,9 +49,8 @@ import static java.util.Objects.requireNonNull;
  * Puzzle-solving activity.
  */
 public class PuzzleFragment extends Fragment {
-    private static final String TAG = "PuzzleFragment";
     static final int REQUEST_CODE_REBUS_ENTRY = 0;
-
+    private static final String TAG = "PuzzleFragment";
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
     private volatile boolean mSolved;
@@ -80,7 +79,6 @@ public class PuzzleFragment extends Fragment {
         mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
                                          IOUtil.getPuzzleFile(getContext(),
                                                               bundle.getString("filename")));
-
         mViewModel.isSolved().observe(this, solved -> mSolved = solved);
     }
 
@@ -186,11 +184,14 @@ public class PuzzleFragment extends Fragment {
                     mViewModel.doUndo();
                     break;
                 case KEYCODE_MODE_CHANGE:
-                    FragmentManager fragmentManager = getParentFragmentManager();
-                    RebusFragment rebusFragment =
-                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
-                    rebusFragment.setTargetFragment(PuzzleFragment.this, REQUEST_CODE_REBUS_ENTRY);
-                    rebusFragment.show(fragmentManager, "Rebus");
+                    Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT)
+                            .show();
+//                    FragmentManager fragmentManager = getParentFragmentManager();
+//                    RebusFragment rebusFragment =
+//                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
+//                    rebusFragment.setTargetFragment(PuzzleFragment.this,
+//                    REQUEST_CODE_REBUS_ENTRY);
+//                    rebusFragment.show(fragmentManager, "Rebus");
                     break;
                 default:
                     char letter = (char) primaryCode;
@@ -265,19 +266,11 @@ public class PuzzleFragment extends Fragment {
             mBinding.setLifecycleOwner(getActivity());
 
             // When a square is focused on, trigger updates to the UI (e.g. clue text).
-            mBinding.entry.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-                @Override
-                public void onFocusChange(View view, boolean hasFocus) {
-                    if (hasFocus) {
-                        mBinding.getCellViewModel().onFocus();
-                    }
+            mBinding.entry.setOnFocusChangeListener((view, hasFocus) -> {
+                if (hasFocus) {
+                    mBinding.getCellViewModel().onFocus();
                 }
             });
-
-            // Auto-focus on the first non-black square.
-            if (mBinding.getCellViewModel().getClueNumber() == 1) {
-                mBinding.entry.requestFocus();
-            }
 
             // Listen for focus changes from the MainViewModel.
             mBinding.getCellViewModel().setListener(() -> mBinding.entry.requestFocus());
@@ -286,6 +279,11 @@ public class PuzzleFragment extends Fragment {
             mBinding.getCellViewModel().isHighlighted().observe(getActivity(),
                                                                 highlighted -> mBinding.entry
                                                                         .setActivated(highlighted));
+
+            // Auto-focus on the first non-black square.
+            if (mBinding.getCellViewModel().getClueNumber() == 1) {
+                mBinding.getCellViewModel().requestFocus();
+            }
 
             // Toggle direction when a clue is clicked on (does not apply to first focusing click).
             mBinding.entry.setOnClickListener(view -> mViewModel.toggleDirection());

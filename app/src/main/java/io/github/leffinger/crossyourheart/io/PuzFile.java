@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Parses and updates Across Lite (puz) files.
@@ -17,7 +19,9 @@ import java.util.Arrays;
  * https://code.google.com/archive/p/puz/wikis/FileFormat.wiki
  */
 public class PuzFile extends AbstractPuzzleFile {
+    public static final String GRBS_SECTION_NAME = "GRBS";
     private static final String MAGIC = "ACROSS&DOWN";
+    private static final String RTBL_SECTION_NAME = "RTBL";
 
     final int mFileChecksum;
     final byte[] mMagic;
@@ -38,10 +42,13 @@ public class PuzFile extends AbstractPuzzleFile {
     final byte[] mCopyright;
     final byte[][] mClues;
     final byte[] mNote;
+    final List<Section> mExtraSections;
 
-    public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums, byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
-                   byte width, byte height, int numClues, int unknownBitmask, int scrambledTag, byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
-                   byte[][] clues, byte[] note) {
+    public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
+                   byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
+                   byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
+                   byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
+                   byte[][] clues, byte[] note, List<Section> extraSections) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -61,6 +68,7 @@ public class PuzFile extends AbstractPuzzleFile {
         mCopyright = copyright;
         mClues = clues;
         mNote = note;
+        mExtraSections = extraSections;
     }
 
     /**
@@ -123,10 +131,32 @@ public class PuzFile extends AbstractPuzzleFile {
         }
         final byte[] note = readNullTerminatedByteString(dataInputStream);
 
+        // Read extra sections. Each of these start with a four-byte key with the name of the
+        // section, and include a length and checksum.
+        List<Section> extraSections = new ArrayList<>();
+        while (true) {
+            final byte[] sectionNameBytes = new byte[4];
+            if (dataInputStream.read(sectionNameBytes) < 4) {
+                // No more data
+                break;
+            }
+
+            String sectionName = new String(sectionNameBytes);
+            int length = dataInputStream.readUnsignedShort();
+            int checksum = dataInputStream.readUnsignedShort();
+            byte[] data = new byte[length];
+            if (dataInputStream.read(data) < length) {
+                throw new EOFException();
+            }
+            dataInputStream.readByte();  // null terminator
+
+            extraSections.add(new Section(sectionName, length, checksum, data));
+        }
+
         return new PuzFile(fileChecksum, magic, headerChecksum, maskedChecksums, versionStringBytes,
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
-                           copyright, clues, note);
+                           copyright, clues, note, extraSections);
     }
 
     /**
@@ -167,10 +197,21 @@ public class PuzFile extends AbstractPuzzleFile {
                                   computedFileChecksum));
         }
 
+        // Verify extra section checksums.
+        for (Section section : puzzleLoader.mExtraSections) {
+            int computedChecksum = checksumRegion(section.data, 0);
+            if (section.checksum != computedChecksum) {
+                throw new IOException(
+                        String.format("Bad checksum for section %s: expected %04X, got %04X",
+                                      section.name, section.checksum, computedChecksum));
+            }
+        }
+
         return puzzleLoader;
     }
 
-    private static byte[] readNullTerminatedByteString(LittleEndianDataInputStream dataInputStream) throws IOException {
+    private static byte[] readNullTerminatedByteString(
+            LittleEndianDataInputStream dataInputStream) throws IOException {
         byte[] bytes = new byte[8];
         int length = 0;
         while (true) {
@@ -186,7 +227,8 @@ public class PuzFile extends AbstractPuzzleFile {
         return Arrays.copyOf(bytes, length);
     }
 
-    private static void writeNullTerminatedByteString(byte[] bytes, LittleEndianDataOutputStream dataOutputStream) throws IOException {
+    private static void writeNullTerminatedByteString(byte[] bytes,
+                                                      LittleEndianDataOutputStream dataOutputStream) throws IOException {
         dataOutputStream.write(bytes);
         dataOutputStream.writeByte(0);
     }
@@ -259,7 +301,8 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public void savePuzzleFile(OutputStream outputStream) throws IOException {
-        LittleEndianDataOutputStream dataOutputStream = new LittleEndianDataOutputStream(outputStream);
+        LittleEndianDataOutputStream dataOutputStream =
+                new LittleEndianDataOutputStream(outputStream);
 
         dataOutputStream.writeShort(computeFileChecksum());
         writeNullTerminatedByteString(mMagic, dataOutputStream);
@@ -464,10 +507,6 @@ public class PuzFile extends AbstractPuzzleFile {
         return computedScrambledChecksum;
     }
 
-    public int getScrambledChecksum() {
-        return mScrambledChecksum;
-    }
-
     @Override
     public ScrambleState getScrambleState() {
         switch (mScrambledTag) {
@@ -479,6 +518,67 @@ public class PuzFile extends AbstractPuzzleFile {
             return ScrambleState.SCRAMBLED;
         default:
             return ScrambleState.UNKNOWN;
+        }
+    }
+
+    private Section findSection(String sectionName) {
+        for (Section section : mExtraSections) {
+            if (section.name.equals(sectionName)) {
+                return section;
+            }
+        }
+        return null;
+    }
+
+    public int getNumRebusSquares() {
+        Section grbsSection = findSection(GRBS_SECTION_NAME);
+        if (grbsSection == null) {
+            return 0;
+        }
+        int numRebusSquares = 0;
+        for (byte b : grbsSection.data) {
+            if (b != 0) {
+                numRebusSquares++;
+            }
+        }
+        return numRebusSquares;
+    }
+
+    public String getRbtlString() {
+        Section rbtlSection = findSection(RTBL_SECTION_NAME);
+        if (rbtlSection == null) {
+            return "";
+        }
+        return new String(rbtlSection.data, StandardCharsets.US_ASCII);
+    }
+
+    public String getRebus(int rebusIndex) {
+        String rbtlString = getRbtlString();
+        int offset = 0;
+        while (offset < rbtlString.length()) {
+            int i = rbtlString.indexOf(';', offset);
+            if (i >= 0) {
+                int index = Integer.parseInt(rbtlString.substring(offset, offset + 2).trim());
+                if (index == rebusIndex + 1) {
+                    return rbtlString.substring(offset + 3, i);
+                }
+            }
+            offset = i + 1;
+        }
+        return null;
+    }
+
+    private static class Section {
+        final String name;
+        final int length;
+        final int checksum;
+        final byte[] data;
+
+        public Section(String name, int length, int checksum, byte[] data) {
+            this.name = name;
+            this.length = length;
+            this.checksum = checksum;
+            this.data = data;
         }
     }
 }

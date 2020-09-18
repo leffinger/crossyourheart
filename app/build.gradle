@@ -3,7 +3,7 @@ apply plugin: 'com.google.gms.google-services'
 
 android {
     compileSdkVersion 29
-    buildToolsVersion "29.0.1"
+    buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "io.github.leffinger.crossyourheart"
         minSdkVersion 21
@@ -20,6 +20,9 @@ android {
     }
     dataBinding {
         enabled = true
+    }
+    testOptions {
+        unitTests.includeAndroidResources = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

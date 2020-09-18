@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * An entire clue, including its clue number, clue text, and the cells in the clue.
  */
-class ClueViewModel {
+public class ClueViewModel {
     private boolean mAcross;
     private int mNumber;
     private String mText;
@@ -18,16 +18,8 @@ class ClueViewModel {
         return mAcross;
     }
 
-    public void setAcross(boolean across) {
-        mAcross = across;
-    }
-
     public int getNumber() {
         return mNumber;
-    }
-
-    public void setNumber(int number) {
-        mNumber = number;
     }
 
     public String getText() {
@@ -54,11 +46,21 @@ class ClueViewModel {
         mPreviousClue = previousClue;
     }
 
-    public void addCell(CellViewModel cellViewModel) {
-        mCells.add(cellViewModel);
-    }
-
     public List<CellViewModel> getCells() {
         return mCells;
+    }
+
+    public void setClueInfo(boolean isAcross, List<CellViewModel> cellViewModels, int clueNumber) {
+        mAcross = isAcross;
+        mCells = cellViewModels;
+        for (CellViewModel cell : cellViewModels) {
+            if (mAcross) {
+                cell.setAcrossClue(this);
+            } else {
+                cell.setDownClue(this);
+            }
+        }
+        mNumber = clueNumber;
+        getCells().get(0).setClueNumber(clueNumber);
     }
 }
