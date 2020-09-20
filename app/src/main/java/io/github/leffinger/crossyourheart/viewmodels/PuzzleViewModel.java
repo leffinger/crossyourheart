@@ -54,12 +54,17 @@ public class PuzzleViewModel extends ViewModel {
     /**
      * Whether the puzzle's solution is currently correct.
      */
-    private final MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> mIsSolved;
 
+    // This can be called from a background thread, so it should not call setValue() on any
+    // LiveData objects.
     public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
         mPuzzleFile = puzzleFile;
         mFile = file;
         mAcrossFocus = new MutableLiveData<>(!startWithDownClues);
+        boolean isSolved = puzzleFile.isSolved();
+        Log.i(TAG, "isSolved=" + isSolved);
+        mIsSolved = new MutableLiveData<>(isSolved);
 
         StringBuilder solution = new StringBuilder();
         for (int row = 0; row < getNumRows(); row++) {
@@ -116,7 +121,7 @@ public class PuzzleViewModel extends ViewModel {
                     mCurrentClue.setValue(currentCell.getAcrossClue());
                 } else if (currentCell.getDownClue() != null) {
                     // switch directions if this cell only has a down clue
-                    mAcrossFocus.setValue(false);  // should trigger another update
+                    mAcrossFocus.setValue(false);  // should ttrigger another update
                 }
             } else {
                 if (currentCell.getDownClue() != null) {
@@ -380,10 +385,6 @@ public class PuzzleViewModel extends ViewModel {
 
     public AbstractPuzzleFile getPuzzleFile() {
         return mPuzzleFile;
-    }
-
-    private boolean isCircled(int row, int col) {
-        return mPuzzleFile.isCircled(row, col);
     }
 
     private static class Action {

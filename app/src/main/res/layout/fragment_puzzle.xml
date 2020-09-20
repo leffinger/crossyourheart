@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
+        <import type="android.view.View" />
 
         <variable
             name="viewModel"
@@ -16,6 +17,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context=".activities.PuzzleFragment">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="@id/puzzle"
+            app:layout_constraintBottom_toBottomOf="@id/puzzle"
+            app:layout_constraintStart_toStartOf="@id/puzzle"
+            app:layout_constraintEnd_toEndOf="@id/puzzle" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/puzzle"
@@ -44,6 +53,7 @@
             android:layout_height="0dp"
             android:gravity="center"
             android:minHeight="100dp"
+            android:visibility="@{viewModel == null ? View.INVISIBLE : View.VISIBLE}"
             android:text="@{@string/clue_format(viewModel.currentClueNumber, viewModel.currentClueText)}"
             android:textSize="18sp"
             app:layout_constraintTop_toBottomOf="@id/puzzle"

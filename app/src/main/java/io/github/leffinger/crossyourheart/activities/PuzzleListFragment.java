@@ -68,23 +68,21 @@ public class PuzzleListFragment extends Fragment {
         mPuzzles = new ArrayList<>();
         mAdapter = new PuzzleFileAdapter();
 
-        // Implements a basic message handler that adds puzzles to the list as they are read from
-        // disk.
+        // Implements a message handler that adds puzzles to the list as they are read from disk.
         mHandler = new Handler(Looper.getMainLooper()) {
             @Override
             public void handleMessage(@NonNull Message msg) {
-                switch (msg.what) {
-                case MESSAGE_PUZZLE:
+                if (msg.what == MESSAGE_PUZZLE) {
                     PuzzleFileViewModel viewModel = (PuzzleFileViewModel) msg.obj;
                     mPuzzles.add(viewModel);
                     mAdapter.notifyItemInserted(mPuzzles.size() - 1);
-                    break;
-                default:
-                    Log.e(TAG, "Handler received unknown message ID: " + msg.what);
+                } else {
+                    Log.e(TAG, "Handler received unknown message type: " + msg.what);
                 }
             }
         };
 
+        // Fetch puzzles in a background task.
         new FetchPuzzleFilesTask().execute();
     }
 

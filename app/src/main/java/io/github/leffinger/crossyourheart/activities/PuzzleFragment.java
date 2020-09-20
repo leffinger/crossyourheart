@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,6 +29,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,9 +55,13 @@ public class PuzzleFragment extends Fragment {
     static final int REQUEST_CODE_REBUS_ENTRY = 0;
     private static final String TAG = "PuzzleFragment";
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
-    private PuzzleViewModel mViewModel;
+    private volatile PuzzleViewModel mViewModel;
     private volatile boolean mSolved;
     private SharedPreferences mPreferences;
+    private FragmentPuzzleBinding mFragmentPuzzleBinding;
+    private CellAdapter mCellAdapter;
+    private AbstractPuzzleFile mPuzzleFile;
+    private File mFilename;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -67,6 +73,7 @@ public class PuzzleFragment extends Fragment {
     }
 
     @Override
+    @SuppressWarnings("StaticFieldLeak")
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
@@ -79,14 +86,28 @@ public class PuzzleFragment extends Fragment {
         }
 
         mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
-        boolean startWithDownClues = mPreferences
-                .getBoolean(getString(R.string.preference_start_with_down_clues), false);
+        mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable("puzzle");
+        mCellAdapter = new CellAdapter(mPuzzleFile.getWidth(), mPuzzleFile.getHeight());
+        mFilename = IOUtil.getPuzzleFile(getContext(), bundle.getString("filename"));
+        mSolved = mPuzzleFile.isSolved();
 
-        mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
-                                         IOUtil.getPuzzleFile(getContext(),
-                                                              bundle.getString("filename")),
-                                         startWithDownClues);
-        mViewModel.isSolved().observe(this, solved -> mSolved = solved);
+        new AsyncTask<Void, Void, PuzzleViewModel>() {
+
+            @Override
+            protected PuzzleViewModel doInBackground(Void... voids) {
+                boolean startWithDownClues = mPreferences
+                        .getBoolean(getString(R.string.preference_start_with_down_clues), false);
+                return new PuzzleViewModel(mPuzzleFile, mFilename, startWithDownClues);
+            }
+
+            @Override
+            protected void onPostExecute(PuzzleViewModel puzzleViewModel) {
+                mViewModel = puzzleViewModel;
+                setUpViewModelListeners();
+                mCellAdapter.notifyDataSetChanged();
+                mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
+            }
+        }.execute();
     }
 
     @Override
@@ -139,117 +160,132 @@ public class PuzzleFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        final FragmentPuzzleBinding binding =
+        mFragmentPuzzleBinding =
                 DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
-        binding.setViewModel(mViewModel);
-        binding.setLifecycleOwner(getActivity());
+        mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
 
-        ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mViewModel.getTitle());
+        ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mPuzzleFile.getTitle());
 
-        GridLayoutManager layoutManager =
-                new GridLayoutManager(getActivity(), mViewModel.getNumColumns());
-        binding.puzzle.setLayoutManager(layoutManager);
-        binding.puzzle.setAdapter(new CellAdapter());
+        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
+        mFragmentPuzzleBinding.puzzle
+                .setLayoutManager(new GridLayoutManager(getActivity(), mPuzzleFile.getWidth()));
+        mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
 
-        binding.clue.setOnClickListener(view -> {
+        Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
+        mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
+
+        return mFragmentPuzzleBinding.getRoot();
+    }
+
+    private void setUpViewModelListeners() {
+        if (mViewModel == null) {
+            throw new RuntimeException(
+                    "setUpViewModelListeners() must be called after mViewModel is initialized");
+        }
+
+        mFragmentPuzzleBinding.setViewModel(mViewModel);
+
+        mFragmentPuzzleBinding.clue.setOnClickListener(view -> {
             if (mPreferences
                     .getBoolean(getContext().getString(R.string.preference_tap_clue_behavior),
                                 true)) {
-                doHapticFeedback(binding.clue, HapticFeedbackConstants.KEYBOARD_TAP);
+                doHapticFeedback(mFragmentPuzzleBinding.clue, HapticFeedbackConstants.KEYBOARD_TAP);
                 mViewModel.toggleDirection();
             }
         });
 
-        binding.prev.setOnClickListener(view -> {
-            doHapticFeedback(binding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
+        mFragmentPuzzleBinding.prev.setOnClickListener(view -> {
+            doHapticFeedback(mFragmentPuzzleBinding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
             mViewModel.moveToPreviousClue(skipFilledClues(), skipFilledSquares());
         });
 
-        binding.next.setOnClickListener(view -> {
-            doHapticFeedback(binding.next, HapticFeedbackConstants.KEYBOARD_TAP);
+        mFragmentPuzzleBinding.next.setOnClickListener(view -> {
+            doHapticFeedback(mFragmentPuzzleBinding.next, HapticFeedbackConstants.KEYBOARD_TAP);
             mViewModel.moveToNextClue(skipFilledClues(), skipFilledSquares());
         });
 
-        Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
-        binding.keyboard.setKeyboard(keyboard);
-        binding.keyboard.setOnKeyboardActionListener(new KeyboardView.OnKeyboardActionListener() {
+        mFragmentPuzzleBinding.keyboard
+                .setOnKeyboardActionListener(new KeyboardView.OnKeyboardActionListener() {
 
-            @RequiresApi(api = Build.VERSION_CODES.O_MR1)
-            @Override
-            public void onPress(int i) {
-                doHapticFeedback(binding.keyboard, HapticFeedbackConstants.KEYBOARD_PRESS);
-            }
+                    @RequiresApi(api = Build.VERSION_CODES.O_MR1)
+                    @Override
+                    public void onPress(int i) {
+                        doHapticFeedback(mFragmentPuzzleBinding.keyboard,
+                                         HapticFeedbackConstants.KEYBOARD_PRESS);
+                    }
 
-            @Override
-            public void onRelease(int i) {
+                    @Override
+                    public void onRelease(int i) {
 
-            }
+                    }
 
-            @Override
-            public void onKey(int primaryCode, int[] keyCodes) {
-                if (mSolved) {
-                    return;
-                }
-                switch (primaryCode) {
-                case KEYCODE_DELETE:
-                    mViewModel.doBackspace();
-                    break;
-                case KEYCODE_CANCEL:
-                    mViewModel.doUndo();
-                    break;
-                case KEYCODE_MODE_CHANGE:
-                    Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT)
-                            .show();
+                    @Override
+                    public void onKey(int primaryCode, int[] keyCodes) {
+                        if (mSolved) {
+                            return;
+                        }
+                        switch (primaryCode) {
+                        case KEYCODE_DELETE:
+                            mViewModel.doBackspace();
+                            break;
+                        case KEYCODE_CANCEL:
+                            mViewModel.doUndo();
+                            break;
+                        case KEYCODE_MODE_CHANGE:
+                            Toast.makeText(getActivity(), R.string.rebus_message,
+                                           Toast.LENGTH_SHORT).show();
 //                    FragmentManager fragmentManager = getParentFragmentManager();
 //                    RebusFragment rebusFragment =
 //                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
 //                    rebusFragment.setTargetFragment(PuzzleFragment.this,
 //                    REQUEST_CODE_REBUS_ENTRY);
 //                    rebusFragment.show(fragmentManager, "Rebus");
-                    break;
-                default:
-                    char letter = (char) primaryCode;
-                    mViewModel.setCurrentCellContents(String.valueOf(letter), skipFilledClues(),
-                                                      skipFilledSquares());
+                            break;
+                        default:
+                            char letter = (char) primaryCode;
+                            mViewModel.setCurrentCellContents(String.valueOf(letter),
+                                                              skipFilledClues(),
+                                                              skipFilledSquares());
+                        }
+                    }
+
+                    @Override
+                    public void onText(CharSequence charSequence) {
+
+                    }
+
+                    @Override
+                    public void swipeLeft() {
+
+                    }
+
+                    @Override
+                    public void swipeRight() {
+
+                    }
+
+                    @Override
+                    public void swipeDown() {
+
+                    }
+
+                    @Override
+                    public void swipeUp() {
+
+                    }
+                });
+
+        if (!mSolved) {
+            mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
+                mSolved = solved;
+                if (solved) {
+                    AlertDialog dialog =
+                            new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
+                                    .setPositiveButton(android.R.string.ok, null).create();
+                    dialog.show();
                 }
-            }
-
-            @Override
-            public void onText(CharSequence charSequence) {
-
-            }
-
-            @Override
-            public void swipeLeft() {
-
-            }
-
-            @Override
-            public void swipeRight() {
-
-            }
-
-            @Override
-            public void swipeDown() {
-
-            }
-
-            @Override
-            public void swipeUp() {
-
-            }
-        });
-
-        mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
-            if (solved) {
-                AlertDialog dialog =
-                        new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
-                                .setPositiveButton(android.R.string.ok, null).create();
-                dialog.show();
-            }
-        });
-
-        return binding.getRoot();
+            });
+        }
     }
 
     private void doHapticFeedback(View view, int type) {
@@ -302,14 +338,13 @@ public class PuzzleFragment extends Fragment {
             });
 
             // Listen for focus changes from the MainViewModel.
-            mBinding.getCellViewModel().setListener(() -> mBinding.entry.requestFocus());
+            mBinding.getCellViewModel().setListener(mBinding.entry::requestFocus);
 
             // "Activate" squares in the same clue as the focused square.
-            mBinding.getCellViewModel().isHighlighted().observe(getActivity(),
-                                                                highlighted -> mBinding.entry
-                                                                        .setActivated(highlighted));
+            mBinding.getCellViewModel().isHighlighted()
+                    .observe(getActivity(), mBinding.entry::setActivated);
 
-            // Auto-focus on the first non-black square.
+            // Auto-focus on the first cell for clue 1.
             if (mBinding.getCellViewModel().getClueNumber() == 1) {
                 mBinding.getCellViewModel().requestFocus();
             }
@@ -333,6 +368,14 @@ public class PuzzleFragment extends Fragment {
     }
 
     private class CellAdapter extends RecyclerView.Adapter<CellHolder> {
+        private final int mSize;
+        private final int mWidth;
+
+        public CellAdapter(int width, int height) {
+            mSize = width * height;
+            mWidth = width;
+            setHasStableIds(true);
+        }
 
         @NonNull
         @Override
@@ -344,15 +387,17 @@ public class PuzzleFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull CellHolder holder, int position) {
-            CellViewModel cellViewModel = mViewModel
-                    .getCellViewModel(position / mViewModel.getNumColumns(),
-                                      position % mViewModel.getNumColumns());
+            if (mViewModel == null) {
+                return;
+            }
+            CellViewModel cellViewModel =
+                    mViewModel.getCellViewModel(position / mWidth, position % mWidth);
             holder.bind(cellViewModel);
         }
 
         @Override
         public int getItemCount() {
-            return mViewModel.getNumRows() * mViewModel.getNumColumns();
+            return mSize;
         }
     }
 }
