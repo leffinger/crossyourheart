@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -45,15 +46,18 @@ public class PuzFile extends AbstractPuzzleFile {
     final byte[] mTitle;
     final byte[] mAuthor;
     final byte[] mCopyright;
-    final byte[][] mClues;
+    final Clue[] mClues;
     final byte[] mNote;
     final List<Section> mExtraSections;
+    final int[] mAcrossClueMapping;
+    final int[] mDownClueMapping;
 
     public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
                    byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
                    byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
                    byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
-                   byte[][] clues, byte[] note, List<Section> extraSections) {
+                   Clue[] clues, byte[] note, List<Section> extraSections, int[] acrossClueMapping,
+                   int[] downClueMapping) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -71,9 +75,11 @@ public class PuzFile extends AbstractPuzzleFile {
         mTitle = title;
         mAuthor = author;
         mCopyright = copyright;
-        mClues = clues;
         mNote = note;
         mExtraSections = extraSections;
+        mClues = clues;
+        mAcrossClueMapping = acrossClueMapping;
+        mDownClueMapping = downClueMapping;
     }
 
     /**
@@ -130,9 +136,9 @@ public class PuzFile extends AbstractPuzzleFile {
         final byte[] title = readNullTerminatedByteString(dataInputStream);
         final byte[] author = readNullTerminatedByteString(dataInputStream);
         final byte[] copyright = readNullTerminatedByteString(dataInputStream);
-        final byte[][] clues = new byte[numClues][];
+        final byte[][] clueTexts = new byte[numClues][];
         for (int i = 0; i < numClues; i++) {
-            clues[i] = readNullTerminatedByteString(dataInputStream);
+            clueTexts[i] = readNullTerminatedByteString(dataInputStream);
         }
         final byte[] note = readNullTerminatedByteString(dataInputStream);
 
@@ -144,14 +150,129 @@ public class PuzFile extends AbstractPuzzleFile {
             if (section == null) {
                 break;
             }
-
             extraSections.add(section);
+        }
+
+        // Clue assignment. This part is not persisted, but we do it here so that (1) we don't
+        // have to redo this math whenever we create a ViewModel and (2) we can fail loading if
+        // there is an issue assigning clues.
+        Clue[] clues = new Clue[numClues];
+        for (int i = 0; i < numClues; i++) {
+            clues[i] = new Clue(new String(clueTexts[i], StandardCharsets.ISO_8859_1));
+        }
+        int[] acrossClueMapping = new int[height * width];
+        int[] downClueMapping = new int[height * width];
+
+        // Split cells into groups of across clues, iterating in row-major order. The values here
+        // are lists of offsets into the grid/solution arrays.
+        List<List<Integer>> acrossClues = new ArrayList<>();
+        for (int row = 0; row < height; row++) {
+            List<Integer> nextClue = null;
+            for (int col = 0; col < width; col++) {
+                int offset = row * width + col;
+                if (solution[offset] == '.') {
+                    if (nextClue != null && nextClue.size() > 2) {
+                        acrossClues.add(nextClue);
+                    }
+                    nextClue = null;
+                } else {
+                    if (nextClue == null) {
+                        nextClue = new ArrayList<>();
+                    }
+                    nextClue.add(offset);
+                }
+            }
+            if (nextClue != null && nextClue.size() > 2) {
+                acrossClues.add(nextClue);
+            }
+        }
+
+        // Split cells into groups of down clues, iterating in column-major order.
+        List<List<Integer>> downClues = new ArrayList<>();
+        for (int col = 0; col < width; col++) {
+            List<Integer> nextClue = null;
+            for (int row = 0; row < height; row++) {
+                int offset = row * width + col;
+                if (solution[offset] == '.') {
+                    if (nextClue != null && nextClue.size() > 2) {
+                        downClues.add(nextClue);
+                    }
+                    nextClue = null;
+                } else {
+                    if (nextClue == null) {
+                        nextClue = new ArrayList<>();
+                    }
+                    nextClue.add(offset);
+                }
+            }
+            if (nextClue != null && nextClue.size() > 2) {
+                downClues.add(nextClue);
+            }
+        }
+
+        if (acrossClues.size() + downClues.size() != numClues) {
+            throw new IOException(String.format(
+                    "Wrong number of clues: expected %d, but had %d across and %d down (%d total)",
+                    numClues, acrossClues.size(), downClues.size(),
+                    acrossClues.size() + downClues.size()));
+        }
+
+        // Sort down clues in row-major order for clue assignment.
+        Collections.sort(downClues, (clue1, clue2) -> clue1.get(0).compareTo(clue2.get(0)));
+
+        // For each group of cells, assign it to a ClueViewModel.
+        int acrossIndex = 0;
+        int downIndex = 0;
+        int clueNumber = 1;
+        for (int clueIndex = 0; clueIndex < clueTexts.length; clueIndex++) {
+            Clue clue = clues[clueIndex];
+            if (acrossIndex >= acrossClues.size()) {
+                // No more across clues
+                setClueInfo(clue, false, clueNumber++, clueIndex, downClueMapping,
+                            downClues.get(downIndex++));
+            } else if (downIndex >= downClues.size()) {
+                // No more down clues
+                setClueInfo(clue, true, clueNumber++, clueIndex, acrossClueMapping,
+                            acrossClues.get(acrossIndex++));
+            } else {
+                List<Integer> acrossCells = acrossClues.get(acrossIndex);
+                List<Integer> downCells = downClues.get(downIndex);
+                int cmp = acrossCells.get(0).compareTo(downCells.get(0));
+                if (cmp == 0) {
+                    // Across and down start on the same square and share a clue number.
+                    setClueInfo(clue, true, clueNumber, clueIndex, acrossClueMapping, acrossCells);
+                    clue = clues[++clueIndex];
+                    setClueInfo(clue, false, clueNumber++, clueIndex, downClueMapping, downCells);
+                    acrossIndex++;
+                    downIndex++;
+                } else if (cmp <= 0) {
+                    // Across clue.
+                    setClueInfo(clue, true, clueNumber++, clueIndex, acrossClueMapping,
+                                acrossCells);
+                    acrossIndex++;
+                } else {
+                    // Down clue.
+                    setClueInfo(clue, false, clueNumber++, clueIndex, downClueMapping, downCells);
+                    downIndex++;
+                }
+            }
         }
 
         return new PuzFile(fileChecksum, magic, headerChecksum, maskedChecksums, versionStringBytes,
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
-                           copyright, clues, note, extraSections);
+                           copyright, clues, note, extraSections, acrossClueMapping,
+                           downClueMapping);
+    }
+
+    /* Helper method for clue assignment. */
+    private static void setClueInfo(Clue clue, boolean isAcross, int clueNumber, int clueIndex,
+                                    int[] mapping, List<Integer> offsets) {
+        clue.setAcross(isAcross);
+        clue.setNumber(clueNumber);
+        for (int offset : offsets) {
+            mapping[offset] = clueIndex + 1;
+        }
     }
 
     /**
@@ -199,6 +320,15 @@ public class PuzFile extends AbstractPuzzleFile {
                 throw new IOException(
                         String.format("Bad checksum for section %s: expected %04X, got %04X",
                                       section.name, section.checksum, computedChecksum));
+            }
+        }
+
+        // Verify clue assignment.
+        Clue[] clues = puzzleLoader.mClues;
+        for (int i = 0; i < clues.length; i++) {
+            Clue clue = clues[i];
+            if (clue.getNumber() == 0) {
+                throw new IOException("Missing clue number for clue index" + i);
             }
         }
 
@@ -318,8 +448,9 @@ public class PuzFile extends AbstractPuzzleFile {
         writeNullTerminatedByteString(mTitle, dataOutputStream);
         writeNullTerminatedByteString(mAuthor, dataOutputStream);
         writeNullTerminatedByteString(mCopyright, dataOutputStream);
-        for (byte[] clue : mClues) {
-            writeNullTerminatedByteString(clue, dataOutputStream);
+        for (Clue clue : mClues) {
+            byte[] bytes = clue.getText().getBytes(StandardCharsets.ISO_8859_1);
+            writeNullTerminatedByteString(bytes, dataOutputStream);
         }
         writeNullTerminatedByteString(mNote, dataOutputStream);
         for (Section section : mExtraSections) {
@@ -391,8 +522,8 @@ public class PuzFile extends AbstractPuzzleFile {
             cksum = checksumRegion(mCopyright, cksum);
             cksum = checksumByte((byte) 0, cksum);
         }
-        for (byte[] clue : mClues) {
-            cksum = checksumRegion(clue, cksum);
+        for (Clue clue : mClues) {
+            cksum = checksumRegion(clue.getText().getBytes(StandardCharsets.ISO_8859_1), cksum);
         }
 
         if (mIncludeNoteInTextChecksum && mNote.length > 0) {
@@ -437,11 +568,6 @@ public class PuzFile extends AbstractPuzzleFile {
     @Override
     public String getTitle() {
         return new String(mTitle, StandardCharsets.ISO_8859_1);
-    }
-
-    @Override
-    public String getClue(int i) {
-        return new String(mClues[i], StandardCharsets.ISO_8859_1);
     }
 
     @Override
@@ -574,6 +700,21 @@ public class PuzFile extends AbstractPuzzleFile {
         }
         byte mask = gextSection.data[getOffset(row, col)];
         return (mask & GEXT_MASK_CIRCLED) != 0;
+    }
+
+    @Override
+    public Clue getClue(int i) {
+        return mClues[i];
+    }
+
+    @Override
+    public int getAcrossClueIndex(int row, int col) {
+        return mAcrossClueMapping[getOffset(row, col)] - 1;
+    }
+
+    @Override
+    public int getDownClueIndex(int row, int col) {
+        return mDownClueMapping[getOffset(row, col)] - 1;
     }
 
     private static class Section implements Serializable {

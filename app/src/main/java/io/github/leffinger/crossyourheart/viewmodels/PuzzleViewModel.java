@@ -12,8 +12,6 @@ import androidx.lifecycle.ViewModel;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 
@@ -71,99 +69,34 @@ public class PuzzleViewModel extends ViewModel {
             solution.append('\n');
         }
 
-        mGrid = new CellViewModel[getNumRows()][getNumColumns()];
-
+        // Construct a structure of ClueViewModels linked to CellViewModels, and vice versa.
         ClueViewModel[] clues = new ClueViewModel[mPuzzleFile.getNumClues()];
         for (int i = 0; i < clues.length; i++) {
-            clues[i] = new ClueViewModel();
-            clues[i].setText(mPuzzleFile.getClue(i));
+            AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
+            clues[i] = new ClueViewModel(clue.isAcross(), clue.getNumber(), clue.getText());
         }
 
-        // Split cells into groups of across clues, iterating in row-major order.
-        List<List<CellViewModel>> acrossClues = new ArrayList<>();
+        mGrid = new CellViewModel[getNumRows()][getNumColumns()];
         for (int row = 0; row < getNumRows(); row++) {
-            List<CellViewModel> nextClue = null;
             for (int col = 0; col < getNumColumns(); col++) {
                 if (mPuzzleFile.isBlack(row, col)) {
-                    if (nextClue != null && nextClue.size() > 2) {
-                        acrossClues.add(nextClue);
-                    }
-                    nextClue = null;
-                } else {
-                    if (nextClue == null) {
-                        nextClue = new ArrayList<>();
-                    }
-                    String contents = puzzleFile.getCellContents(row, col);
-                    mGrid[row][col] =
-                            new CellViewModel(this, row, col, contents, isCircled(row, col));
-                    nextClue.add(mGrid[row][col]);
+                    continue;
                 }
-            }
-            if (nextClue != null && nextClue.size() > 2) {
-                acrossClues.add(nextClue);
-            }
-        }
 
-        // Split cells into groups of down clues, iterating in column-major order.
-        List<List<CellViewModel>> downClues = new ArrayList<>();
-        for (int col = 0; col < getNumColumns(); col++) {
-            List<CellViewModel> nextClue = null;
-            for (int row = 0; row < getNumRows(); row++) {
-                if (mPuzzleFile.isBlack(row, col)) {
-                    if (nextClue != null && nextClue.size() > 2) {
-                        downClues.add(nextClue);
-                    }
-                    nextClue = null;
-                } else {
-                    if (nextClue == null) {
-                        nextClue = new ArrayList<>();
-                    }
-                    nextClue.add(mGrid[row][col]);
+                mGrid[row][col] =
+                        new CellViewModel(this, row, col, mPuzzleFile.getCellContents(row, col),
+                                          mPuzzleFile.isCircled(row, col));
+
+                int acrossClueIndex = mPuzzleFile.getAcrossClueIndex(row, col);
+                if (acrossClueIndex >= 0) {
+                    mGrid[row][col].setAcrossClue(clues[acrossClueIndex]);
+                    clues[acrossClueIndex].addCell(mGrid[row][col]);
                 }
-            }
-            if (nextClue != null && nextClue.size() > 2) {
-                downClues.add(nextClue);
-            }
-        }
 
-        // TODO(effinger): Verify this during puzzle load so we fail earlier.
-        if (acrossClues.size() + downClues.size() != mPuzzleFile.getNumClues()) {
-            throw new RuntimeException(String.format(
-                    "Wrong number of clues: expected %d, but had %d across and %d down (%d total)",
-                    mPuzzleFile.getNumClues(), acrossClues.size(), downClues.size(),
-                    acrossClues.size() + downClues.size()));
-        }
-
-        // Sort down clues in row-major order for clue assignment.
-        Collections.sort(downClues, (clue1, clue2) -> clue1.get(0).compareTo(clue2.get(0)));
-
-        // For each group of cells, assign it to a ClueViewModel.
-        int acrossIndex = 0;
-        int downIndex = 0;
-        int clueNumber = 1;
-        for (int clueIndex = 0; clueIndex < clues.length; clueIndex++) {
-            ClueViewModel clueViewModel = clues[clueIndex];
-            if (acrossIndex >= acrossClues.size()) {
-                // No more across clues
-                clueViewModel.setClueInfo(false, downClues.get(downIndex++), clueNumber++);
-            } else if (downIndex >= downClues.size()) {
-                // No more down clues
-                clueViewModel.setClueInfo(true, acrossClues.get(acrossIndex++), clueNumber++);
-            } else {
-                List<CellViewModel> acrossCells = acrossClues.get(acrossIndex);
-                List<CellViewModel> downCells = downClues.get(downIndex);
-                int cmp = acrossCells.get(0).compareTo(downCells.get(0));
-                if (cmp == 0) {
-                    // Across and down start on the same square and share a clue number.
-                    clueViewModel.setClueInfo(true, acrossClues.get(acrossIndex++), clueNumber);
-                    clueViewModel = clues[++clueIndex];
-                    clueViewModel.setClueInfo(false, downClues.get(downIndex++), clueNumber++);
-                } else if (cmp <= 0) {
-                    // Across clue.
-                    clueViewModel.setClueInfo(true, acrossClues.get(acrossIndex++), clueNumber++);
-                } else {
-                    // Down clue.
-                    clueViewModel.setClueInfo(false, downClues.get(downIndex++), clueNumber++);
+                int downClueIndex = mPuzzleFile.getDownClueIndex(row, col);
+                if (downClueIndex >= 0) {
+                    mGrid[row][col].setDownClue(clues[downClueIndex]);
+                    clues[downClueIndex].addCell(mGrid[row][col]);
                 }
             }
         }

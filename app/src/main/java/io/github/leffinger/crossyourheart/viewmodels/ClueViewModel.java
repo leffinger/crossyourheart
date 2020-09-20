@@ -14,6 +14,12 @@ public class ClueViewModel {
     private ClueViewModel mPreviousClue;
     private List<CellViewModel> mCells = new ArrayList<>();
 
+    public ClueViewModel(boolean across, int number, String text) {
+        mAcross = across;
+        mNumber = number;
+        mText = text;
+    }
+
     public boolean isAcross() {
         return mAcross;
     }
@@ -71,5 +77,12 @@ public class ClueViewModel {
             }
         }
         return true;
+    }
+
+    public void addCell(CellViewModel cellViewModel) {
+        if (mCells.isEmpty()) {
+            cellViewModel.setClueNumber(mNumber);
+        }
+        mCells.add(cellViewModel);
     }
 }

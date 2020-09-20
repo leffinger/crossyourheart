@@ -10,8 +10,6 @@ import java.io.Serializable;
 public abstract class AbstractPuzzleFile implements Serializable {
     public abstract int getNumClues();
 
-    public abstract String getClue(int i);
-
     public abstract boolean isBlack(int row, int col);
 
     public abstract String getCellSolution(int row, int col);
@@ -40,7 +38,43 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract boolean isCircled(int row, int col);
 
+    public abstract int getAcrossClueIndex(int row, int col);
+
+    public abstract int getDownClueIndex(int row, int col);
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
+    }
+
+    public abstract Clue getClue(int i);
+
+    public static class Clue implements Serializable {
+        private final String mText;
+        private boolean mIsAcross;
+        private int mNumber;
+
+        public Clue(String text) {
+            mText = text;
+        }
+
+        public String getText() {
+            return mText;
+        }
+
+        public void setAcross(boolean across) {
+            mIsAcross = across;
+        }
+
+        public void setNumber(int number) {
+            mNumber = number;
+        }
+
+        public boolean isAcross() {
+            return mIsAcross;
+        }
+
+        public int getNumber() {
+            return mNumber;
+        }
     }
 }
