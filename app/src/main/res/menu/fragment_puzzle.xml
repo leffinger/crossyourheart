@@ -12,4 +12,9 @@
         android:title="@string/title_activity_settings"
         android:icon="@drawable/settings"
         app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/reset_puzzle"
+        android:title="@string/reset_puzzle"
+        app:showAsAction="never" />
 </menu>

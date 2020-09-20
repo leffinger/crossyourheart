@@ -116,22 +116,6 @@ public class CellViewModel {
         mPuzzleViewModel.onContentsChanged(mRow, mCol, mContents.getValue());
     }
 
-    public int compareTo(CellViewModel cellViewModel) {
-        if (this.mRow < cellViewModel.mRow) {
-            return -1;
-        }
-        if (this.mRow > cellViewModel.mRow) {
-            return 1;
-        }
-        if (this.mCol < cellViewModel.mCol) {
-            return -1;
-        }
-        if (this.mCol > cellViewModel.mCol) {
-            return 1;
-        }
-        return 0;
-    }
-
     public interface Listener {
         void requestFocus();
     }

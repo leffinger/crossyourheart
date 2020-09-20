@@ -151,6 +151,16 @@ public class PuzzleFragment extends Fragment {
         case R.id.settings:
             startActivity(SettingsActivity.newIntent(getContext()));
             return true;
+        case R.id.reset_puzzle:
+            AlertDialog alertDialog =
+                    new AlertDialog.Builder(getContext()).setTitle(R.string.reset_puzzle)
+                            .setMessage(R.string.reset_puzzle_alert)
+                            .setPositiveButton(R.string.reset_puzzle, (dialogInterface, i) -> {
+                                mViewModel.resetPuzzle();
+                            }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
+                            .create();
+            alertDialog.show();
+            return true;
         default:
             return super.onOptionsItemSelected(item);
         }

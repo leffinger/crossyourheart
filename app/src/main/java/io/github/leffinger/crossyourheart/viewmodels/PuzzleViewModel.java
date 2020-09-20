@@ -387,6 +387,18 @@ public class PuzzleViewModel extends ViewModel {
         return mPuzzleFile;
     }
 
+    public void resetPuzzle() {
+        for (CellViewModel[] row : mGrid) {
+            for (CellViewModel cell : row) {
+                if (cell != null) {
+                    cell.getContents().setValue("");
+                }
+            }
+        }
+        mUndoStack.clear();
+        mIsSolved.setValue(false);
+    }
+
     private static class Action {
         CellViewModel mModifiedCell;
         CellViewModel mFocusedCell;
