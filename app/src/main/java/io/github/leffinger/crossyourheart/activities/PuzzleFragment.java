@@ -141,17 +141,19 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.puzzle_info:
+        int itemId = item.getItemId();
+        if (itemId == R.id.puzzle_info) {
             FragmentManager fragmentManager = getParentFragmentManager();
             PuzzleInfoFragment infoFragment =
                     PuzzleInfoFragment.newInstance(mViewModel.getPuzzleInfoViewModel());
             infoFragment.show(fragmentManager, "PuzzleInfo");
             return true;
-        case R.id.settings:
+        }
+        if (itemId == R.id.settings) {
             startActivity(SettingsActivity.newIntent(getContext()));
             return true;
-        case R.id.reset_puzzle:
+        }
+        if (itemId == R.id.reset_puzzle) {
             AlertDialog alertDialog =
                     new AlertDialog.Builder(getContext()).setTitle(R.string.reset_puzzle)
                             .setMessage(R.string.reset_puzzle_alert)
@@ -161,9 +163,8 @@ public class PuzzleFragment extends Fragment {
                             .create();
             alertDialog.show();
             return true;
-        default:
-            return super.onOptionsItemSelected(item);
         }
+        return super.onOptionsItemSelected(item);
     }
 
     @Nullable

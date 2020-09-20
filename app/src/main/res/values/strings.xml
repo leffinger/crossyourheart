@@ -23,5 +23,5 @@
     <string name="user_experience">User Experience</string>
     <string name="start_with_down_clues">Start with down clues</string>
     <string name="reset_puzzle">Reset Puzzle</string>
-    <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and the undo stack.</string>
+    <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and clear the undo stack.</string>
 </resources>
