@@ -38,6 +38,8 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract ScrambleState getScrambleState();
 
+    public abstract boolean isCircled(int row, int col);
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
     }

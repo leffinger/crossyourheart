@@ -7,7 +7,6 @@
     <string name="delete_puzzle">Delete this puzzle?</string>
     <string name="open_file">Open Puzzle File…</string>
     <string name="solved">Solved</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="download_header">Cross Your Heart supports puzzle files that end in \".puz\". Here are some sites where you can download puzzles!</string>
     <string name="download_file">Download Puzzles…</string>
     <string name="locked_message">Puzzle solution is not available</string>
@@ -15,4 +14,12 @@
     <string name="unsolved_message">Puzzle is in progress</string>
     <string name="rebus_message">Rebus not supported yet :(</string>
     <string name="rebus_title">Rebus Entry</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="navigation_preferences">Navigation</string>
+    <string name="tap_clue_behavior">Tapping clue text changes direction</string>
+    <string name="skip_filled_clues">Skip to next empty clue</string>
+    <string name="skip_filled_squares">Skip to next empty square</string>
+    <string name="enable_haptic_feedback">Enable haptic feedback</string>
+    <string name="user_experience">User Experience</string>
+    <string name="start_with_down_clues">Start with down clues</string>
 </resources>

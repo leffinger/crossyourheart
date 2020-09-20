@@ -63,4 +63,13 @@ public class ClueViewModel {
         mNumber = clueNumber;
         getCells().get(0).setClueNumber(clueNumber);
     }
+
+    public boolean isFilled() {
+        for (CellViewModel cell : mCells) {
+            if (cell.getContents().getValue().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

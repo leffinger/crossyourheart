@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
@@ -27,7 +30,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import io.github.leffinger.crossyourheart.R;
@@ -45,8 +47,11 @@ import static android.app.Activity.RESULT_OK;
 public class PuzzleListFragment extends Fragment {
     private static final String TAG = "PuzzleListFragment";
     private static final int REQUEST_CODE_OPEN_FILE = 0;
+    private static final int MESSAGE_PUZZLE = 0;
+
     private List<PuzzleFileViewModel> mPuzzles;
     private PuzzleFileAdapter mAdapter;
+    private Handler mHandler;
 
     public static PuzzleListFragment newInstance() {
         PuzzleListFragment fragment = new PuzzleListFragment();
@@ -62,6 +67,24 @@ public class PuzzleListFragment extends Fragment {
 
         mPuzzles = new ArrayList<>();
         mAdapter = new PuzzleFileAdapter();
+
+        // Implements a basic message handler that adds puzzles to the list as they are read from
+        // disk.
+        mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                switch (msg.what) {
+                case MESSAGE_PUZZLE:
+                    PuzzleFileViewModel viewModel = (PuzzleFileViewModel) msg.obj;
+                    mPuzzles.add(viewModel);
+                    mAdapter.notifyItemInserted(mPuzzles.size() - 1);
+                    break;
+                default:
+                    Log.e(TAG, "Handler received unknown message ID: " + msg.what);
+                }
+            }
+        };
+
         new FetchPuzzleFilesTask().execute();
     }
 
@@ -113,40 +136,31 @@ public class PuzzleListFragment extends Fragment {
         void onDownloadSelected();
     }
 
-    private class FetchPuzzleFilesTask extends AsyncTask<Void, Void, List<PuzzleFileViewModel>> {
+    private class FetchPuzzleFilesTask extends AsyncTask<Void, Void, Void> {
 
         @Override
-        protected List<PuzzleFileViewModel> doInBackground(Void... voids) {
-            List<PuzzleFileViewModel> puzzles = new ArrayList<>();
+        protected Void doInBackground(Void... voids) {
             File puzzleDir = IOUtil.getPuzzleDir(getContext());
             File[] files = puzzleDir.listFiles();
-            Arrays.sort(files, new Comparator<File>() {
-                @Override
-                public int compare(File file1, File file2) {
-                    return file2.getName().compareTo(file1.getName());
-                }
-            });
+            Arrays.sort(files, (file1, file2) -> file2.getName().compareTo(file1.getName()));
             for (File file : files) {
                 try (FileInputStream inputStream = new FileInputStream(file)) {
                     PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
-                    puzzles.add(new PuzzleFileViewModel(file.getName(), puzzleLoader));
+                    PuzzleFileViewModel viewModel =
+                            new PuzzleFileViewModel(file.getName(), puzzleLoader);
+                    Message completeMessage = mHandler.obtainMessage(MESSAGE_PUZZLE, viewModel);
+                    completeMessage.sendToTarget();
                 } catch (IOException e) {
-                    Log.e(TAG, "Failed to load puzzle file", e);
+                    Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
                     e.printStackTrace();
                 }
             }
-            return puzzles;
-        }
-
-        @Override
-        protected void onPostExecute(List<PuzzleFileViewModel> puzzleFiles) {
-            mPuzzles.addAll(puzzleFiles);
-            mAdapter.notifyDataSetChanged();
+            return null;
         }
     }
 
     private class PuzzleFileHolder extends RecyclerView.ViewHolder {
-        private FragmentPuzzleFileBinding mBinding;
+        private final FragmentPuzzleFileBinding mBinding;
 
         public PuzzleFileHolder(FragmentPuzzleFileBinding binding) {
             super(binding.getRoot());
@@ -155,33 +169,29 @@ public class PuzzleListFragment extends Fragment {
 
         public void bind(PuzzleFileViewModel viewModel) {
             mBinding.setViewModel(viewModel);
-            mBinding.getRoot().setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_PRESS);
-                    ((Callbacks) getActivity())
-                            .onFileSelected(mBinding.getViewModel().getFilename());
-                }
+
+            // Clicking on the puzzle file opens that file.
+            mBinding.getRoot().setOnClickListener(view -> {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_PRESS);
+                ((Callbacks) getActivity()).onFileSelected(mBinding.getViewModel().getFilename());
             });
-            mBinding.getRoot().setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View view) {
-                    AlertDialog alertDialog =
-                            new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle)
-                                    .setPositiveButton(android.R.string.ok,
-                                                       (dialogInterface, i) -> {
-                                                           int index = getAdapterPosition();
-                                                           mPuzzles.remove(index);
-                                                           mAdapter.notifyItemRemoved(index);
-                                                           String filename = mBinding.getViewModel()
-                                                                   .getFilename();
-                                                           IOUtil.getPuzzleFile(getContext(),
-                                                                                filename).delete();
-                                                       }).setCancelable(true).create();
-                    alertDialog.show();
-                    return true;
-                }
+
+            // Long-clicking the puzzle file brings up an option to deete the file.
+            mBinding.getRoot().setOnLongClickListener(view -> {
+                AlertDialog alertDialog =
+                        new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle)
+                                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                                    int index = getAdapterPosition();
+                                    mPuzzles.remove(index);
+                                    mAdapter.notifyItemRemoved(index);
+                                    String filename = mBinding.getViewModel().getFilename();
+                                    IOUtil.getPuzzleFile(getContext(), filename).delete();
+                                }).setCancelable(true).create();
+                alertDialog.show();
+                return true;
             });
+
+            // Display the puzzle's status in an image on the right.
             mBinding.solved.setImageResource(viewModel.getSolvedStateResId());
             mBinding.solved.setOnClickListener(view -> {
                 Toast.makeText(getActivity(), viewModel.getSolvedMessageResId(), Toast.LENGTH_SHORT)

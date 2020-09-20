@@ -9,7 +9,9 @@
         android:roundIcon="@mipmap/heart_outline_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:label="@string/title_activity_settings"></activity>
         <activity android:name=".activities.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,11 +28,9 @@
                     android:scheme="content" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".activities.PuzzleActivity"
             android:parentActivityName=".activities.MainActivity" />
-
         <activity
             android:name=".activities.DownloadPuzzlesActivity"
             android:parentActivityName=".activities.MainActivity" />

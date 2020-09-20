@@ -1,0 +1,40 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/navigation_preferences">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:title="@string/tap_clue_behavior"
+            app:key="@string/preference_tap_clue_behavior"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:title="@string/skip_filled_clues"
+            app:key="@string/preference_skip_filled_clues"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:title="@string/skip_filled_squares"
+            app:key="@string/preference_skip_filled_squares"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/user_experience">
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:title="@string/enable_haptic_feedback"
+            app:key="@string/preference_enable_haptic_feedback"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:title="@string/start_with_down_clues"
+            app:key="@string/preference_start_with_down_clues"
+            app:singleLineTitle="false" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

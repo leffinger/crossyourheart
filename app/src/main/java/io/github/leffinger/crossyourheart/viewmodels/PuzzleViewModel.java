@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -38,7 +40,7 @@ public class PuzzleViewModel extends ViewModel {
     /**
      * True if the currently active clue is an Across, false if Down.
      */
-    private final MutableLiveData<Boolean> mAcrossFocus = new MutableLiveData<>(true);
+    private final MutableLiveData<Boolean> mAcrossFocus;
     /**
      * Currently active clue.
      */
@@ -50,16 +52,16 @@ public class PuzzleViewModel extends ViewModel {
     /**
      * The view model for the currently focused square.
      */
-    private MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>();
-
+    private final MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>();
     /**
      * Whether the puzzle's solution is currently correct.
      */
-    private MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
 
-    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file) {
+    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
         mPuzzleFile = puzzleFile;
         mFile = file;
+        mAcrossFocus = new MutableLiveData<>(!startWithDownClues);
 
         StringBuilder solution = new StringBuilder();
         for (int row = 0; row < getNumRows(); row++) {
@@ -92,7 +94,8 @@ public class PuzzleViewModel extends ViewModel {
                         nextClue = new ArrayList<>();
                     }
                     String contents = puzzleFile.getCellContents(row, col);
-                    mGrid[row][col] = new CellViewModel(this, row, col, contents);
+                    mGrid[row][col] =
+                            new CellViewModel(this, row, col, contents, isCircled(row, col));
                     nextClue.add(mGrid[row][col]);
                 }
             }
@@ -285,78 +288,95 @@ public class PuzzleViewModel extends ViewModel {
         mAcrossFocus.setValue(!mAcrossFocus.getValue());
     }
 
-    private void moveToNextCell() {
+    private void moveToNextCell(boolean skipFilledClues, boolean skipFilledSquares) {
         // Find our location in the current clue.
         CellViewModel currentCell = mCurrentCell.getValue();
         List<CellViewModel> currentClueCells = mCurrentClue.getValue().getCells();
         int i = currentClueCells.indexOf(currentCell);
         if (i < 0) {
+            Log.e(TAG, "CellViewModel should be in ClueViewModel but isn't!");
             return;
         }
         for (int j = 1; j < currentClueCells.size(); j++) {
             int index = (i + j) % currentClueCells.size();
-            if (currentClueCells.get(index).getContents().getValue().isEmpty()) {
+            if (!skipFilledSquares ||
+                    currentClueCells.get(index).getContents().getValue().isEmpty()) {
                 currentClueCells.get(index).requestFocus();
                 return;
             }
         }
 
         // No empty cell available; move to next clue.
-        moveToNextClue();
+        moveToNextClue(skipFilledClues, skipFilledSquares);
     }
 
-    public void moveToPreviousClue() {
+    public void moveToPreviousClue(boolean skipFilledClues, boolean skipFilledSquares) {
         ClueViewModel prev = mCurrentClue.getValue().getPreviousClue();
-        while (prev != mCurrentClue.getValue()) {
-            // Find empty cell.
-            for (CellViewModel cell : prev.getCells()) {
-                if (cell.getContents().getValue().isEmpty()) {
-                    cell.requestFocus();
-                    mAcrossFocus.setValue(prev.isAcross());
-                    return;
-                }
-            }
 
-            // No empty cell available.
-            prev = prev.getPreviousClue();
+        if (skipFilledClues) {
+            // Find a clue with at least one empty square.
+            while (prev != mCurrentClue.getValue() && prev.isFilled()) {
+                prev = prev.getPreviousClue();
+            }
+            if (prev == mCurrentClue.getValue()) {
+                // All clues are filled.
+                prev = prev.getPreviousClue();
+            }
         }
 
-        // No empty clue available. Request first cell in previous clue.
-        prev.getPreviousClue().getCells().get(0).requestFocus();
-        mAcrossFocus.setValue(prev.getPreviousClue().isAcross());
+        CellViewModel cell = prev.getCells().get(0);
+        if (skipFilledSquares) {
+            for (int i = 0; i < prev.getCells().size(); i++) {
+                if (prev.getCells().get(i).getContents().getValue().isEmpty()) {
+                    cell = prev.getCells().get(i);
+                    break;
+                }
+            }
+        }
+
+        Log.i(TAG,
+              String.format("Selecting clue %d-%s", prev.getNumber(), prev.isAcross() ? "A" : "D"));
+        mAcrossFocus.setValue(prev.isAcross());
+        cell.requestFocus();
     }
 
-    public void moveToNextClue() {
+    public void moveToNextClue(boolean skipFilledClues, boolean skipFilledSquares) {
         ClueViewModel next = mCurrentClue.getValue().getNextClue();
-        while (next != mCurrentClue.getValue()) {
-            // Find empty cell.
-            for (CellViewModel cell : next.getCells()) {
-                if (cell.getContents().getValue().isEmpty()) {
-                    mAcrossFocus.setValue(next.isAcross());
-                    cell.requestFocus();
-                    return;
-                }
-            }
 
-            // No empty cell available.
-            next = next.getNextClue();
+        if (skipFilledClues) {
+            // Find a clue with at least one empty square.
+            while (next != mCurrentClue.getValue() && next.isFilled()) {
+                next = next.getNextClue();
+            }
+            if (next == mCurrentClue.getValue()) {
+                // All clues are filled.
+                next = next.getNextClue();
+            }
         }
 
-        // No empty clue available. Request first cell in next clue.
-        next.getNextClue().getCells().get(0).requestFocus();
-        mAcrossFocus.setValue(next.getNextClue().isAcross());
+        CellViewModel cell = next.getCells().get(0);
+        if (skipFilledSquares) {
+            for (int i = 0; i < next.getCells().size(); i++) {
+                if (next.getCells().get(i).getContents().getValue().isEmpty()) {
+                    cell = next.getCells().get(i);
+                    break;
+                }
+            }
+        }
+
+        Log.i(TAG,
+              String.format("Selecting clue %d-%s", next.getNumber(), next.isAcross() ? "A" : "D"));
+        mAcrossFocus.setValue(next.isAcross());
+        cell.requestFocus();
     }
 
-    public String getCurrentCellContents() {
-        return mCurrentCell.getValue().getContents().getValue();
-    }
-
-    public void setCurrentCellContents(String newContents) {
+    public void setCurrentCellContents(String newContents, boolean skipFilledClues,
+                                       boolean skipFilledSquares) {
         CellViewModel currentCell = mCurrentCell.getValue();
         String oldContents = currentCell.getContents().getValue();
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents));
         currentCell.getContents().setValue(newContents);
-        moveToNextCell();
+        moveToNextCell(skipFilledClues, skipFilledSquares);
     }
 
     public void doUndo() {
@@ -427,6 +447,10 @@ public class PuzzleViewModel extends ViewModel {
 
     public AbstractPuzzleFile getPuzzleFile() {
         return mPuzzleFile;
+    }
+
+    private boolean isCircled(int row, int col) {
+        return mPuzzleFile.isCircled(row, col);
     }
 
     private static class Action {

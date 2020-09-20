@@ -46,7 +46,7 @@ public class PuzzleViewModelTest {
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
         PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile());
+                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
         assertEquals(3, puzzleViewModel.getNumRows());
         assertEquals(3, puzzleViewModel.getNumColumns());
         assertEquals("3x3", puzzleViewModel.getTitle());

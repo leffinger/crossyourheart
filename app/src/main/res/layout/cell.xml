@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
+        <import type="android.view.View" />
 
         <variable
             name="cellViewModel"
@@ -37,6 +38,17 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:layout_height="0dp"
+            android:layout_width="0dp"
+            android:padding="1dp"
+            app:layout_constraintTop_toTopOf="@id/entry"
+            app:layout_constraintBottom_toBottomOf="@id/entry"
+            app:layout_constraintStart_toStartOf="@id/entry"
+            app:layout_constraintEnd_toEndOf="@id/entry"
+            android:src="@drawable/circled"
+            android:visibility="@{cellViewModel.circled ? View.VISIBLE : View.INVISIBLE}" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline_vertical"

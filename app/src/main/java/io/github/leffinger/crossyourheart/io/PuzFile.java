@@ -7,6 +7,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,9 +20,13 @@ import java.util.List;
  * https://code.google.com/archive/p/puz/wikis/FileFormat.wiki
  */
 public class PuzFile extends AbstractPuzzleFile {
-    public static final String GRBS_SECTION_NAME = "GRBS";
+    private static final String TAG = "PuzFile";
     private static final String MAGIC = "ACROSS&DOWN";
+    private static final String GRBS_SECTION_NAME = "GRBS";
     private static final String RTBL_SECTION_NAME = "RTBL";
+
+    private static final String GEXT_SECTION_NAME = "GEXT";
+    private static final int GEXT_MASK_CIRCLED = 0x80;
 
     final int mFileChecksum;
     final byte[] mMagic;
@@ -135,22 +140,12 @@ public class PuzFile extends AbstractPuzzleFile {
         // section, and include a length and checksum.
         List<Section> extraSections = new ArrayList<>();
         while (true) {
-            final byte[] sectionNameBytes = new byte[4];
-            if (dataInputStream.read(sectionNameBytes) < 4) {
-                // No more data
+            Section section = Section.readSection(dataInputStream);
+            if (section == null) {
                 break;
             }
 
-            String sectionName = new String(sectionNameBytes);
-            int length = dataInputStream.readUnsignedShort();
-            int checksum = dataInputStream.readUnsignedShort();
-            byte[] data = new byte[length];
-            if (dataInputStream.read(data) < length) {
-                throw new EOFException();
-            }
-            dataInputStream.readByte();  // null terminator
-
-            extraSections.add(new Section(sectionName, length, checksum, data));
+            extraSections.add(section);
         }
 
         return new PuzFile(fileChecksum, magic, headerChecksum, maskedChecksums, versionStringBytes,
@@ -327,6 +322,9 @@ public class PuzFile extends AbstractPuzzleFile {
             writeNullTerminatedByteString(clue, dataOutputStream);
         }
         writeNullTerminatedByteString(mNote, dataOutputStream);
+        for (Section section : mExtraSections) {
+            section.writeSection(dataOutputStream);
+        }
     }
 
     public String getMagic() {
@@ -568,7 +566,17 @@ public class PuzFile extends AbstractPuzzleFile {
         return null;
     }
 
-    private static class Section {
+    @Override
+    public boolean isCircled(int row, int col) {
+        Section gextSection = findSection(GEXT_SECTION_NAME);
+        if (gextSection == null) {
+            return false;
+        }
+        byte mask = gextSection.data[getOffset(row, col)];
+        return (mask & GEXT_MASK_CIRCLED) != 0;
+    }
+
+    private static class Section implements Serializable {
         final String name;
         final int length;
         final int checksum;
@@ -579,6 +587,34 @@ public class PuzFile extends AbstractPuzzleFile {
             this.length = length;
             this.checksum = checksum;
             this.data = data;
+        }
+
+        public static Section readSection(
+                LittleEndianDataInputStream dataInputStream) throws IOException {
+            final byte[] sectionNameBytes = new byte[4];
+            if (dataInputStream.read(sectionNameBytes) < 4) {
+                // No more data
+                return null;
+            }
+
+            String sectionName = new String(sectionNameBytes);
+            int length = dataInputStream.readUnsignedShort();
+            int checksum = dataInputStream.readUnsignedShort();
+            byte[] data = new byte[length];
+            if (dataInputStream.read(data) < length) {
+                throw new EOFException();
+            }
+            dataInputStream.readByte();  // null terminator
+            Section section = new Section(sectionName, length, checksum, data);
+            return section;
+        }
+
+        public void writeSection(LittleEndianDataOutputStream outputStream) throws IOException {
+            outputStream.write(name.getBytes());
+            outputStream.writeShort(length);
+            outputStream.writeShort(checksum);
+            outputStream.write(data);
+            outputStream.write('\0');
         }
     }
 }

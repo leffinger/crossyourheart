@@ -10,13 +10,14 @@ public class CellViewModel {
     private final PuzzleViewModel mPuzzleViewModel;
     private final int mRow;
     private final int mCol;
+    private final boolean mIsCircled;
 
     private int mClueNumber;  // if this is the first cell in one or both directions
     private ClueViewModel mAcrossClue;
     private ClueViewModel mDownClue;
 
-    private MutableLiveData<String> mContents;
-    private MediatorLiveData<Boolean> mHighlighted;
+    private final MutableLiveData<String> mContents;
+    private final MediatorLiveData<Boolean> mHighlighted;
     private Listener mListener;
 
     /**
@@ -25,10 +26,12 @@ public class CellViewModel {
      * @param col             column for this cell (0-indexed)
      * @param contents        initial contents of the cell
      */
-    public CellViewModel(PuzzleViewModel puzzleViewModel, int row, int col, String contents) {
+    public CellViewModel(PuzzleViewModel puzzleViewModel, int row, int col, String contents,
+                         boolean isCircled) {
         mPuzzleViewModel = puzzleViewModel;
         mRow = row;
         mCol = col;
+        mIsCircled = isCircled;
 
         mClueNumber = 0;
 
@@ -89,6 +92,10 @@ public class CellViewModel {
 
     public LiveData<Boolean> isHighlighted() {
         return mHighlighted;
+    }
+
+    public boolean isCircled() {
+        return mIsCircled;
     }
 
     public void onFocus() {

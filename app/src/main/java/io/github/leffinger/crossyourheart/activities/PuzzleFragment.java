@@ -1,6 +1,7 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.Build;
@@ -23,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -43,7 +45,6 @@ import static android.app.Activity.RESULT_OK;
 import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
 import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
 import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Puzzle-solving activity.
@@ -54,6 +55,7 @@ public class PuzzleFragment extends Fragment {
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
     private volatile boolean mSolved;
+    private SharedPreferences mPreferences;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -73,12 +75,17 @@ public class PuzzleFragment extends Fragment {
         if (savedInstanceState != null) {
             bundle = savedInstanceState;
         } else {
-            bundle = requireNonNull(getArguments());
+            bundle = requireArguments();
         }
+
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+        boolean startWithDownClues = mPreferences
+                .getBoolean(getString(R.string.preference_start_with_down_clues), false);
 
         mViewModel = new PuzzleViewModel((AbstractPuzzleFile) bundle.getSerializable("puzzle"),
                                          IOUtil.getPuzzleFile(getContext(),
-                                                              bundle.getString("filename")));
+                                                              bundle.getString("filename")),
+                                         startWithDownClues);
         mViewModel.isSolved().observe(this, solved -> mSolved = solved);
     }
 
@@ -120,6 +127,9 @@ public class PuzzleFragment extends Fragment {
                     PuzzleInfoFragment.newInstance(mViewModel.getPuzzleInfoViewModel());
             infoFragment.show(fragmentManager, "PuzzleInfo");
             return true;
+        case R.id.settings:
+            startActivity(SettingsActivity.newIntent(getContext()));
+            return true;
         default:
             return super.onOptionsItemSelected(item);
         }
@@ -142,18 +152,22 @@ public class PuzzleFragment extends Fragment {
         binding.puzzle.setAdapter(new CellAdapter());
 
         binding.clue.setOnClickListener(view -> {
-            binding.clue.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-            mViewModel.toggleDirection();
+            if (mPreferences
+                    .getBoolean(getContext().getString(R.string.preference_tap_clue_behavior),
+                                true)) {
+                doHapticFeedback(binding.clue, HapticFeedbackConstants.KEYBOARD_TAP);
+                mViewModel.toggleDirection();
+            }
         });
 
         binding.prev.setOnClickListener(view -> {
-            binding.prev.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-            mViewModel.moveToPreviousClue();
+            doHapticFeedback(binding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToPreviousClue(skipFilledClues(), skipFilledSquares());
         });
 
         binding.next.setOnClickListener(view -> {
-            binding.next.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-            mViewModel.moveToNextClue();
+            doHapticFeedback(binding.next, HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToNextClue(skipFilledClues(), skipFilledSquares());
         });
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
@@ -163,7 +177,7 @@ public class PuzzleFragment extends Fragment {
             @RequiresApi(api = Build.VERSION_CODES.O_MR1)
             @Override
             public void onPress(int i) {
-                binding.keyboard.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_PRESS);
+                doHapticFeedback(binding.keyboard, HapticFeedbackConstants.KEYBOARD_PRESS);
             }
 
             @Override
@@ -195,7 +209,8 @@ public class PuzzleFragment extends Fragment {
                     break;
                 default:
                     char letter = (char) primaryCode;
-                    mViewModel.setCurrentCellContents(String.valueOf(letter));
+                    mViewModel.setCurrentCellContents(String.valueOf(letter), skipFilledClues(),
+                                                      skipFilledSquares());
                 }
             }
 
@@ -237,6 +252,20 @@ public class PuzzleFragment extends Fragment {
         return binding.getRoot();
     }
 
+    private void doHapticFeedback(View view, int type) {
+        if (mPreferences.getBoolean(getString(R.string.preference_enable_haptic_feedback), true)) {
+            view.performHapticFeedback(type);
+        }
+    }
+
+    private boolean skipFilledClues() {
+        return mPreferences.getBoolean(getString(R.string.preference_skip_filled_clues), true);
+    }
+
+    private boolean skipFilledSquares() {
+        return mPreferences.getBoolean(getString(R.string.preference_skip_filled_squares), true);
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         Toast.makeText(getActivity(), "onActivityResult", Toast.LENGTH_SHORT).show();
@@ -244,12 +273,12 @@ public class PuzzleFragment extends Fragment {
             String newContents = RebusFragment.getContents(data);
             Toast.makeText(getActivity(), "Got contents: " + newContents, Toast.LENGTH_SHORT)
                     .show();
-            mViewModel.setCurrentCellContents(newContents);
+            mViewModel.setCurrentCellContents(newContents, skipFilledClues(), skipFilledSquares());
         }
     }
 
     private class CellHolder extends RecyclerView.ViewHolder {
-        private CellBinding mBinding;
+        private final CellBinding mBinding;
 
         private CellHolder(CellBinding binding) {
             super(binding.getRoot());
