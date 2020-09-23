@@ -6,7 +6,6 @@ import java.io.File;
 
 public class IOUtil {
     private static final String PUZZLE_DIR_NAME = "puzzles";
-    private static final String SETTINGS_FILENAME = "settings.pb";
 
     public static File getPuzzleDir(Context context) {
         return new File(context.getFilesDir(), PUZZLE_DIR_NAME);

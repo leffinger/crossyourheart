@@ -7,6 +7,9 @@ import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
@@ -52,16 +55,24 @@ import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
  * Puzzle-solving activity.
  */
 public class PuzzleFragment extends Fragment {
-    static final int REQUEST_CODE_REBUS_ENTRY = 0;
     private static final String TAG = "PuzzleFragment";
+
+    // Activity request codes.
+    private static final int REQUEST_CODE_REBUS_ENTRY = 0;
+
+    // Handler message codes.
+    private static final int MESSAGE_VIEW_MODEL_READY = 0;
+    private static final int MESSAGE_PUZZLE_VIEW_READY = 1;
+
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
-    private volatile PuzzleViewModel mViewModel;
+    private PuzzleViewModel mViewModel;
     private volatile boolean mSolved;
     private SharedPreferences mPreferences;
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
     private CellAdapter mCellAdapter;
     private AbstractPuzzleFile mPuzzleFile;
     private File mFilename;
+    private Handler mHandler;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -91,23 +102,65 @@ public class PuzzleFragment extends Fragment {
         mFilename = IOUtil.getPuzzleFile(getContext(), bundle.getString("filename"));
         mSolved = mPuzzleFile.isSolved();
 
-        new AsyncTask<Void, Void, PuzzleViewModel>() {
+        // This handler listens on the main thread and waits for both the view model and the view
+        // to be ready.
+        mHandler = new Handler(Looper.getMainLooper()) {
+            private boolean mViewModelReady = false;
+            private boolean mPuzzleViewReady = false;
 
             @Override
-            protected PuzzleViewModel doInBackground(Void... voids) {
+            public void handleMessage(@NonNull Message msg) {
+                switch (msg.what) {
+                case MESSAGE_VIEW_MODEL_READY:
+                    mViewModelReady = true;
+                    break;
+                case MESSAGE_PUZZLE_VIEW_READY:
+                    mPuzzleViewReady = true;
+                    break;
+                }
+
+                if (mViewModelReady && mPuzzleViewReady) {
+                    setUpViewModelListeners();
+                    mCellAdapter.notifyDataSetChanged();
+                    mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
+                }
+            }
+        };
+
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
                 boolean startWithDownClues = mPreferences
                         .getBoolean(getString(R.string.preference_start_with_down_clues), false);
-                return new PuzzleViewModel(mPuzzleFile, mFilename, startWithDownClues);
-            }
-
-            @Override
-            protected void onPostExecute(PuzzleViewModel puzzleViewModel) {
-                mViewModel = puzzleViewModel;
-                setUpViewModelListeners();
-                mCellAdapter.notifyDataSetChanged();
-                mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
+                mViewModel = new PuzzleViewModel(mPuzzleFile, mFilename, startWithDownClues);
+                mHandler.obtainMessage(MESSAGE_VIEW_MODEL_READY).sendToTarget();
+                return null;
             }
         }.execute();
+    }
+
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        mFragmentPuzzleBinding =
+                DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
+        mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
+
+        ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mPuzzleFile.getTitle());
+
+        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
+        mFragmentPuzzleBinding.puzzle
+                .setLayoutManager(new GridLayoutManager(getActivity(), mPuzzleFile.getWidth()));
+        mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
+
+        Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
+        mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
+
+        mHandler.obtainMessage(MESSAGE_PUZZLE_VIEW_READY).sendToTarget();
+
+        return mFragmentPuzzleBinding.getRoot();
     }
 
     @Override
@@ -153,6 +206,18 @@ public class PuzzleFragment extends Fragment {
             startActivity(SettingsActivity.newIntent(getContext()));
             return true;
         }
+        if (itemId == R.id.check_square) {
+            mViewModel.checkCurrentCell();
+            return true;
+        }
+        if (itemId == R.id.check_clue) {
+            mViewModel.checkCurrentClue();
+            return true;
+        }
+        if (itemId == R.id.check_puzzle) {
+            mViewModel.checkPuzzle();
+            return true;
+        }
         if (itemId == R.id.reset_puzzle) {
             AlertDialog alertDialog =
                     new AlertDialog.Builder(getContext()).setTitle(R.string.reset_puzzle)
@@ -167,35 +232,16 @@ public class PuzzleFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
-        mFragmentPuzzleBinding =
-                DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
-        mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
-
-        ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mPuzzleFile.getTitle());
-
-        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mFragmentPuzzleBinding.puzzle
-                .setLayoutManager(new GridLayoutManager(getActivity(), mPuzzleFile.getWidth()));
-        mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
-
-        Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
-        mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
-
-        return mFragmentPuzzleBinding.getRoot();
-    }
-
     private void setUpViewModelListeners() {
         if (mViewModel == null) {
             throw new RuntimeException(
                     "setUpViewModelListeners() must be called after mViewModel is initialized");
         }
 
+        // Sets up basic data binding, e.g. clue number & text.
         mFragmentPuzzleBinding.setViewModel(mViewModel);
 
+        // Change direction when clue is tapped (if configured).
         mFragmentPuzzleBinding.clue.setOnClickListener(view -> {
             if (mPreferences
                     .getBoolean(getContext().getString(R.string.preference_tap_clue_behavior),
@@ -205,87 +251,22 @@ public class PuzzleFragment extends Fragment {
             }
         });
 
+        // Move to previous clue when button is pressed.
         mFragmentPuzzleBinding.prev.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
             mViewModel.moveToPreviousClue(skipFilledClues(), skipFilledSquares());
         });
 
+        // Move to next clue when button is pressed.
         mFragmentPuzzleBinding.next.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.next, HapticFeedbackConstants.KEYBOARD_TAP);
             mViewModel.moveToNextClue(skipFilledClues(), skipFilledSquares());
         });
 
-        mFragmentPuzzleBinding.keyboard
-                .setOnKeyboardActionListener(new KeyboardView.OnKeyboardActionListener() {
+        // Set up keyboard listener.
+        mFragmentPuzzleBinding.keyboard.setOnKeyboardActionListener(new PuzzleKeyboardListener());
 
-                    @RequiresApi(api = Build.VERSION_CODES.O_MR1)
-                    @Override
-                    public void onPress(int i) {
-                        doHapticFeedback(mFragmentPuzzleBinding.keyboard,
-                                         HapticFeedbackConstants.KEYBOARD_PRESS);
-                    }
-
-                    @Override
-                    public void onRelease(int i) {
-
-                    }
-
-                    @Override
-                    public void onKey(int primaryCode, int[] keyCodes) {
-                        if (mSolved) {
-                            return;
-                        }
-                        switch (primaryCode) {
-                        case KEYCODE_DELETE:
-                            mViewModel.doBackspace();
-                            break;
-                        case KEYCODE_CANCEL:
-                            mViewModel.doUndo();
-                            break;
-                        case KEYCODE_MODE_CHANGE:
-                            Toast.makeText(getActivity(), R.string.rebus_message,
-                                           Toast.LENGTH_SHORT).show();
-//                    FragmentManager fragmentManager = getParentFragmentManager();
-//                    RebusFragment rebusFragment =
-//                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
-//                    rebusFragment.setTargetFragment(PuzzleFragment.this,
-//                    REQUEST_CODE_REBUS_ENTRY);
-//                    rebusFragment.show(fragmentManager, "Rebus");
-                            break;
-                        default:
-                            char letter = (char) primaryCode;
-                            mViewModel.setCurrentCellContents(String.valueOf(letter),
-                                                              skipFilledClues(),
-                                                              skipFilledSquares());
-                        }
-                    }
-
-                    @Override
-                    public void onText(CharSequence charSequence) {
-
-                    }
-
-                    @Override
-                    public void swipeLeft() {
-
-                    }
-
-                    @Override
-                    public void swipeRight() {
-
-                    }
-
-                    @Override
-                    public void swipeDown() {
-
-                    }
-
-                    @Override
-                    public void swipeUp() {
-
-                    }
-                });
-
+        // If the puzzle was not solved to begin with, display a message when it is solved.
         if (!mSolved) {
             mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
                 mSolved = solved;
@@ -315,11 +296,8 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        Toast.makeText(getActivity(), "onActivityResult", Toast.LENGTH_SHORT).show();
         if (requestCode == REQUEST_CODE_REBUS_ENTRY && resultCode == RESULT_OK) {
             String newContents = RebusFragment.getContents(data);
-            Toast.makeText(getActivity(), "Got contents: " + newContents, Toast.LENGTH_SHORT)
-                    .show();
             mViewModel.setCurrentCellContents(newContents, skipFilledClues(), skipFilledSquares());
         }
     }
@@ -354,6 +332,14 @@ public class PuzzleFragment extends Fragment {
             // "Activate" squares in the same clue as the focused square.
             mBinding.getCellViewModel().isHighlighted()
                     .observe(getActivity(), mBinding.entry::setActivated);
+
+            // Change text color of squares marked incorrect.
+            // TODO: Can we use app-defined state attributes for this? See
+            //  https://developer.android.com/reference/android/content/res/ColorStateList
+            mBinding.getCellViewModel().isMarkedIncorrect().observe(getActivity(), incorrect -> {
+                mBinding.entry.setTextColor(getResources().getColor(
+                        incorrect ? R.color.colorMarkedIncorrect : R.color.colorEntryText));
+            });
 
             // Auto-focus on the first cell for clue 1.
             if (mBinding.getCellViewModel().getClueNumber() == 1) {
@@ -409,6 +395,74 @@ public class PuzzleFragment extends Fragment {
         @Override
         public int getItemCount() {
             return mSize;
+        }
+    }
+
+    private class PuzzleKeyboardListener implements KeyboardView.OnKeyboardActionListener {
+
+        @RequiresApi(api = Build.VERSION_CODES.O_MR1)
+        @Override
+        public void onPress(int i) {
+            doHapticFeedback(mFragmentPuzzleBinding.keyboard,
+                             HapticFeedbackConstants.KEYBOARD_PRESS);
+        }
+
+        @Override
+        public void onRelease(int i) {
+
+        }
+
+        @Override
+        public void onKey(int primaryCode, int[] keyCodes) {
+            if (mSolved) {
+                return;
+            }
+            switch (primaryCode) {
+            case KEYCODE_DELETE:
+                mViewModel.doBackspace();
+                break;
+            case KEYCODE_CANCEL:
+                mViewModel.doUndo();
+                break;
+            case KEYCODE_MODE_CHANGE:
+                Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT).show();
+//                    FragmentManager fragmentManager = getParentFragmentManager();
+//                    RebusFragment rebusFragment =
+//                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
+//                    rebusFragment.setTargetFragment(PuzzleFragment.this,
+//                    REQUEST_CODE_REBUS_ENTRY);
+//                    rebusFragment.show(fragmentManager, "Rebus");
+                break;
+            default:
+                char letter = (char) primaryCode;
+                mViewModel.setCurrentCellContents(String.valueOf(letter), skipFilledClues(),
+                                                  skipFilledSquares());
+            }
+        }
+
+        @Override
+        public void onText(CharSequence charSequence) {
+
+        }
+
+        @Override
+        public void swipeLeft() {
+
+        }
+
+        @Override
+        public void swipeRight() {
+
+        }
+
+        @Override
+        public void swipeDown() {
+
+        }
+
+        @Override
+        public void swipeUp() {
+
         }
     }
 }

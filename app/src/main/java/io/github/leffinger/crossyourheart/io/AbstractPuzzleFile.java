@@ -30,9 +30,11 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract void savePuzzleFile(OutputStream outputStream) throws IOException;
 
-    public abstract void setCellContents(int row, int col, String value);
+    public abstract void setCellContents(int row, int col, String contents);
 
     public abstract boolean isSolved();
+
+    public abstract boolean isCorrect(int row, int col);
 
     public abstract ScrambleState getScrambleState();
 

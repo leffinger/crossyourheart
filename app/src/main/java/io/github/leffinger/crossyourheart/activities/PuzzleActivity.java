@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
@@ -15,18 +14,17 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import io.github.leffinger.crossyourheart.R;
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 public class PuzzleActivity extends AppCompatActivity {
-
     private static final String TAG = "PuzzleActivity";
+    public static final String KEY_FILENAME = "filename";
     private String mFilename;
 
     public static Intent newIntent(Context context, String filename) {
         Intent intent = new Intent(context, PuzzleActivity.class);
-        intent.putExtra("filename", filename);
+        intent.putExtra(KEY_FILENAME, filename);
         return intent;
     }
 
@@ -39,9 +37,9 @@ public class PuzzleActivity extends AppCompatActivity {
                 .replace(R.id.container, PuzzleLoadingFragment.newInstance()).commitNow();
 
         if (savedInstanceState != null) {
-            mFilename = savedInstanceState.getString("filename");
+            mFilename = savedInstanceState.getString(KEY_FILENAME);
         } else {
-            mFilename = getIntent().getStringExtra("filename");
+            mFilename = getIntent().getStringExtra(KEY_FILENAME);
         }
         if (mFilename == null) {
             finish();
@@ -54,54 +52,24 @@ public class PuzzleActivity extends AppCompatActivity {
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         Log.i(TAG, "onSaveInstanceState");
-        outState.putString("filename", mFilename);
+        outState.putString(KEY_FILENAME, mFilename);
     }
 
-    @Override
-    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        Log.i(TAG, "onRestoreInstanceState");
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.i(TAG, "onRestart");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.i(TAG, "onResume");
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.i(TAG, "onActivityResult");
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.i(TAG, "onDestroy");
-    }
-
-    private class LoadPuzzleFileTask extends AsyncTask<Void, Void, AbstractPuzzleFile> {
+    private class LoadPuzzleFileTask extends AsyncTask<Void, Void, PuzzleFragment> {
 
         @Override
-        protected AbstractPuzzleFile doInBackground(Void... voids) {
+        protected PuzzleFragment doInBackground(Void... voids) {
             File file = IOUtil.getPuzzleFile(PuzzleActivity.this, mFilename);
             try (FileInputStream inputStream = new FileInputStream(file)) {
-                return PuzFile.loadPuzFile(inputStream);
+                PuzFile puzFile = PuzFile.loadPuzFile(inputStream);
+                return PuzzleFragment.newInstance(mFilename, puzFile);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
         @Override
-        protected void onPostExecute(AbstractPuzzleFile abstractPuzzleFile) {
-            PuzzleFragment fragment = PuzzleFragment.newInstance(mFilename, abstractPuzzleFile);
+        protected void onPostExecute(PuzzleFragment fragment) {
             getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
                     .commitNow();
         }

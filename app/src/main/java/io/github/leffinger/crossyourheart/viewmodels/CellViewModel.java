@@ -15,16 +15,18 @@ public class CellViewModel {
     private int mClueNumber;  // if this is the first cell in one or both directions
     private ClueViewModel mAcrossClue;
     private ClueViewModel mDownClue;
+    private Listener mListener;
 
     private final MutableLiveData<String> mContents;
+    private final MutableLiveData<Boolean> mMarkedIncorrect;
     private final MediatorLiveData<Boolean> mHighlighted;
-    private Listener mListener;
 
     /**
      * @param puzzleViewModel ViewModel for the whole puzzle
      * @param row             row for this cell (0-indexed)
      * @param col             column for this cell (0-indexed)
      * @param contents        initial contents of the cell
+     * @param isCircled       whether the cell should be circled
      */
     public CellViewModel(PuzzleViewModel puzzleViewModel, int row, int col, String contents,
                          boolean isCircled) {
@@ -36,7 +38,7 @@ public class CellViewModel {
         mClueNumber = 0;
 
         mContents = new MutableLiveData<>(contents);
-
+        mMarkedIncorrect = new MutableLiveData<>(false);
         mHighlighted = new MediatorLiveData<>();
 
         // Set up LiveData observers for whether this cell should be highlighted (is part of the
@@ -94,6 +96,10 @@ public class CellViewModel {
         return mHighlighted;
     }
 
+    public LiveData<Boolean> isMarkedIncorrect() {
+        return mMarkedIncorrect;
+    }
+
     public boolean isCircled() {
         return mIsCircled;
     }
@@ -113,7 +119,17 @@ public class CellViewModel {
     }
 
     public void onContentsChanged() {
+        mMarkedIncorrect.setValue(false);
         mPuzzleViewModel.onContentsChanged(mRow, mCol, mContents.getValue());
+    }
+
+    public void checkContents() {
+        if (mContents.getValue().isEmpty()) {
+            return;
+        }
+        if (!mPuzzleViewModel.isCorrect(mRow, mCol)) {
+            mMarkedIncorrect.setValue(true);
+        }
     }
 
     public interface Listener {

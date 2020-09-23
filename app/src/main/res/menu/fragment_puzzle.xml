@@ -3,15 +3,34 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/puzzle_info"
-        android:title="@string/puzzle_info"
         android:icon="@drawable/info"
+        android:title="@string/puzzle_info"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/settings"
-        android:title="@string/title_activity_settings"
         android:icon="@drawable/settings"
+        android:title="@string/title_activity_settings"
         app:showAsAction="ifRoom" />
+
+    <group>
+
+        <item
+            android:id="@+id/check_square"
+            android:title="@string/check_square"
+            android:enabled="false"
+            app:showAsAction="never" />
+
+        <item
+            android:id="@+id/check_clue"
+            android:title="@string/check_clue"
+            app:showAsAction="never" />
+
+        <item
+            android:id="@+id/check_puzzle"
+            android:title="@string/check_puzzle"
+            app:showAsAction="never" />
+    </group>
 
     <item
         android:id="@+id/reset_puzzle"

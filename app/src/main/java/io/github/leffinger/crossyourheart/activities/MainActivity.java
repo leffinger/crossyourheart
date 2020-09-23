@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     }
 
     private String findDuplicate(PuzFile puzzleLoader) {
-        File puzzleDir = getFilesDir();
+        File puzzleDir = IOUtil.getPuzzleDir(this);
         String[] files = puzzleDir.list();
         for (String filename : files) {
             try (FileInputStream inputStream = new FileInputStream(

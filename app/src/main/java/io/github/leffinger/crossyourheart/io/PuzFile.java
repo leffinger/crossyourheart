@@ -617,6 +617,17 @@ public class PuzFile extends AbstractPuzzleFile {
         }
     }
 
+    @Override
+    public boolean isCorrect(int row, int col) {
+        switch (getScrambleState()) {
+        case UNSCRAMBLED:
+            int offset = getOffset(row, col);
+            return mSolution[offset] == mGrid[offset];
+        default:
+            return true;
+        }
+    }
+
     private int getComputedScrambledChecksum() {
         int computedScrambledChecksum = 0;
         for (int i = 0; i < mWidth; i++) {

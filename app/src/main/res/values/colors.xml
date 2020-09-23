@@ -10,4 +10,5 @@
     <color name="colorEntryText">#000000</color>
     <color name="colorSolved">#4CAF50</color>
     <color name="colorInProgress">#FF9800</color>
+    <color name="colorMarkedIncorrect">#E53935</color>
 </resources>

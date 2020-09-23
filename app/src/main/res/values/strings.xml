@@ -24,4 +24,7 @@
     <string name="start_with_down_clues">Start with down clues</string>
     <string name="reset_puzzle">Reset Puzzle</string>
     <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and clear the undo stack.</string>
+    <string name="check_square">Check Square</string>
+    <string name="check_clue">Check Clue</string>
+    <string name="check_puzzle">Check Puzzle</string>
 </resources>

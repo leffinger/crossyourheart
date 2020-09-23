@@ -62,9 +62,7 @@ public class PuzzleViewModel extends ViewModel {
         mPuzzleFile = puzzleFile;
         mFile = file;
         mAcrossFocus = new MutableLiveData<>(!startWithDownClues);
-        boolean isSolved = puzzleFile.isSolved();
-        Log.i(TAG, "isSolved=" + isSolved);
-        mIsSolved = new MutableLiveData<>(isSolved);
+        mIsSolved = new MutableLiveData<>(puzzleFile.isSolved());
 
         StringBuilder solution = new StringBuilder();
         for (int row = 0; row < getNumRows(); row++) {
@@ -121,7 +119,7 @@ public class PuzzleViewModel extends ViewModel {
                     mCurrentClue.setValue(currentCell.getAcrossClue());
                 } else if (currentCell.getDownClue() != null) {
                     // switch directions if this cell only has a down clue
-                    mAcrossFocus.setValue(false);  // should ttrigger another update
+                    mAcrossFocus.setValue(false);  // should trigger another update
                 }
             } else {
                 if (currentCell.getDownClue() != null) {
@@ -397,6 +395,39 @@ public class PuzzleViewModel extends ViewModel {
         }
         mUndoStack.clear();
         mIsSolved.setValue(false);
+    }
+
+    public boolean isCorrect(int row, int col) {
+        return mPuzzleFile.isCorrect(row, col);
+    }
+
+    public void checkCurrentCell() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        mCurrentCell.getValue().checkContents();
+    }
+
+    public void checkCurrentClue() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        for (CellViewModel cell : mCurrentClue.getValue().getCells()) {
+            cell.checkContents();
+        }
+    }
+
+    public void checkPuzzle() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        for (CellViewModel[] row : mGrid) {
+            for (CellViewModel cell : row) {
+                if (cell != null) {
+                    cell.checkContents();
+                }
+            }
+        }
     }
 
     private static class Action {
