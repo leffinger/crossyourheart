@@ -137,6 +137,10 @@ public class CellViewModel {
         mContents.setValue(solution);
     }
 
+    public void removeListener() {
+        mListener = null;
+    }
+
     public interface Listener {
         void requestFocus();
     }

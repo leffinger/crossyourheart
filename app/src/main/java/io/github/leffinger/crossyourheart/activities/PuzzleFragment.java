@@ -28,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.Observer;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -63,7 +64,6 @@ public class PuzzleFragment extends Fragment {
     // Handler message codes.
     private static final int MESSAGE_VIEW_MODEL_READY = 0;
     private static final int MESSAGE_PUZZLE_VIEW_READY = 1;
-
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
     private volatile boolean mSolved;
@@ -291,6 +291,13 @@ public class PuzzleFragment extends Fragment {
         }
 
         mCellAdapter.notifyDataSetChanged();
+        for (int col = 0; col < mViewModel.getNumColumns(); col++) {
+            CellViewModel cellViewModel = mViewModel.getCellViewModel(0, col);
+            if (cellViewModel != null) {
+                cellViewModel.requestFocus();
+                break;
+            }
+        }
         mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
 
         configureCheckMenuItems();
@@ -331,7 +338,8 @@ public class PuzzleFragment extends Fragment {
         }
     }
 
-    private class CellHolder extends RecyclerView.ViewHolder {
+    private class CellHolder extends RecyclerView.ViewHolder implements Observer<Boolean>,
+            CellViewModel.Listener {
         private final CellBinding mBinding;
 
         private CellHolder(CellBinding binding) {
@@ -339,9 +347,18 @@ public class PuzzleFragment extends Fragment {
             mBinding = binding;
         }
 
+        private void recycle() {
+            if (mBinding.getCellViewModel() != null) {
+                mBinding.getCellViewModel().isHighlighted().removeObserver(this);
+                mBinding.getCellViewModel().removeListener();
+                mBinding.setCellViewModel(null);
+            }
+        }
+
         private void bind(final CellViewModel viewModel) {
             if (viewModel == null) {
                 // black square
+                recycle();
                 return;
             }
 
@@ -356,11 +373,10 @@ public class PuzzleFragment extends Fragment {
             });
 
             // Listen for focus changes from the MainViewModel.
-            mBinding.getCellViewModel().setListener(mBinding.entry::requestFocus);
+            mBinding.getCellViewModel().setListener(this);
 
             // "Activate" squares in the same clue as the focused square.
-            mBinding.getCellViewModel().isHighlighted()
-                    .observe(getActivity(), mBinding.entry::setActivated);
+            mBinding.getCellViewModel().isHighlighted().observe(getActivity(), this);
 
             // Change text color of squares marked incorrect.
             // TODO: Can we use app-defined state attributes for this? See
@@ -369,11 +385,6 @@ public class PuzzleFragment extends Fragment {
                 mBinding.entry.setTextColor(getResources().getColor(
                         incorrect ? R.color.colorMarkedIncorrect : R.color.colorEntryText));
             });
-
-            // Auto-focus on the first cell for clue 1.
-            if (mBinding.getCellViewModel().getClueNumber() == 1) {
-                mBinding.getCellViewModel().requestFocus();
-            }
 
             // Toggle direction when a clue is clicked on (does not apply to first focusing click).
             mBinding.entry.setOnClickListener(view -> mViewModel.toggleDirection());
@@ -390,6 +401,16 @@ public class PuzzleFragment extends Fragment {
                     }
                 });
             });
+        }
+
+        @Override
+        public void onChanged(Boolean isHighlighted) {
+            mBinding.entry.setActivated(isHighlighted);
+        }
+
+        @Override
+        public void requestFocus() {
+            mBinding.entry.requestFocus();
         }
     }
 
@@ -413,9 +434,6 @@ public class PuzzleFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull CellHolder holder, int position) {
-            if (mViewModel == null) {
-                return;
-            }
             CellViewModel cellViewModel =
                     mViewModel.getCellViewModel(position / mWidth, position % mWidth);
             holder.bind(cellViewModel);
@@ -424,6 +442,16 @@ public class PuzzleFragment extends Fragment {
         @Override
         public int getItemCount() {
             return mSize;
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public void onViewRecycled(@NonNull CellHolder holder) {
+            holder.recycle();
         }
     }
 
