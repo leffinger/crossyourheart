@@ -39,18 +39,22 @@ public class PuzzleViewModel extends ViewModel {
      * True if the currently active clue is an Across, false if Down.
      */
     private final MutableLiveData<Boolean> mAcrossFocus;
+
+    /**
+     * The view model for the currently selected square.
+     */
+    private final MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>(null);
+
     /**
      * Currently active clue.
      */
     private final MediatorLiveData<ClueViewModel> mCurrentClue = new MediatorLiveData<>();
+
     /**
      * History of actions. Enables "undo" functionality.
      */
     private final Stack<Action> mUndoStack = new Stack<>();
-    /**
-     * The view model for the currently focused square.
-     */
-    private final MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>();
+
     /**
      * Whether the puzzle's solution is currently correct.
      */
@@ -196,10 +200,6 @@ public class PuzzleViewModel extends ViewModel {
         return mPuzzleFile.getWidth();
     }
 
-    public void onFocusChanged(int row, int col) {
-        mCurrentCell.setValue(mGrid[row][col]);
-    }
-
     public LiveData<ClueViewModel> getCurrentClue() {
         return mCurrentClue;
     }
@@ -235,9 +235,9 @@ public class PuzzleViewModel extends ViewModel {
         }
         for (int j = 1; j < currentClueCells.size(); j++) {
             int index = (i + j) % currentClueCells.size();
-            if (!skipFilledSquares ||
-                    currentClueCells.get(index).getContents().getValue().isEmpty()) {
-                currentClueCells.get(index).requestFocus();
+            CellViewModel cellViewModel = currentClueCells.get(index);
+            if (!skipFilledSquares || cellViewModel.getContents().getValue().isEmpty()) {
+                mCurrentCell.setValue(cellViewModel);
                 return;
             }
         }
@@ -273,7 +273,7 @@ public class PuzzleViewModel extends ViewModel {
         Log.i(TAG,
               String.format("Selecting clue %d-%s", prev.getNumber(), prev.isAcross() ? "A" : "D"));
         mAcrossFocus.setValue(prev.isAcross());
-        cell.requestFocus();
+        mCurrentCell.setValue(cell);
     }
 
     public void moveToNextClue(boolean skipFilledClues, boolean skipFilledSquares) {
@@ -303,7 +303,7 @@ public class PuzzleViewModel extends ViewModel {
         Log.i(TAG,
               String.format("Selecting clue %d-%s", next.getNumber(), next.isAcross() ? "A" : "D"));
         mAcrossFocus.setValue(next.isAcross());
-        cell.requestFocus();
+        mCurrentCell.setValue(cell);
     }
 
     public void setCurrentCellContents(String newContents, boolean skipFilledClues,
@@ -323,7 +323,7 @@ public class PuzzleViewModel extends ViewModel {
 
         Action lastAction = mUndoStack.pop();
         lastAction.mModifiedCell.getContents().setValue(lastAction.mOldContents);
-        lastAction.mFocusedCell.requestFocus();
+        mCurrentCell.setValue(lastAction.mSelectedCell);
         mAcrossFocus.setValue(lastAction.mAcrossFocus);
     }
 
@@ -355,7 +355,7 @@ public class PuzzleViewModel extends ViewModel {
             mUndoStack.push(new Action(newCell, currentCell, newCell.getContents().getValue(), "",
                                        mAcrossFocus.getValue()));
             newCell.getContents().setValue("");
-            newCell.requestFocus();
+            mCurrentCell.setValue(newCell);
         } else {
             // Delete current cell's contents.
             mUndoStack
@@ -471,17 +471,39 @@ public class PuzzleViewModel extends ViewModel {
         }
     }
 
+    public LiveData<CellViewModel> getCurrentCell() {
+        return mCurrentCell;
+    }
+
+    public void selectCell(CellViewModel cellViewModel) {
+        if (mCurrentCell.getValue() == cellViewModel) {
+            // Toggle directions.
+            mAcrossFocus.setValue(!mAcrossFocus.getValue());
+        } else {
+            mCurrentCell.setValue(cellViewModel);
+        }
+    }
+
+    public void selectFirstCell() {
+        for (CellViewModel cellViewModel : mGrid[0]) {
+            if (cellViewModel != null) {
+                mCurrentCell.setValue(cellViewModel);
+                return;
+            }
+        }
+    }
+
     private static class Action {
         final CellViewModel mModifiedCell;
-        final CellViewModel mFocusedCell;
+        final CellViewModel mSelectedCell;
         final String mOldContents;
         final String mNewContents;
         final boolean mAcrossFocus;
 
-        public Action(CellViewModel modifiedCell, CellViewModel focusedCell, String oldContents,
+        public Action(CellViewModel modifiedCell, CellViewModel selectedCell, String oldContents,
                       String newContents, boolean acrossFocus) {
             mModifiedCell = modifiedCell;
-            mFocusedCell = focusedCell;
+            mSelectedCell = selectedCell;
             mOldContents = oldContents;
             mNewContents = newContents;
             mAcrossFocus = acrossFocus;

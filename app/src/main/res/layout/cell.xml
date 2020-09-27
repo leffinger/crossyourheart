@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:custom="http://schemas.android.com/apk/res-auto">
 
     <data>
+
         <import type="android.view.View" />
 
         <variable
@@ -16,15 +18,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <TextView
+        <io.github.leffinger.crossyourheart.views.CellView
             android:id="@+id/entry"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:background="@drawable/cell"
-            android:clickable="true"
             android:enabled="@{cellViewModel != null}"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
+            custom:isSelected="@{cellViewModel.selected}"
+            custom:isCircled="@{cellViewModel.circled}"
+            custom:isHighlighted="@{cellViewModel.highlighted}"
             android:gravity="center"
             android:padding="2dp"
             android:text="@{cellViewModel.contents}"

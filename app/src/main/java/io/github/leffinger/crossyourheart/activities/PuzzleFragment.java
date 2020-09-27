@@ -28,7 +28,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.Observer;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -290,14 +289,9 @@ public class PuzzleFragment extends Fragment {
             });
         }
 
+        mViewModel.selectFirstCell();
+
         mCellAdapter.notifyDataSetChanged();
-        for (int col = 0; col < mViewModel.getNumColumns(); col++) {
-            CellViewModel cellViewModel = mViewModel.getCellViewModel(0, col);
-            if (cellViewModel != null) {
-                cellViewModel.requestFocus();
-                break;
-            }
-        }
         mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
 
         configureCheckMenuItems();
@@ -338,8 +332,7 @@ public class PuzzleFragment extends Fragment {
         }
     }
 
-    private class CellHolder extends RecyclerView.ViewHolder implements Observer<Boolean>,
-            CellViewModel.Listener {
+    private class CellHolder extends RecyclerView.ViewHolder {
         private final CellBinding mBinding;
 
         private CellHolder(CellBinding binding) {
@@ -349,8 +342,6 @@ public class PuzzleFragment extends Fragment {
 
         private void recycle() {
             if (mBinding.getCellViewModel() != null) {
-                mBinding.getCellViewModel().isHighlighted().removeObserver(this);
-                mBinding.getCellViewModel().removeListener();
                 mBinding.setCellViewModel(null);
             }
         }
@@ -365,18 +356,9 @@ public class PuzzleFragment extends Fragment {
             mBinding.setCellViewModel(viewModel);
             mBinding.setLifecycleOwner(getActivity());
 
-            // When a square is focused on, trigger updates to the UI (e.g. clue text).
-            mBinding.entry.setOnFocusChangeListener((view, hasFocus) -> {
-                if (hasFocus) {
-                    mBinding.getCellViewModel().onFocus();
-                }
+            mBinding.getRoot().setOnClickListener(view -> {
+                mViewModel.selectCell(mBinding.getCellViewModel());
             });
-
-            // Listen for focus changes from the MainViewModel.
-            mBinding.getCellViewModel().setListener(this);
-
-            // "Activate" squares in the same clue as the focused square.
-            mBinding.getCellViewModel().isHighlighted().observe(getActivity(), this);
 
             // Change text color of squares marked incorrect.
             // TODO: Can we use app-defined state attributes for this? See
@@ -385,9 +367,6 @@ public class PuzzleFragment extends Fragment {
                 mBinding.entry.setTextColor(getResources().getColor(
                         incorrect ? R.color.colorMarkedIncorrect : R.color.colorEntryText));
             });
-
-            // Toggle direction when a clue is clicked on (does not apply to first focusing click).
-            mBinding.entry.setOnClickListener(view -> mViewModel.toggleDirection());
 
             // Persist changes in content to disk.
             mBinding.getCellViewModel().getContents().observe(getActivity(), s -> {
@@ -401,16 +380,6 @@ public class PuzzleFragment extends Fragment {
                     }
                 });
             });
-        }
-
-        @Override
-        public void onChanged(Boolean isHighlighted) {
-            mBinding.entry.setActivated(isHighlighted);
-        }
-
-        @Override
-        public void requestFocus() {
-            mBinding.entry.requestFocus();
         }
     }
 
@@ -434,6 +403,9 @@ public class PuzzleFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull CellHolder holder, int position) {
+            if (mViewModel == null) {
+                return;
+            }
             CellViewModel cellViewModel =
                     mViewModel.getCellViewModel(position / mWidth, position % mWidth);
             holder.bind(cellViewModel);
