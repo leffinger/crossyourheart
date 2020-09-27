@@ -22,9 +22,15 @@
     <string name="enable_haptic_feedback">Enable haptic feedback</string>
     <string name="user_experience">User Experience</string>
     <string name="start_with_down_clues">Start with down clues</string>
-    <string name="reset_puzzle">Reset Puzzle</string>
-    <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and clear the undo stack.</string>
+    <string name="enable_hints">Enable hints</string>
+    <string name="check_submenu">Check…</string>
     <string name="check_square">Check Square</string>
     <string name="check_clue">Check Clue</string>
     <string name="check_puzzle">Check Puzzle</string>
+    <string name="reveal_submenu">Reveal…</string>
+    <string name="reveal_square">Reveal Square</string>
+    <string name="reveal_clue">Reveal Clue</string>
+    <string name="reveal_puzzle">Reveal Puzzle</string>
+    <string name="reset_puzzle">Reset Puzzle</string>
+    <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and clear the undo stack.</string>
 </resources>

@@ -13,23 +13,44 @@
         android:title="@string/title_activity_settings"
         app:showAsAction="ifRoom" />
 
-    <group>
+    <group android:id="@+id/check_items">
 
         <item
-            android:id="@+id/check_square"
-            android:title="@string/check_square"
-            android:enabled="false"
-            app:showAsAction="never" />
+            android:id="@+id/check_submenu"
+            android:title="@string/check_submenu">
+            <menu>
+
+                <item
+                    android:id="@+id/check_square"
+                    android:title="@string/check_square" />
+
+                <item
+                    android:id="@+id/check_clue"
+                    android:title="@string/check_clue" />
+
+                <item
+                    android:id="@+id/check_puzzle"
+                    android:title="@string/check_puzzle" />
+            </menu>
+        </item>
 
         <item
-            android:id="@+id/check_clue"
-            android:title="@string/check_clue"
-            app:showAsAction="never" />
+            android:id="@+id/reveal_submenu"
+            android:title="@string/reveal_submenu">
+            <menu>
+                <item
+                    android:id="@+id/reveal_square"
+                    android:title="@string/reveal_square" />
 
-        <item
-            android:id="@+id/check_puzzle"
-            android:title="@string/check_puzzle"
-            app:showAsAction="never" />
+                <item
+                    android:id="@+id/reveal_clue"
+                    android:title="@string/reveal_clue" />
+
+                <item
+                    android:id="@+id/reveal_puzzle"
+                    android:title="@string/reveal_puzzle" />
+            </menu>
+        </item>
     </group>
 
     <item

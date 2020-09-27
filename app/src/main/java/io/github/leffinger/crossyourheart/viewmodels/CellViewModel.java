@@ -132,6 +132,11 @@ public class CellViewModel {
         }
     }
 
+    public void revealContents() {
+        String solution = mPuzzleViewModel.getSolution(mRow, mCol);
+        mContents.setValue(solution);
+    }
+
     public interface Listener {
         void requestFocus();
     }

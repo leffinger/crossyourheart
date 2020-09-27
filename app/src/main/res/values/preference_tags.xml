@@ -5,5 +5,6 @@
     <string name="preference_skip_filled_squares">skipFilledSquares</string>
     <string name="preference_enable_haptic_feedback">enableHapticFeedback</string>
     <string name="preference_start_with_down_clues">startWithDownClues</string>
+    <string name="preference_enable_hints">enableHints</string>
 
 </resources>

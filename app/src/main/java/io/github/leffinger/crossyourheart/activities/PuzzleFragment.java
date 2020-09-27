@@ -73,6 +73,7 @@ public class PuzzleFragment extends Fragment {
     private AbstractPuzzleFile mPuzzleFile;
     private File mFilename;
     private Handler mHandler;
+    private Menu mMenu;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -121,8 +122,6 @@ public class PuzzleFragment extends Fragment {
 
                 if (mViewModelReady && mPuzzleViewReady) {
                     setUpViewModelListeners();
-                    mCellAdapter.notifyDataSetChanged();
-                    mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
                 }
             }
         };
@@ -138,7 +137,6 @@ public class PuzzleFragment extends Fragment {
             }
         }.execute();
     }
-
 
     @Nullable
     @Override
@@ -157,8 +155,6 @@ public class PuzzleFragment extends Fragment {
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
         mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
-
-        mHandler.obtainMessage(MESSAGE_PUZZLE_VIEW_READY).sendToTarget();
 
         return mFragmentPuzzleBinding.getRoot();
     }
@@ -190,6 +186,8 @@ public class PuzzleFragment extends Fragment {
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.fragment_puzzle, menu);
+        mMenu = menu;
+        mHandler.obtainMessage(MESSAGE_PUZZLE_VIEW_READY).sendToTarget();
     }
 
     @Override
@@ -216,6 +214,18 @@ public class PuzzleFragment extends Fragment {
         }
         if (itemId == R.id.check_puzzle) {
             mViewModel.checkPuzzle();
+            return true;
+        }
+        if (itemId == R.id.reveal_square) {
+            mViewModel.revealCurrentCell();
+            return true;
+        }
+        if (itemId == R.id.reveal_clue) {
+            mViewModel.revealCurrentClue();
+            return true;
+        }
+        if (itemId == R.id.reveal_puzzle) {
+            mViewModel.revealPuzzle();
             return true;
         }
         if (itemId == R.id.reset_puzzle) {
@@ -278,6 +288,24 @@ public class PuzzleFragment extends Fragment {
                 }
             });
         }
+
+        mCellAdapter.notifyDataSetChanged();
+        mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
+
+        configureCheckMenuItems();
+        mPreferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
+            if (key.equals(getString(R.string.preference_enable_hints))) {
+                configureCheckMenuItems();
+            }
+        });
+    }
+
+    private void configureCheckMenuItems() {
+        boolean visible =
+                mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
+        boolean enabled = mViewModel.isCheckable();
+        mMenu.setGroupVisible(R.id.check_items, visible);
+        mMenu.setGroupEnabled(R.id.check_items, enabled);
     }
 
     private void doHapticFeedback(View view, int type) {

@@ -62,6 +62,16 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         startActivity(PuzzleActivity.newIntent(this, mFilename));
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        // Display list of puzzles.
+        PuzzleListFragment fragment = PuzzleListFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
+                .commitNow();
+    }
+
     /**
      * Open the input stream, try to parse it as a puzzle, and save it to a local file.
      * <p>
@@ -86,7 +96,8 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                         return filename;
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to save puzzle file", e);
-                        Toast.makeText(this, "Failed to save puzzle file", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Failed to save puzzle file", Toast.LENGTH_LONG)
+                                .show();
                     }
                 } else {
                     Toast.makeText(this, "Reusing existing file", Toast.LENGTH_LONG).show();

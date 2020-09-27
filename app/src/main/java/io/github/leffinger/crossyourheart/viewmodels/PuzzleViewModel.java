@@ -310,7 +310,8 @@ public class PuzzleViewModel extends ViewModel {
                                        boolean skipFilledSquares) {
         CellViewModel currentCell = mCurrentCell.getValue();
         String oldContents = currentCell.getContents().getValue();
-        mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents));
+        mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents,
+                                   mAcrossFocus.getValue()));
         currentCell.getContents().setValue(newContents);
         moveToNextCell(skipFilledClues, skipFilledSquares);
     }
@@ -323,6 +324,7 @@ public class PuzzleViewModel extends ViewModel {
         Action lastAction = mUndoStack.pop();
         lastAction.mModifiedCell.getContents().setValue(lastAction.mOldContents);
         lastAction.mFocusedCell.requestFocus();
+        mAcrossFocus.setValue(lastAction.mAcrossFocus);
     }
 
     public void doBackspace() {
@@ -350,14 +352,15 @@ public class PuzzleViewModel extends ViewModel {
             }
 
             // Delete previous cell contents and move to that cell.
-            mUndoStack.push(new Action(newCell, currentCell, newCell.getContents().getValue(), ""));
+            mUndoStack.push(new Action(newCell, currentCell, newCell.getContents().getValue(), "",
+                                       mAcrossFocus.getValue()));
             newCell.getContents().setValue("");
             newCell.requestFocus();
         } else {
             // Delete current cell's contents.
             mUndoStack
                     .push(new Action(currentCell, currentCell, currentCell.getContents().getValue(),
-                                     ""));
+                                     "", mAcrossFocus.getValue()));
             currentCell.getContents().setValue("");
         }
     }
@@ -401,6 +404,11 @@ public class PuzzleViewModel extends ViewModel {
         return mPuzzleFile.isCorrect(row, col);
     }
 
+    public boolean isCheckable() {
+        AbstractPuzzleFile.ScrambleState scrambleState = mPuzzleFile.getScrambleState();
+        return scrambleState == AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
+    }
+
     public void checkCurrentCell() {
         if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
             return;
@@ -430,18 +438,53 @@ public class PuzzleViewModel extends ViewModel {
         }
     }
 
+    public String getSolution(int row, int col) {
+        return mPuzzleFile.getSolution(row, col);
+    }
+
+    public void revealCurrentCell() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        mCurrentCell.getValue().revealContents();
+    }
+
+    public void revealCurrentClue() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        for (CellViewModel cell : mCurrentClue.getValue().getCells()) {
+            cell.revealContents();
+        }
+    }
+
+    public void revealPuzzle() {
+        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+            return;
+        }
+        for (CellViewModel[] row : mGrid) {
+            for (CellViewModel cell : row) {
+                if (cell != null) {
+                    cell.revealContents();
+                }
+            }
+        }
+    }
+
     private static class Action {
-        CellViewModel mModifiedCell;
-        CellViewModel mFocusedCell;
-        String mOldContents;
-        String mNewContents;
+        final CellViewModel mModifiedCell;
+        final CellViewModel mFocusedCell;
+        final String mOldContents;
+        final String mNewContents;
+        final boolean mAcrossFocus;
 
         public Action(CellViewModel modifiedCell, CellViewModel focusedCell, String oldContents,
-                      String newContents) {
+                      String newContents, boolean acrossFocus) {
             mModifiedCell = modifiedCell;
             mFocusedCell = focusedCell;
             mOldContents = oldContents;
             mNewContents = newContents;
+            mAcrossFocus = acrossFocus;
         }
     }
 }

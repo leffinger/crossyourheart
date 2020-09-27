@@ -44,6 +44,8 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract int getDownClueIndex(int row, int col);
 
+    public abstract String getSolution(int row, int col);
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
     }

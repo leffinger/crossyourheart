@@ -24,6 +24,13 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/user_experience">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:title="@string/enable_hints"
+            app:key="@string/preference_enable_hints"
+            app:singleLineTitle="false" />
+
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:title="@string/enable_haptic_feedback"

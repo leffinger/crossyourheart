@@ -628,6 +628,11 @@ public class PuzFile extends AbstractPuzzleFile {
         }
     }
 
+    @Override
+    public String getSolution(int row, int col) {
+        return new String(new byte[]{mSolution[getOffset(row, col)]}, StandardCharsets.ISO_8859_1);
+    }
+
     private int getComputedScrambledChecksum() {
         int computedScrambledChecksum = 0;
         for (int i = 0; i < mWidth; i++) {
