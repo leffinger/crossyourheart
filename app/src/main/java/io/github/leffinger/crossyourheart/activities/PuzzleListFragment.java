@@ -200,6 +200,10 @@ public class PuzzleListFragment extends Fragment {
 
     private class PuzzleFileAdapter extends RecyclerView.Adapter<PuzzleFileHolder> {
 
+        public PuzzleFileAdapter() {
+            setHasStableIds(true);
+        }
+
         @NonNull
         @Override
         public PuzzleFileHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -217,6 +221,11 @@ public class PuzzleListFragment extends Fragment {
         @Override
         public int getItemCount() {
             return mPuzzles.size();
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return mPuzzles.get(position).getFilename().hashCode();
         }
     }
 }
