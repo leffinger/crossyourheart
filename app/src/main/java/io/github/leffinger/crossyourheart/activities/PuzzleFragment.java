@@ -149,8 +149,9 @@ public class PuzzleFragment extends Fragment {
         ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mPuzzleFile.getTitle());
 
         mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mFragmentPuzzleBinding.puzzle
-                .setLayoutManager(new GridLayoutManager(getActivity(), mPuzzleFile.getWidth()));
+        mFragmentPuzzleBinding.puzzle.setLayoutManager(
+                new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
+                                      GridLayoutManager.VERTICAL, false));
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
