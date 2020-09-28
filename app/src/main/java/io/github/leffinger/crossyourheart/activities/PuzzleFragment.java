@@ -63,10 +63,15 @@ public class PuzzleFragment extends Fragment {
     // Handler message codes.
     private static final int MESSAGE_VIEW_MODEL_READY = 0;
     private static final int MESSAGE_PUZZLE_VIEW_READY = 1;
+
+    // Used to write puzzle file changes to disk in the background.
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
+
+    // View and model state.
     private PuzzleViewModel mViewModel;
     private SharedPreferences mPreferences;
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
+    private GridLayoutManager mGridLayoutManager;
     private CellAdapter mCellAdapter;
     private AbstractPuzzleFile mPuzzleFile;
     private File mFilename;
@@ -146,9 +151,9 @@ public class PuzzleFragment extends Fragment {
         ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(mPuzzleFile.getTitle());
 
         mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mFragmentPuzzleBinding.puzzle.setLayoutManager(
-                new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
-                                      GridLayoutManager.VERTICAL, false));
+        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
+                                                   GridLayoutManager.VERTICAL, false);
+        mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
@@ -268,6 +273,16 @@ public class PuzzleFragment extends Fragment {
             }
         });
 
+        // When a cell is selected, tell the grid manager to scroll so the cell is visible.
+        mViewModel.selectFirstCell();
+        mViewModel.getCurrentCell().observe(getActivity(), cellViewModel -> {
+            if (cellViewModel != null) {
+                int position =
+                        cellViewModel.getRow() * mViewModel.getNumRows() + cellViewModel.getCol();
+                mGridLayoutManager.scrollToPositionWithOffset(position, 2);
+            }
+        });
+
         // Move to previous clue when button is pressed.
         mFragmentPuzzleBinding.prev.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
@@ -306,8 +321,6 @@ public class PuzzleFragment extends Fragment {
                 }
             });
         }
-
-        mViewModel.selectFirstCell();
 
         mCellAdapter.notifyDataSetChanged();
         mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
