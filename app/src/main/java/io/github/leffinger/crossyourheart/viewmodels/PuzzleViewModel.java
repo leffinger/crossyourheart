@@ -51,6 +51,11 @@ public class PuzzleViewModel extends ViewModel {
     private final MediatorLiveData<ClueViewModel> mCurrentClue = new MediatorLiveData<>();
 
     /**
+     * Listens for changes to cell contents.
+     */
+    private final MediatorLiveData<Integer> mContentsChanged = new MediatorLiveData<>();
+
+    /**
      * History of actions. Enables "undo" functionality.
      */
     private final Stack<Action> mUndoStack = new Stack<>();
@@ -136,6 +141,23 @@ public class PuzzleViewModel extends ViewModel {
         };
         mCurrentClue.addSource(mAcrossFocus, observer);
         mCurrentClue.addSource(mCurrentCell, observer);
+
+        // When text changes, trigger updates.
+        for (int row = 0; row < getNumRows(); row++) {
+            for (int col = 0; col < getNumColumns(); col++) {
+                CellViewModel cellViewModel = mGrid[row][col];
+                if (cellViewModel == null) {
+                    continue;
+                }
+                mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
+                    Log.i(TAG, "Contents changed");
+                    mPuzzleFile.setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
+                                                contents);
+                    mIsSolved.setValue(mPuzzleFile.isSolved());
+                    mContentsChanged.setValue(0);
+                });
+            }
+        }
     }
 
     private static void linkClues(ClueViewModel[] clues) {
@@ -217,7 +239,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public LiveData<Boolean> isSolved() {
-        return Transformations.distinctUntilChanged(mIsSolved);
+        return mIsSolved;
     }
 
     public void toggleDirection() {
@@ -309,10 +331,9 @@ public class PuzzleViewModel extends ViewModel {
     public void setCurrentCellContents(String newContents, boolean skipFilledClues,
                                        boolean skipFilledSquares) {
         CellViewModel currentCell = mCurrentCell.getValue();
-        String oldContents = currentCell.getContents().getValue();
+        String oldContents = currentCell.setContents(newContents);
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents,
                                    mAcrossFocus.getValue()));
-        currentCell.getContents().setValue(newContents);
         moveToNextCell(skipFilledClues, skipFilledSquares);
     }
 
@@ -322,7 +343,7 @@ public class PuzzleViewModel extends ViewModel {
         }
 
         Action lastAction = mUndoStack.pop();
-        lastAction.mModifiedCell.getContents().setValue(lastAction.mOldContents);
+        lastAction.mModifiedCell.setContents(lastAction.mOldContents);
         mCurrentCell.setValue(lastAction.mSelectedCell);
         mAcrossFocus.setValue(lastAction.mAcrossFocus);
     }
@@ -352,16 +373,15 @@ public class PuzzleViewModel extends ViewModel {
             }
 
             // Delete previous cell contents and move to that cell.
-            mUndoStack.push(new Action(newCell, currentCell, newCell.getContents().getValue(), "",
+            String oldContents = newCell.setContents("");
+            mUndoStack.push(new Action(newCell, currentCell, oldContents, "",
                                        mAcrossFocus.getValue()));
-            newCell.getContents().setValue("");
             mCurrentCell.setValue(newCell);
         } else {
             // Delete current cell's contents.
-            mUndoStack
-                    .push(new Action(currentCell, currentCell, currentCell.getContents().getValue(),
-                                     "", mAcrossFocus.getValue()));
-            currentCell.getContents().setValue("");
+            String oldContents = currentCell.setContents("");
+            mUndoStack.push(new Action(currentCell, currentCell, oldContents, "",
+                                       mAcrossFocus.getValue()));
         }
     }
 
@@ -369,11 +389,6 @@ public class PuzzleViewModel extends ViewModel {
         try (FileOutputStream outputStream = new FileOutputStream(mFile)) {
             mPuzzleFile.savePuzzleFile(outputStream);
         }
-    }
-
-    public void onContentsChanged(int row, int col, String value) {
-        mPuzzleFile.setCellContents(row, col, value);
-        mIsSolved.setValue(mPuzzleFile.isSolved());
     }
 
     public PuzzleInfoViewModel getPuzzleInfoViewModel() {
@@ -392,7 +407,7 @@ public class PuzzleViewModel extends ViewModel {
         for (CellViewModel[] row : mGrid) {
             for (CellViewModel cell : row) {
                 if (cell != null) {
-                    cell.getContents().setValue("");
+                    cell.setContents("");
                 }
             }
         }
@@ -473,6 +488,10 @@ public class PuzzleViewModel extends ViewModel {
 
     public LiveData<CellViewModel> getCurrentCell() {
         return mCurrentCell;
+    }
+
+    public LiveData<Integer> getContentsChanged() {
+        return mContentsChanged;
     }
 
     public void selectCell(CellViewModel cellViewModel) {

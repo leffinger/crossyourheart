@@ -65,7 +65,6 @@ public class PuzzleFragment extends Fragment {
     private static final int MESSAGE_PUZZLE_VIEW_READY = 1;
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private PuzzleViewModel mViewModel;
-    private volatile boolean mSolved;
     private SharedPreferences mPreferences;
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
     private CellAdapter mCellAdapter;
@@ -100,7 +99,6 @@ public class PuzzleFragment extends Fragment {
         mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable("puzzle");
         mCellAdapter = new CellAdapter(mPuzzleFile.getWidth(), mPuzzleFile.getHeight());
         mFilename = IOUtil.getPuzzleFile(getContext(), bundle.getString("filename"));
-        mSolved = mPuzzleFile.isSolved();
 
         // This handler listens on the main thread and waits for both the view model and the view
         // to be ready.
@@ -234,6 +232,15 @@ public class PuzzleFragment extends Fragment {
                             .setMessage(R.string.reset_puzzle_alert)
                             .setPositiveButton(R.string.reset_puzzle, (dialogInterface, i) -> {
                                 mViewModel.resetPuzzle();
+                                mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
+                                    if (solved) {
+                                        AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                                                .setMessage(R.string.alert_solved)
+                                                .setPositiveButton(android.R.string.ok, null)
+                                                .create();
+                                        dialog.show();
+                                    }
+                                });
                             }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
                             .create();
             alertDialog.show();
@@ -276,10 +283,21 @@ public class PuzzleFragment extends Fragment {
         // Set up keyboard listener.
         mFragmentPuzzleBinding.keyboard.setOnKeyboardActionListener(new PuzzleKeyboardListener());
 
+        // Persist changes in content to disk.
+        mViewModel.getContentsChanged().observe(getActivity(), i -> mExecutorService.submit(() -> {
+            try {
+                Log.i(TAG, "Saving pizzle file " + mViewModel.getFile().getName());
+                mViewModel.saveToFile();
+            } catch (IOException e) {
+                Log.e(TAG,
+                      String.format("Saving puzzle file %s failed", mViewModel.getFile().getName()),
+                      e);
+            }
+        }));
+
         // If the puzzle was not solved to begin with, display a message when it is solved.
-        if (!mSolved) {
+        if (!mViewModel.isSolved().getValue()) {
             mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
-                mSolved = solved;
                 if (solved) {
                     AlertDialog dialog =
                             new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
@@ -338,6 +356,10 @@ public class PuzzleFragment extends Fragment {
         private CellHolder(CellBinding binding) {
             super(binding.getRoot());
             mBinding = binding;
+
+            mBinding.getRoot().setOnClickListener(view -> {
+                mViewModel.selectCell(mBinding.getCellViewModel());
+            });
         }
 
         private void recycle() {
@@ -355,31 +377,6 @@ public class PuzzleFragment extends Fragment {
 
             mBinding.setCellViewModel(viewModel);
             mBinding.setLifecycleOwner(getActivity());
-
-            mBinding.getRoot().setOnClickListener(view -> {
-                mViewModel.selectCell(mBinding.getCellViewModel());
-            });
-
-            // Change text color of squares marked incorrect.
-            // TODO: Can we use app-defined state attributes for this? See
-            //  https://developer.android.com/reference/android/content/res/ColorStateList
-            mBinding.getCellViewModel().isMarkedIncorrect().observe(getActivity(), incorrect -> {
-                mBinding.entry.setTextColor(getResources().getColor(
-                        incorrect ? R.color.colorMarkedIncorrect : R.color.colorEntryText));
-            });
-
-            // Persist changes in content to disk.
-            mBinding.getCellViewModel().getContents().observe(getActivity(), s -> {
-                mBinding.getCellViewModel().onContentsChanged();
-                mExecutorService.submit(() -> {
-                    try {
-                        mViewModel.saveToFile();
-                    } catch (IOException e) {
-                        Log.e(TAG, String.format("Saving puzzle file %s failed",
-                                                 mViewModel.getFile().getName()), e);
-                    }
-                });
-            });
         }
     }
 
@@ -443,7 +440,7 @@ public class PuzzleFragment extends Fragment {
 
         @Override
         public void onKey(int primaryCode, int[] keyCodes) {
-            if (mSolved) {
+            if (mViewModel.isSolved().getValue()) {
                 return;
             }
             switch (primaryCode) {

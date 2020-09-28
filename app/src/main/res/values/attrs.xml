@@ -4,5 +4,6 @@
         <attr name="isSelected" format="boolean" />
         <attr name="isHighlighted" format="boolean" />
         <attr name="isCircled" format="boolean" />
+        <attr name="isMarkedIncorrect" format="boolean" />
     </declare-styleable>
 </resources>

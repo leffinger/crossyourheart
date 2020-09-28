@@ -15,6 +15,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsSelected;
     private boolean mIsCircled;
     private boolean mIsHighlighted;
+    private boolean mIsMarkedIncorrect;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -25,14 +26,6 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         cellView.setSelected(isSelected);
     }
 
-    @Override
-    public void setSelected(boolean selected) {
-        if (mIsSelected != selected) {
-            mIsSelected = selected;
-            refreshDrawableState();
-        }
-    }
-
     @BindingAdapter("isCircled")
     public static void setCircled(CellView cellView, boolean isCircled) {
         cellView.setCircled(isCircled);
@@ -41,6 +34,19 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isHighlighted")
     public static void setHighlighted(CellView cellView, boolean isHighlighted) {
         cellView.setHighlighted(isHighlighted);
+    }
+
+    @BindingAdapter("isMarkedIncorrect")
+    public static void setMarkedIncorrect(CellView cellView, boolean isMarkedIncorrect) {
+        cellView.setMarkedIncorrect(isMarkedIncorrect);
+    }
+
+    @Override
+    public void setSelected(boolean selected) {
+        if (mIsSelected != selected) {
+            mIsSelected = selected;
+            refreshDrawableState();
+        }
     }
 
     public void setCircled(boolean circled) {
@@ -57,9 +63,16 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
+    public void setMarkedIncorrect(boolean markedIncorrect) {
+        if (mIsMarkedIncorrect != markedIncorrect) {
+            mIsMarkedIncorrect = markedIncorrect;
+            refreshDrawableState();
+        }
+    }
+
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
-        int[] extraDrawableStates = new int[3];
+        int[] extraDrawableStates = new int[4];
         int count = 0;
         if (mIsSelected) {
             extraDrawableStates[count++] = R.attr.isSelected;
@@ -69,6 +82,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsCircled) {
             extraDrawableStates[count++] = R.attr.isCircled;
+        }
+        if (mIsMarkedIncorrect) {
+            extraDrawableStates[count++] = R.attr.isMarkedIncorrect;
         }
         if (count > 0) {
             int[] resized = Arrays.copyOf(extraDrawableStates, count);

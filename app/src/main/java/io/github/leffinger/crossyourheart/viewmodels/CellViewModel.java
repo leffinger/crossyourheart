@@ -91,8 +91,15 @@ public class CellViewModel {
         mDownClue = downClue;
     }
 
-    public MutableLiveData<String> getContents() {
+    public LiveData<String> getContents() {
         return mContents;
+    }
+
+    public String setContents(String newContents) {
+        String oldContents = mContents.getValue();
+        mContents.setValue(newContents);
+        mMarkedIncorrect.setValue(false);
+        return oldContents;
     }
 
     public LiveData<Boolean> isHighlighted() {
@@ -105,11 +112,6 @@ public class CellViewModel {
 
     public boolean isCircled() {
         return mIsCircled;
-    }
-
-    public void onContentsChanged() {
-        mMarkedIncorrect.setValue(false);
-        mPuzzleViewModel.onContentsChanged(mRow, mCol, mContents.getValue());
     }
 
     public void checkContents() {

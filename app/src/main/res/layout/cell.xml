@@ -27,7 +27,7 @@
             android:gravity="center"
             android:padding="2dp"
             android:text="@{cellViewModel.contents}"
-            android:textColor="@color/colorEntryText"
+            android:textColor="@color/entry_text"
             app:autoSizeMaxTextSize="100sp"
             app:autoSizeMinTextSize="4sp"
             app:autoSizeStepGranularity="2sp"
@@ -39,6 +39,7 @@
             app:layout_constraintTop_toTopOf="parent"
             custom:isCircled="@{cellViewModel.circled}"
             custom:isHighlighted="@{cellViewModel.highlighted}"
+            custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
             custom:isSelected="@{cellViewModel.selected}" />
 
         <androidx.constraintlayout.widget.Guideline
