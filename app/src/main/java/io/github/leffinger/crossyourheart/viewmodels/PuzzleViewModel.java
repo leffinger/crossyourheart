@@ -150,7 +150,6 @@ public class PuzzleViewModel extends ViewModel {
                     continue;
                 }
                 mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
-                    Log.i(TAG, "Contents changed");
                     mPuzzleFile.setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
                                                 contents);
                     mIsSolved.setValue(mPuzzleFile.isSolved());

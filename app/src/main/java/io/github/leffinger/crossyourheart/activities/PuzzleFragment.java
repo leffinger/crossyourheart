@@ -301,7 +301,6 @@ public class PuzzleFragment extends Fragment {
         // Persist changes in content to disk.
         mViewModel.getContentsChanged().observe(getActivity(), i -> mExecutorService.submit(() -> {
             try {
-                Log.i(TAG, "Saving pizzle file " + mViewModel.getFile().getName());
                 mViewModel.saveToFile();
             } catch (IOException e) {
                 Log.e(TAG,
