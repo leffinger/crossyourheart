@@ -245,26 +245,71 @@ public class PuzzleViewModel extends ViewModel {
         mAcrossFocus.setValue(!mAcrossFocus.getValue());
     }
 
-    private void moveToNextCell(boolean skipFilledClues, boolean skipFilledSquares) {
+    private CellViewModel getNextCell(boolean wasFilled, boolean skipFilledClues,
+                                      boolean skipFilledSquares, boolean skipFilledSquaresWrap,
+                                      boolean completedClueNext) {
         // Find our location in the current clue.
         CellViewModel currentCell = mCurrentCell.getValue();
         List<CellViewModel> currentClueCells = mCurrentClue.getValue().getCells();
         int i = currentClueCells.indexOf(currentCell);
         if (i < 0) {
             Log.e(TAG, "CellViewModel should be in ClueViewModel but isn't!");
-            return;
-        }
-        for (int j = 1; j < currentClueCells.size(); j++) {
-            int index = (i + j) % currentClueCells.size();
-            CellViewModel cellViewModel = currentClueCells.get(index);
-            if (!skipFilledSquares || cellViewModel.getContents().getValue().isEmpty()) {
-                mCurrentCell.setValue(cellViewModel);
-                return;
-            }
+            return currentCell;
         }
 
-        // No empty cell available; move to next clue.
-        moveToNextClue(skipFilledClues, skipFilledSquares);
+        if (!wasFilled) {
+            // Behavior after filling in an empty square.
+            if (skipFilledSquares) {
+                // Move to next empty square in the clue
+                if (i < currentClueCells.size() - 1) {
+                    for (int j = i + 1; j < currentClueCells.size(); j++) {
+                        if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
+                            return currentClueCells.get(j);
+                        }
+                    }
+                }
+                // Last (empty) square in the clue. Wrap around?
+                if (skipFilledSquaresWrap) {
+                    for (int j = 0; j < i; j++) {
+                        if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
+                            return currentClueCells.get(j);
+                        }
+                    }
+                }
+                // Move to next clue?
+                if (completedClueNext) {
+                    return getCellInNextClue(skipFilledClues, skipFilledSquares);
+                }
+                return currentCell;
+            }
+
+            // Move to next square in the clue, regardless of whether it is filled.
+            if (i < currentClueCells.size() - 1) {
+                return currentClueCells.get(i + 1);
+            }
+            // Last square in the clue. Wrap, next, or stop?
+            if (completedClueNext) {
+                // Move to the next clue.
+                return getCellInNextClue(skipFilledClues, skipFilledSquares);
+            }
+            // Stop.
+            return currentCell;
+
+        }
+
+        // Behavior after editing a previously-filled square.
+        // Move to next square in the clue, regardless of whether it is filled.
+        if (i < currentClueCells.size() - 1) {
+            return currentClueCells.get(i + 1);
+        }
+        // Last square in the clue.
+        if (completedClueNext) {
+            // Move to the next clue.
+            return getCellInNextClue(skipFilledClues, skipFilledSquares);
+        }
+        // Stop.
+        return currentCell;
+
     }
 
     public void moveToPreviousClue(boolean skipFilledClues, boolean skipFilledSquares) {
@@ -298,6 +343,11 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void moveToNextClue(boolean skipFilledClues, boolean skipFilledSquares) {
+        CellViewModel cell = getCellInNextClue(skipFilledClues, skipFilledSquares);
+        mCurrentCell.setValue(cell);
+    }
+
+    private CellViewModel getCellInNextClue(boolean skipFilledClues, boolean skipFilledSquares) {
         ClueViewModel next = mCurrentClue.getValue().getNextClue();
 
         if (skipFilledClues) {
@@ -324,16 +374,20 @@ public class PuzzleViewModel extends ViewModel {
         Log.i(TAG,
               String.format("Selecting clue %d-%s", next.getNumber(), next.isAcross() ? "A" : "D"));
         mAcrossFocus.setValue(next.isAcross());
-        mCurrentCell.setValue(cell);
+        return cell;
     }
 
     public void setCurrentCellContents(String newContents, boolean skipFilledClues,
-                                       boolean skipFilledSquares) {
+                                       boolean skipFilledSquares, boolean skipFilledSquaresWrap,
+                                       boolean completedClueNext) {
         CellViewModel currentCell = mCurrentCell.getValue();
         String oldContents = currentCell.setContents(newContents);
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents,
                                    mAcrossFocus.getValue()));
-        moveToNextCell(skipFilledClues, skipFilledSquares);
+        CellViewModel newCell =
+                getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares,
+                            skipFilledSquaresWrap, completedClueNext);
+        mCurrentCell.setValue(newCell);
     }
 
     public void doUndo() {

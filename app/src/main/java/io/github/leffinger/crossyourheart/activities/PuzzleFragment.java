@@ -277,9 +277,15 @@ public class PuzzleFragment extends Fragment {
         mViewModel.selectFirstCell();
         mViewModel.getCurrentCell().observe(getActivity(), cellViewModel -> {
             if (cellViewModel != null) {
+                int firstVisiblePosition =
+                        mGridLayoutManager.findFirstCompletelyVisibleItemPosition();
+                int lastVisibleItemPosition =
+                        mGridLayoutManager.findLastCompletelyVisibleItemPosition();
                 int position =
                         cellViewModel.getRow() * mViewModel.getNumRows() + cellViewModel.getCol();
-                mGridLayoutManager.scrollToPositionWithOffset(position, 2);
+                if (position < firstVisiblePosition || position > lastVisibleItemPosition) {
+                    mGridLayoutManager.scrollToPositionWithOffset(position, 2);
+                }
             }
         });
 
@@ -354,11 +360,21 @@ public class PuzzleFragment extends Fragment {
         return mPreferences.getBoolean(getString(R.string.preference_skip_filled_squares), true);
     }
 
+    private boolean skipFilledSquaresWrap() {
+        return mPreferences
+                .getBoolean(getString(R.string.preference_skip_filled_squares_wrap), false);
+    }
+
+    private boolean completedClueNext() {
+        return mPreferences.getBoolean(getString(R.string.preference_completed_clue_next), true);
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == REQUEST_CODE_REBUS_ENTRY && resultCode == RESULT_OK) {
             String newContents = RebusFragment.getContents(data);
-            mViewModel.setCurrentCellContents(newContents, skipFilledClues(), skipFilledSquares());
+            mViewModel.setCurrentCellContents(newContents, skipFilledClues(), skipFilledSquares(),
+                                              skipFilledSquaresWrap(), completedClueNext());
         }
     }
 
@@ -474,7 +490,8 @@ public class PuzzleFragment extends Fragment {
             default:
                 char letter = (char) primaryCode;
                 mViewModel.setCurrentCellContents(String.valueOf(letter), skipFilledClues(),
-                                                  skipFilledSquares());
+                                                  skipFilledSquares(), skipFilledSquaresWrap(),
+                                                  completedClueNext());
             }
         }
 

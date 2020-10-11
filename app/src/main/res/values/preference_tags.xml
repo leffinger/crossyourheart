@@ -3,8 +3,9 @@
     <string name="preference_tap_clue_behavior">tapClueBehavior</string>
     <string name="preference_skip_filled_clues">skipFilledClues</string>
     <string name="preference_skip_filled_squares">skipFilledSquares</string>
+    <string name="preference_skip_filled_squares_wrap">skipFilledSquaresWrap</string>
     <string name="preference_enable_haptic_feedback">enableHapticFeedback</string>
     <string name="preference_start_with_down_clues">startWithDownClues</string>
     <string name="preference_enable_hints">enableHints</string>
-
+    <string name="preference_completed_clue_next">completedClueNext</string>
 </resources>
