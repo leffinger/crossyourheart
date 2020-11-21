@@ -63,6 +63,7 @@ public class PuzzleLoaderTest {
                              new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c", SCRAMBLED, 0, null},
                              new Object[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c",
                                           SCRAMBLED, 0, null},
+                             new Object[]{"/mgwcc647.puz", "Time to Reorder", "1.2c", SCRAMBLED, 0, null},
                              new Object[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0",
                                           UNSCRAMBLED, 0, null},
                              new Object[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
@@ -72,7 +73,9 @@ public class PuzzleLoaderTest {
                                           new String[]{"STOCK", "BLACK", "FREE", "MASS"}},
                              new Object[]{"/Mar2920.puz",
                                           "NY Times, Sunday, March 29, 2020 Keep The Change",
-                                          "1.3\0", UNSCRAMBLED, 0, null});
+                                          "1.3\0", UNSCRAMBLED, 0, null},
+                             new Object[]{"/2020-10-9-Newsday.puz", "BEAR WITH US", "1.2\0",
+                                          UNSCRAMBLED, 0, null});
     }
 
     private static void assertHexEquals(byte expected, byte actual) {
