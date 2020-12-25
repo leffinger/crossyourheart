@@ -18,7 +18,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -479,13 +478,11 @@ public class PuzzleFragment extends Fragment {
                 mViewModel.doUndo();
                 break;
             case KEYCODE_MODE_CHANGE:
-                Toast.makeText(getActivity(), R.string.rebus_message, Toast.LENGTH_SHORT).show();
-//                    FragmentManager fragmentManager = getParentFragmentManager();
-//                    RebusFragment rebusFragment =
-//                            RebusFragment.newInstance(mViewModel.getCurrentCellContents());
-//                    rebusFragment.setTargetFragment(PuzzleFragment.this,
-//                    REQUEST_CODE_REBUS_ENTRY);
-//                    rebusFragment.show(fragmentManager, "Rebus");
+                FragmentManager fragmentManager = getParentFragmentManager();
+                RebusFragment rebusFragment = RebusFragment.newInstance(
+                        mViewModel.getCurrentCell().getValue().getContents().getValue());
+                rebusFragment.setTargetFragment(PuzzleFragment.this, REQUEST_CODE_REBUS_ENTRY);
+                rebusFragment.show(fragmentManager, "Rebus");
                 break;
             default:
                 char letter = (char) primaryCode;

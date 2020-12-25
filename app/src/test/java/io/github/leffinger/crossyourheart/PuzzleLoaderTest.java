@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart;
 
+import com.google.common.collect.ImmutableList;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,16 +15,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.List;
 
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 
 import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.LOCKED;
 import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.SCRAMBLED;
-import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -31,51 +32,71 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class PuzzleLoaderTest {
 
-    private final String mFilename;
-    private final String mTitle;
-    private final String mVersionString;
-    private final ScrambleState mScrambled;
-    private final int mNumRebusSquares;
-    private final String[] mRebuses;
+    private static final ImmutableList<PuzzleInfo> PUZZLE_INFOS =
+            ImmutableList.<PuzzleInfo>builder()
+                    .add(PuzzleInfo.builder().setFilename("/3x3.puz").setTitle("3x3")
+                                 .setVersionString("1.2\0").addSectionNames("LTIM").build())
+                    .add(PuzzleInfo.builder().setFilename("/3x3_filled.puz").setTitle("3x3")
+                                 .setVersionString("1.4\0").addSectionNames("LTIM", "RUSR").build())
+                    .add(PuzzleInfo.builder().setFilename("/wsj200827.puz")
+                                 .setTitle("Financial Sectors").setVersionString("1.4\0")
+                                 .setNumRebusSquares(4).addRebuses("STOCK", "BLACK", "FREE", "MASS")
+                                 .addSectionNames("GRBS", "RTBL", "LTIM").build())
+                    .add(PuzzleInfo.builder().setFilename("/076_ExtremelyOnline.puz")
+                                 .setTitle("\"Extremely Online\"").setVersionString("1.3\0")
+                                 .setScrambled(LOCKED).build())
+                    .add(PuzzleInfo.builder().setFilename("/075_WoodenIdols.puz")
+                                 .setTitle("\"Wooden Idols\"").setVersionString("1.4\0")
+                                 .setScrambled(LOCKED).addSectionNames("LTIM").build())
+                    .add(PuzzleInfo.builder().setFilename("/mgwcc636.puz").setTitle("Team Meta")
+                                 .setVersionString("1.2c").setScrambled(SCRAMBLED).build())
+                    .add(PuzzleInfo.builder().setFilename("/mgwcc637.puz")
+                                 .setTitle("\"Grid...of...Fortune!\"").setVersionString("1.2c")
+                                 .setScrambled(SCRAMBLED).build())
+                    .add(PuzzleInfo.builder().setFilename("/mgwcc647.puz")
+                                 .setTitle("Time to Reorder").setVersionString("1.2c")
+                                 .setScrambled(SCRAMBLED).build())
+                    .add(PuzzleInfo.builder().setFilename("/1287UpWithPeople.puz")
+                                 .setTitle("UP WITH PEOPLE").setVersionString("1.3\0").build())
+                    .add(PuzzleInfo.builder().setFilename("/Mar2920.puz")
+                                 .setTitle("NY Times, Sunday, March 29, 2020 Keep The Change")
+                                 .setVersionString("1.3\0").addCircledSquare(8, 7)
+                                 .addCircledSquare(8, 15).addCircledSquare(9, 8)
+                                 .addCircledSquare(9, 16).addCircledSquare(10, 4)
+                                 .addCircledSquare(10, 12).addCircledSquare(11, 6)
+                                 .addCircledSquare(11, 14).addCircledSquare(12, 5)
+                                 .addCircledSquare(12, 13).addSectionNames("GEXT").build())
+                    .add(PuzzleInfo.builder().setFilename("/Sep0520.puz")
+                                 .setTitle("NY Times, Saturday, September 5, 2020 ")
+                                 .setVersionString("1.3\0").build())
+                    .add(PuzzleInfo.builder().setFilename("/Nov0596.puz")
+                                 .setTitle("NY Times, Tuesday, November 5, 1996 ")
+                                 .setVersionString("1.3\0").addSectionNames("GEXT").build())
+                    .add(PuzzleInfo.builder().setFilename("/2020-10-9-Newsday.puz")
+                                 .setTitle("BEAR WITH US").setVersionString("1.2\0").build())
+                    .build();
+
+    private final PuzzleInfo mPuzzleInfo;
+    private final boolean mSerializeFirst;
 
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
     private PuzFile mPuzzleLoader;
 
-    public PuzzleLoaderTest(String filename, String title, String versionString,
-                            ScrambleState scrambled, int numRebusSquares, String[] rebuses) {
-        mFilename = filename;
-        mTitle = title;
-        mVersionString = versionString;
-        mScrambled = scrambled;
-        mNumRebusSquares = numRebusSquares;
-        mRebuses = rebuses;
+    public PuzzleLoaderTest(PuzzleInfo puzzleInfo, boolean serializeFirst) {
+        mPuzzleInfo = puzzleInfo;
+        mSerializeFirst = serializeFirst;
     }
 
-    @Parameters(name = "{0}")
+    @Parameters(name = "{0}_serializeFirst_{1}")
     public static List<Object[]> parameters() {
-        return Arrays.asList(new Object[]{"/3x3.puz", "3x3", "1.2\0", UNSCRAMBLED, 0, null},
-                             new Object[]{"/3x4.puz", "3x4", "1.2\0", UNSCRAMBLED, 0, null},
-                             new Object[]{"/076_ExtremelyOnline.puz", "\"Extremely Online\"",
-                                          "1.3\0", LOCKED, 0, null},
-                             new Object[]{"/075_WoodenIdols.puz", "\"Wooden Idols\"", "1.4\0",
-                                          LOCKED, 0, null},
-                             new Object[]{"/mgwcc636.puz", "Team Meta", "1.2c", SCRAMBLED, 0, null},
-                             new Object[]{"/mgwcc637.puz", "\"Grid...of...Fortune!\"", "1.2c",
-                                          SCRAMBLED, 0, null},
-                             new Object[]{"/mgwcc647.puz", "Time to Reorder", "1.2c", SCRAMBLED, 0, null},
-                             new Object[]{"/1287UpWithPeople.puz", "UP WITH PEOPLE", "1.3\0",
-                                          UNSCRAMBLED, 0, null},
-                             new Object[]{"/Sep0520.puz", "NY Times, Saturday, September 5, 2020 ",
-                                          "1.3\0", UNSCRAMBLED, 0, null},
-                             new Object[]{"/wsj200827.puz", "Financial Sectors", "1.4\0",
-                                          UNSCRAMBLED, 4,
-                                          new String[]{"STOCK", "BLACK", "FREE", "MASS"}},
-                             new Object[]{"/Mar2920.puz",
-                                          "NY Times, Sunday, March 29, 2020 Keep The Change",
-                                          "1.3\0", UNSCRAMBLED, 0, null},
-                             new Object[]{"/2020-10-9-Newsday.puz", "BEAR WITH US", "1.2\0",
-                                          UNSCRAMBLED, 0, null});
+        ImmutableList.Builder<Object[]> params = ImmutableList.builder();
+        for (PuzzleInfo puzzleInfo : PUZZLE_INFOS) {
+            for (boolean serializeFirst : new boolean[]{false, true}) {
+                params.add(new Object[]{puzzleInfo, serializeFirst});
+            }
+        }
+        return params.build();
     }
 
     private static void assertHexEquals(byte expected, byte actual) {
@@ -90,18 +111,27 @@ public class PuzzleLoaderTest {
 
     @Before
     public void loadPuzzle() throws IOException {
-        InputStream file = PuzzleLoaderTest.class.getResourceAsStream(mFilename);
+        InputStream file = PuzzleLoaderTest.class.getResourceAsStream(mPuzzleInfo.filename());
         mPuzzleLoader = PuzFile.loadPuzFile(file);
+        if (mSerializeFirst) {
+            File savedFile = mTemporaryFolder.newFile();
+            try (FileOutputStream outputStream = new FileOutputStream(savedFile)) {
+                mPuzzleLoader.savePuzzleFile(outputStream);
+            }
+            try (FileInputStream inputStream = new FileInputStream(savedFile)) {
+                mPuzzleLoader = PuzFile.verifyPuzFile(inputStream);
+            }
+        }
     }
 
     @Test
     public void verifyFile() throws IOException {
-        PuzFile.verifyPuzFile(PuzzleLoaderTest.class.getResourceAsStream(mFilename));
+        PuzFile.verifyPuzFile(PuzzleLoaderTest.class.getResourceAsStream(mPuzzleInfo.filename()));
     }
 
     @Test
     public void verifyTitle() {
-        assertEquals(mTitle, mPuzzleLoader.getTitle());
+        assertEquals(mPuzzleInfo.title(), mPuzzleLoader.getTitle());
     }
 
     @Test
@@ -111,7 +141,7 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyVersionString() {
-        assertEquals(mVersionString, mPuzzleLoader.getVersionString());
+        assertEquals(mPuzzleInfo.versionString(), mPuzzleLoader.getVersionString());
     }
 
     @Test
@@ -204,14 +234,48 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyScrambledState() {
-        assertEquals(mScrambled, mPuzzleLoader.getScrambleState());
+        assertEquals(mPuzzleInfo.scrambled(), mPuzzleLoader.getScrambleState());
     }
 
     @Test
     public void verifyRebusSquares() {
-        assertEquals(mNumRebusSquares, mPuzzleLoader.getNumRebusSquares());
-        for (int i = 0; i < mNumRebusSquares; i++) {
-            assertEquals(mRebuses[i], mPuzzleLoader.getRebus(i));
+        assertNotNull(mPuzzleLoader.getSectionAsText("GRBS"));
+        assertEquals(mPuzzleInfo.numRebusSquares(), mPuzzleLoader.getNumRebusSquares());
+        for (int i = 0; i < mPuzzleInfo.numRebusSquares(); i++) {
+            assertEquals(mPuzzleInfo.rebuses().get(i), mPuzzleLoader.getRebus(i));
         }
+    }
+
+    @Test
+    public void verifyCircles() {
+        for (int row = 0; row < mPuzzleLoader.getHeight(); row++) {
+            for (int col = 0; col < mPuzzleLoader.getWidth(); col++) {
+                if (mPuzzleInfo.circledSquares().containsEntry(row, col)) {
+                    assertTrue("not circled: row=" + row + ",col=" + col,
+                               mPuzzleLoader.isCircled(row, col));
+                } else {
+                    assertFalse("circled: row=" + row + ",col=" + col,
+                                mPuzzleLoader.isCircled(row, col));
+                }
+            }
+        }
+    }
+
+    @Test
+    public void verifyGextValues() {
+        for (int row = 0; row < mPuzzleLoader.getHeight(); row++) {
+            for (int col = 0; col < mPuzzleLoader.getWidth(); col++) {
+                if (mPuzzleInfo.circledSquares().containsEntry(row, col)) {
+                    assertHexEquals(PuzFile.GEXT_MASK_CIRCLED, mPuzzleLoader.getGextMask(row, col));
+                } else {
+                    assertHexEquals(PuzFile.GEXT_MASK_NONE, mPuzzleLoader.getGextMask(row, col));
+                }
+            }
+        }
+    }
+
+    @Test
+    public void verifyExtraSectionNames() {
+        assertEquals(mPuzzleLoader.getSectionNames(), mPuzzleInfo.sectionNames());
     }
 }
