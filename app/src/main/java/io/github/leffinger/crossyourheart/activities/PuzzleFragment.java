@@ -280,8 +280,8 @@ public class PuzzleFragment extends Fragment {
                         mGridLayoutManager.findFirstCompletelyVisibleItemPosition();
                 int lastVisibleItemPosition =
                         mGridLayoutManager.findLastCompletelyVisibleItemPosition();
-                int position =
-                        cellViewModel.getRow() * mViewModel.getNumRows() + cellViewModel.getCol();
+                int position = cellViewModel.getRow() * mViewModel.getNumColumns() +
+                        cellViewModel.getCol();
                 if (position < firstVisiblePosition || position > lastVisibleItemPosition) {
                     mGridLayoutManager.scrollToPositionWithOffset(position, 2);
                 }
