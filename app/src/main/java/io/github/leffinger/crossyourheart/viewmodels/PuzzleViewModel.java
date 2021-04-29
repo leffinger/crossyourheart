@@ -565,6 +565,31 @@ public class PuzzleViewModel extends ViewModel {
         }
     }
 
+    public void moveToNextCell() {
+        selectCell(getNextCell(false, false, false, false, true));
+    }
+
+    public void moveToPreviousCell() {
+        // Find our location in the current clue.
+        CellViewModel currentCell = mCurrentCell.getValue();
+        List<CellViewModel> currentClueCells = mCurrentClue.getValue().getCells();
+        int i = currentClueCells.indexOf(currentCell);
+        if (i < 0) {
+            Log.e(TAG, "CellViewModel should be in ClueViewModel but isn't!");
+            return;
+        }
+
+        // Move to the previous cell, unless this is the first cell in the clue.
+        if (i > 0) {
+            selectCell(currentClueCells.get(i - 1));
+            return;
+        }
+
+        // Move to the last square of the previous clue.
+        ClueViewModel prevClue = mCurrentClue.getValue().getPreviousClue();
+        selectCell(prevClue.getCells().get(prevClue.getCells().size() - 1));
+    }
+
     private static class Action {
         final CellViewModel mModifiedCell;
         final CellViewModel mSelectedCell;

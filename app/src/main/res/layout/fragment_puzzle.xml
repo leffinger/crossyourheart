@@ -38,13 +38,30 @@
 
         <ImageButton
             android:id="@+id/prev"
+            android:contentDescription="@string/previous_clue"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:backgroundTint="@color/colorHighlightedSquare"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_left_arrow"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/double_left_arrow"
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/clue" />
+
+        <ImageButton
+            android:id="@+id/prev_cell"
+            android:contentDescription="@string/previous_cell"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:backgroundTint="@color/colorHighlightedSquare"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/single_left_arrow"
+            app:layout_constraintBottom_toBottomOf="@id/clue"
+            app:layout_constraintStart_toEndOf="@id/prev"
             app:layout_constraintTop_toTopOf="@id/clue" />
 
         <TextView
@@ -56,19 +73,38 @@
             android:text="@{@string/clue_format(viewModel.currentClueNumber, viewModel.currentClueText)}"
             android:textSize="18sp"
             app:layout_constraintBottom_toTopOf="@id/keyboard"
-            app:layout_constraintEnd_toStartOf="@id/next"
-            app:layout_constraintStart_toEndOf="@id/prev"
+            app:layout_constraintEnd_toStartOf="@id/next_cell"
+            app:layout_constraintStart_toEndOf="@id/prev_cell"
             tools:text="CLUE" />
 
         <ImageButton
-            android:id="@+id/next"
+            android:id="@+id/next_cell"
+            android:contentDescription="@string/next_cell"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:backgroundTint="@color/colorHighlightedSquare"
-            android:src="@drawable/ic_right_arrow"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/single_right_arrow"
+            app:layout_constraintBottom_toBottomOf="@id/clue"
+            app:layout_constraintEnd_toStartOf="@id/next"
+            app:layout_constraintStart_toEndOf="@id/clue"
+            app:layout_constraintTop_toTopOf="@id/clue" />
+
+        <ImageButton
+            android:id="@+id/next"
+            android:contentDescription="@string/next_clue"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:backgroundTint="@color/colorHighlightedSquare"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/double_right_arrow"
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/clue"
+            app:layout_constraintStart_toEndOf="@id/next_cell"
             app:layout_constraintTop_toTopOf="@id/clue" />
 
         <android.inputmethodservice.KeyboardView

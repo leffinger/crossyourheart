@@ -300,6 +300,18 @@ public class PuzzleFragment extends Fragment {
             mViewModel.moveToNextClue(skipFilledClues(), skipFilledSquares());
         });
 
+        // Move to next cell when button is pressed.
+        mFragmentPuzzleBinding.nextCell.setOnClickListener(view -> {
+            doHapticFeedback(mFragmentPuzzleBinding.nextCell, HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToNextCell();
+        });
+
+        // Move to previous cell when button is pressed.
+        mFragmentPuzzleBinding.prevCell.setOnClickListener(view -> {
+            doHapticFeedback(mFragmentPuzzleBinding.prevCell, HapticFeedbackConstants.KEYBOARD_TAP);
+            mViewModel.moveToPreviousCell();
+        });
+
         // Set up keyboard listener.
         mFragmentPuzzleBinding.keyboard.setOnKeyboardActionListener(new PuzzleKeyboardListener());
 
