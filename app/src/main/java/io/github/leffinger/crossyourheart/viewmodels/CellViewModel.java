@@ -13,6 +13,7 @@ public class CellViewModel {
     private final boolean mIsCircled;
     private final MutableLiveData<String> mContents;
     private final MutableLiveData<Boolean> mMarkedIncorrect;
+    private final MutableLiveData<Boolean> mMarkedCorrect;
     private final MutableLiveData<Boolean> mRevealed;
     private final MediatorLiveData<Boolean> mHighlighted;
     private final MediatorLiveData<Boolean> mSelected;
@@ -39,6 +40,7 @@ public class CellViewModel {
         mContents = new MutableLiveData<>(contents);
         mSelected = new MediatorLiveData<>();
         mMarkedIncorrect = new MutableLiveData<>(false);
+        mMarkedCorrect = new MutableLiveData<>(false);
         mRevealed = new MutableLiveData<>(false);
         mHighlighted = new MediatorLiveData<>();
 
@@ -99,6 +101,10 @@ public class CellViewModel {
 
     public String setContents(String newContents) {
         String oldContents = mContents.getValue();
+        if (mMarkedCorrect.getValue() || mRevealed.getValue()) {
+            return oldContents;
+        }
+
         mContents.setValue(newContents);
         mMarkedIncorrect.setValue(false);
         mRevealed.setValue(false);
@@ -115,6 +121,8 @@ public class CellViewModel {
         return mMarkedIncorrect;
     }
 
+    public LiveData<Boolean> isMarkedCorrect() { return mMarkedCorrect; }
+
     public boolean isCircled() {
         return mIsCircled;
     }
@@ -123,7 +131,9 @@ public class CellViewModel {
         if (mContents.getValue().isEmpty()) {
             return;
         }
-        if (!mPuzzleViewModel.isCorrect(mRow, mCol)) {
+        if (mPuzzleViewModel.isCorrect(mRow, mCol)) {
+            mMarkedCorrect.setValue(true);
+        } else {
             mMarkedIncorrect.setValue(true);
         }
     }
@@ -136,5 +146,12 @@ public class CellViewModel {
 
     public LiveData<Boolean> getSelected() {
         return mSelected;
+    }
+
+    public void reset() {
+        mContents.setValue("");
+        mMarkedCorrect.setValue(false);
+        mMarkedIncorrect.setValue(false);
+        mRevealed.setValue(false);
     }
 }

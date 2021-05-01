@@ -41,6 +41,7 @@
             custom:isCircled="@{cellViewModel.circled}"
             custom:isHighlighted="@{cellViewModel.highlighted}"
             custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
+            custom:isMarkedCorrect="@{cellViewModel.markedCorrect}"
             custom:isRevealed="@{cellViewModel.revealed}"
             custom:isSelected="@{cellViewModel.selected}" />
 

@@ -16,6 +16,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsCircled;
     private boolean mIsHighlighted;
     private boolean mIsMarkedIncorrect;
+    private boolean mIsMarkedCorrect;
     private boolean mIsRevealed;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
@@ -40,6 +41,11 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isMarkedIncorrect")
     public static void setMarkedIncorrect(CellView cellView, boolean isMarkedIncorrect) {
         cellView.setMarkedIncorrect(isMarkedIncorrect);
+    }
+
+    @BindingAdapter("isMarkedCorrect")
+    public static void setMarkedCorrect(CellView cellView, boolean isMarkedCorrect) {
+        cellView.setMarkedCorrect(isMarkedCorrect);
     }
 
     @BindingAdapter("isRevealed")
@@ -76,6 +82,13 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
+    public void setMarkedCorrect(boolean markedCorrect) {
+        if (mIsMarkedCorrect != markedCorrect) {
+            mIsMarkedCorrect = markedCorrect;
+            refreshDrawableState();
+        }
+    }
+
     public void setRevealed(boolean isRevealed) {
         if (mIsRevealed != isRevealed) {
             mIsRevealed = isRevealed;
@@ -85,7 +98,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
 
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
-        int[] extraDrawableStates = new int[4];
+        int[] extraDrawableStates = new int[6];
         int count = 0;
         if (mIsSelected) {
             extraDrawableStates[count++] = R.attr.isSelected;
@@ -98,6 +111,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsMarkedIncorrect) {
             extraDrawableStates[count++] = R.attr.isMarkedIncorrect;
+        }
+        if (mIsMarkedCorrect) {
+            extraDrawableStates[count++] = R.attr.isMarkedCorrect;
         }
         if (mIsRevealed) {
             extraDrawableStates[count++] = R.attr.isRevealed;
