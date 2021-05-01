@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -158,6 +159,13 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         if (filename != null) {
             mFilename = filename;
             startActivity(PuzzleActivity.newIntent(this, mFilename));
+        }
+    }
+
+    @Override
+    public void onMultipleUrisSelected(List<Uri> uris) {
+        for (Uri uri : uris) {
+            loadUri(uri);
         }
     }
 

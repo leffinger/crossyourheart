@@ -1,6 +1,7 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -28,6 +29,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -109,6 +111,7 @@ public class PuzzleListFragment extends Fragment {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
             break;
         case R.id.download_file:
@@ -121,7 +124,17 @@ public class PuzzleListFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == REQUEST_CODE_OPEN_FILE && resultCode == RESULT_OK) {
-            ((Callbacks) getActivity()).onUriSelected(data.getData());
+            ClipData clipData = data.getClipData();
+            if (clipData != null && clipData.getItemCount() > 0) {
+                List<Uri> puzzleUris = new ArrayList<>();
+                for (int i = 0; i < clipData.getItemCount(); i++) {
+                    ClipData.Item item = clipData.getItemAt(i);
+                    puzzleUris.add(item.getUri());
+                }
+                ((Callbacks) getActivity()).onMultipleUrisSelected(puzzleUris);
+            } else {
+                ((Callbacks) getActivity()).onUriSelected(data.getData());
+            }
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -130,6 +143,8 @@ public class PuzzleListFragment extends Fragment {
         void onFileSelected(String filename);
 
         void onUriSelected(Uri uri);
+
+        void onMultipleUrisSelected(List<Uri> uris);
 
         void onDownloadSelected();
     }
