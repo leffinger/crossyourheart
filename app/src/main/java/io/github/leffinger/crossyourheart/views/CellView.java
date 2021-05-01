@@ -16,6 +16,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsCircled;
     private boolean mIsHighlighted;
     private boolean mIsMarkedIncorrect;
+    private boolean mIsRevealed;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -39,6 +40,11 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isMarkedIncorrect")
     public static void setMarkedIncorrect(CellView cellView, boolean isMarkedIncorrect) {
         cellView.setMarkedIncorrect(isMarkedIncorrect);
+    }
+
+    @BindingAdapter("isRevealed")
+    public static void setRevealed(CellView cellView, boolean isRevealed) {
+        cellView.setRevealed(isRevealed);
     }
 
     @Override
@@ -70,6 +76,13 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
+    public void setRevealed(boolean isRevealed) {
+        if (mIsRevealed != isRevealed) {
+            mIsRevealed = isRevealed;
+            refreshDrawableState();
+        }
+    }
+
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
         int[] extraDrawableStates = new int[4];
@@ -85,6 +98,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsMarkedIncorrect) {
             extraDrawableStates[count++] = R.attr.isMarkedIncorrect;
+        }
+        if (mIsRevealed) {
+            extraDrawableStates[count++] = R.attr.isRevealed;
         }
         if (count > 0) {
             int[] resized = Arrays.copyOf(extraDrawableStates, count);

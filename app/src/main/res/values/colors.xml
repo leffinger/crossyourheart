@@ -2,13 +2,15 @@
 <resources>
     <color name="colorPrimary">#EC407A</color>
     <color name="colorPrimaryDark">#AD1457</color>
+    <color name="colorPrimaryLight">#F48FB1</color>
     <color name="colorAccent">#26A69A</color>
     <color name="colorBlackSquare">#000000</color>
     <color name="colorWhiteSquare">#ffffff</color>
-    <color name="colorSelectedSquare">#FFE082</color>
-    <color name="colorHighlightedSquare">#F48FB1</color>
+    <color name="colorSelectedSquare">#FFEBAD</color>
+    <color name="colorHighlightedSquare">#B6E3F6</color>
     <color name="colorEntryText">#000000</color>
     <color name="colorSolved">#4CAF50</color>
     <color name="colorInProgress">#FF9800</color>
-    <color name="colorMarkedIncorrect">#E53935</color>
+    <color name="colorMarkedIncorrect">#C34A32</color>
+    <color name="colorRevealed">#40A06A</color>
 </resources>

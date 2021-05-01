@@ -13,6 +13,7 @@ public class CellViewModel {
     private final boolean mIsCircled;
     private final MutableLiveData<String> mContents;
     private final MutableLiveData<Boolean> mMarkedIncorrect;
+    private final MutableLiveData<Boolean> mRevealed;
     private final MediatorLiveData<Boolean> mHighlighted;
     private final MediatorLiveData<Boolean> mSelected;
     private int mClueNumber;  // if this is the first cell in one or both directions
@@ -38,6 +39,7 @@ public class CellViewModel {
         mContents = new MutableLiveData<>(contents);
         mSelected = new MediatorLiveData<>();
         mMarkedIncorrect = new MutableLiveData<>(false);
+        mRevealed = new MutableLiveData<>(false);
         mHighlighted = new MediatorLiveData<>();
 
         // Set up LiveData observer for whether this cell is currently selected.
@@ -99,12 +101,15 @@ public class CellViewModel {
         String oldContents = mContents.getValue();
         mContents.setValue(newContents);
         mMarkedIncorrect.setValue(false);
+        mRevealed.setValue(false);
         return oldContents;
     }
 
     public LiveData<Boolean> isHighlighted() {
         return mHighlighted;
     }
+
+    public LiveData<Boolean> isRevealed() {return mRevealed; }
 
     public LiveData<Boolean> isMarkedIncorrect() {
         return mMarkedIncorrect;
@@ -126,6 +131,7 @@ public class CellViewModel {
     public void revealContents() {
         String solution = mPuzzleViewModel.getSolution(mRow, mCol);
         mContents.setValue(solution);
+        mRevealed.setValue(true);
     }
 
     public LiveData<Boolean> getSelected() {

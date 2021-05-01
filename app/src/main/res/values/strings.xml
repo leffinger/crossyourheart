@@ -40,4 +40,5 @@
     <string name="previous_cell">Previous cell</string>
     <string name="next_cell">Next cell</string>
     <string name="next_clue">Next clue</string>
+    <string name="sample_text">A</string>
 </resources>
