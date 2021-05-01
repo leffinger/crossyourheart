@@ -460,7 +460,7 @@ public class PuzzleViewModel extends ViewModel {
         for (CellViewModel[] row : mGrid) {
             for (CellViewModel cell : row) {
                 if (cell != null) {
-                    cell.setContents("");
+                    cell.reset();
                 }
             }
         }
