@@ -473,19 +473,18 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public boolean isCheckable() {
-        AbstractPuzzleFile.ScrambleState scrambleState = mPuzzleFile.getScrambleState();
-        return scrambleState == AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
+        return mPuzzleFile.getScrambleState() == AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
     }
 
     public void checkCurrentCell() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         mCurrentCell.getValue().checkContents();
     }
 
     public void checkCurrentClue() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         for (CellViewModel cell : mCurrentClue.getValue().getCells()) {
@@ -494,7 +493,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void checkPuzzle() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         for (CellViewModel[] row : mGrid) {
@@ -511,14 +510,14 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void revealCurrentCell() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         mCurrentCell.getValue().revealContents();
     }
 
     public void revealCurrentClue() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         for (CellViewModel cell : mCurrentClue.getValue().getCells()) {
@@ -527,7 +526,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void revealPuzzle() {
-        if (mPuzzleFile.getScrambleState() != AbstractPuzzleFile.ScrambleState.UNSCRAMBLED) {
+        if (!isCheckable()) {
             return;
         }
         for (CellViewModel[] row : mGrid) {
@@ -548,6 +547,9 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void selectCell(CellViewModel cellViewModel) {
+        if (cellViewModel == null) {
+            return;
+        }
         if (mCurrentCell.getValue() == cellViewModel) {
             // Toggle directions.
             mAcrossFocus.setValue(!mAcrossFocus.getValue());
@@ -566,28 +568,31 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void moveToNextCell() {
-        selectCell(getNextCell(false, false, false, false, true));
+        CellViewModel currentCell = mCurrentCell.getValue();
+        Position position = new Position(currentCell.getRow(), currentCell.getCol());
+        boolean isAcross = mAcrossFocus.getValue();
+        do {
+            if (isAcross) {
+                position.moveRowMajor(1);
+            } else {
+                position.moveColumnMajor(1);
+            }
+        } while (mGrid[position.row][position.col] == null);
+        mCurrentCell.setValue(mGrid[position.row][position.col]);
     }
 
     public void moveToPreviousCell() {
-        // Find our location in the current clue.
         CellViewModel currentCell = mCurrentCell.getValue();
-        List<CellViewModel> currentClueCells = mCurrentClue.getValue().getCells();
-        int i = currentClueCells.indexOf(currentCell);
-        if (i < 0) {
-            Log.e(TAG, "CellViewModel should be in ClueViewModel but isn't!");
-            return;
-        }
-
-        // Move to the previous cell, unless this is the first cell in the clue.
-        if (i > 0) {
-            selectCell(currentClueCells.get(i - 1));
-            return;
-        }
-
-        // Move to the last square of the previous clue.
-        ClueViewModel prevClue = mCurrentClue.getValue().getPreviousClue();
-        selectCell(prevClue.getCells().get(prevClue.getCells().size() - 1));
+        Position position = new Position(currentCell.getRow(), currentCell.getCol());
+        boolean isAcross = mAcrossFocus.getValue();
+        do {
+            if (isAcross) {
+                position.moveRowMajor(-1);
+            } else {
+                position.moveColumnMajor(-1);
+            }
+        } while (mGrid[position.row][position.col] == null);
+        mCurrentCell.setValue(mGrid[position.row][position.col]);
     }
 
     private static class Action {
@@ -604,6 +609,38 @@ public class PuzzleViewModel extends ViewModel {
             mOldContents = oldContents;
             mNewContents = newContents;
             mAcrossFocus = acrossFocus;
+        }
+    }
+
+    /**
+     * Helper class for moving around the grid in row-major and column-major ways.
+     */
+    private class Position {
+        int row;
+        int col;
+
+        public Position(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+
+        public void moveRowMajor(int offset) {
+            int width = mPuzzleFile.getWidth();
+            int height = mPuzzleFile.getHeight();
+            int rowMajorPosition = row * width + col;
+            rowMajorPosition = (rowMajorPosition + (width * height) + offset) % (width * height);
+            row = rowMajorPosition / width;
+            col = rowMajorPosition % width;
+        }
+
+        public void moveColumnMajor(int offset) {
+            int width = mPuzzleFile.getWidth();
+            int height = mPuzzleFile.getHeight();
+            int columnMajorPosition = col * height + row;
+            columnMajorPosition =
+                    (columnMajorPosition + (width * height) + offset) % (width * height);
+            row = columnMajorPosition % height;
+            col = columnMajorPosition / height;
         }
     }
 }

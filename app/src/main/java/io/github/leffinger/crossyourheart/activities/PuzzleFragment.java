@@ -27,6 +27,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.Observer;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -236,15 +237,6 @@ public class PuzzleFragment extends Fragment {
                             .setMessage(R.string.reset_puzzle_alert)
                             .setPositiveButton(R.string.reset_puzzle, (dialogInterface, i) -> {
                                 mViewModel.resetPuzzle();
-                                mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
-                                    if (solved) {
-                                        AlertDialog dialog = new AlertDialog.Builder(getActivity())
-                                                .setMessage(R.string.alert_solved)
-                                                .setPositiveButton(android.R.string.ok, null)
-                                                .create();
-                                        dialog.show();
-                                    }
-                                });
                             }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
                             .create();
             alertDialog.show();
@@ -327,16 +319,23 @@ public class PuzzleFragment extends Fragment {
         }));
 
         // If the puzzle was not solved to begin with, display a message when it is solved.
-        if (!mViewModel.isSolved().getValue()) {
-            mViewModel.isSolved().observe(getViewLifecycleOwner(), solved -> {
-                if (solved) {
+        // This also handles situations where the puzzle goes from solved to unsolved, e.g. reset.
+        mViewModel.isSolved().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+            private boolean shouldCongratulate = false;
+
+            @Override
+            public void onChanged(Boolean solved) {
+                if (solved && shouldCongratulate) {
                     AlertDialog dialog =
                             new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
                                     .setPositiveButton(android.R.string.ok, null).create();
                     dialog.show();
+                    shouldCongratulate = false;
+                } else if (!solved && !shouldCongratulate) {
+                    shouldCongratulate = true;
                 }
-            });
-        }
+            }
+        });
 
         mCellAdapter.notifyDataSetChanged();
         mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
