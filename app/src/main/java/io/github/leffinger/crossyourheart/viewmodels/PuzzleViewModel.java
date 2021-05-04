@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import android.annotation.SuppressLint;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
@@ -14,149 +16,62 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 
 public class PuzzleViewModel extends ViewModel {
     private static final String TAG = "PuzzleViewModel";
-
-    /**
-     * Representation of on-disk puzzle file.
-     */
-    private final AbstractPuzzleFile mPuzzleFile;
-
-    /**
-     * Name of the file where the puzzle should be saved.
-     */
-    private final File mFile;
-
-    /**
-     * Grid of mutable CellViewModels. Black cells are null.
-     */
-    private final CellViewModel[][] mGrid;
-
     /**
      * True if the currently active clue is an Across, false if Down.
      */
-    private final MutableLiveData<Boolean> mAcrossFocus;
-
+    private final MutableLiveData<Boolean> mAcrossFocus = new MutableLiveData<>();
     /**
      * The view model for the currently selected square.
      */
-    private final MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>(null);
-
+    private final MutableLiveData<CellViewModel> mCurrentCell = new MutableLiveData<>();
     /**
      * Currently active clue.
      */
     private final MediatorLiveData<ClueViewModel> mCurrentClue = new MediatorLiveData<>();
-
     /**
      * Listens for changes to cell contents.
      */
     private final MediatorLiveData<Integer> mContentsChanged = new MediatorLiveData<>();
-
     /**
      * History of actions. Enables "undo" functionality.
      */
     private final Stack<Action> mUndoStack = new Stack<>();
-
     /**
      * Whether the puzzle's solution is currently correct.
      */
-    private final MutableLiveData<Boolean> mIsSolved;
+    private final MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
+    /**
+     * Time elapsed so far (in seconds).
+     */
+    private final MutableLiveData<Long> mElapsedTime = new MutableLiveData<>();
+    private AtomicBoolean mInitialized = new AtomicBoolean(false);
+    /**
+     * Representation of on-disk puzzle file.
+     */
+    private AbstractPuzzleFile mPuzzleFile;
+    /**
+     * Name of the file where the puzzle should be saved.
+     */
+    private File mFile;
+    /**
+     * Grid of mutable CellViewModels. Black cells are null.
+     */
+    private CellViewModel[][] mGrid;
+
+    public PuzzleViewModel() {
+
+    }
 
     // This can be called from a background thread, so it should not call setValue() on any
     // LiveData objects.
     public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
-        mPuzzleFile = puzzleFile;
-        mFile = file;
-        mAcrossFocus = new MutableLiveData<>(!startWithDownClues);
-        mIsSolved = new MutableLiveData<>(puzzleFile.isSolved());
-
-        StringBuilder solution = new StringBuilder();
-        for (int row = 0; row < getNumRows(); row++) {
-            for (int col = 0; col < getNumColumns(); col++) {
-                solution.append(puzzleFile.getCellSolution(row, col));
-            }
-            solution.append('\n');
-        }
-
-        // Construct a structure of ClueViewModels linked to CellViewModels, and vice versa.
-        ClueViewModel[] clues = new ClueViewModel[mPuzzleFile.getNumClues()];
-        for (int i = 0; i < clues.length; i++) {
-            AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
-            clues[i] = new ClueViewModel(clue.isAcross(), clue.getNumber(), clue.getText());
-        }
-
-        mGrid = new CellViewModel[getNumRows()][getNumColumns()];
-        for (int row = 0; row < getNumRows(); row++) {
-            for (int col = 0; col < getNumColumns(); col++) {
-                if (mPuzzleFile.isBlack(row, col)) {
-                    continue;
-                }
-
-                mGrid[row][col] =
-                        new CellViewModel(this, row, col, mPuzzleFile.getCellContents(row, col),
-                                          mPuzzleFile.isCircled(row, col));
-
-                int acrossClueIndex = mPuzzleFile.getAcrossClueIndex(row, col);
-                if (acrossClueIndex >= 0) {
-                    mGrid[row][col].setAcrossClue(clues[acrossClueIndex]);
-                    clues[acrossClueIndex].addCell(mGrid[row][col]);
-                }
-
-                int downClueIndex = mPuzzleFile.getDownClueIndex(row, col);
-                if (downClueIndex >= 0) {
-                    mGrid[row][col].setDownClue(clues[downClueIndex]);
-                    clues[downClueIndex].addCell(mGrid[row][col]);
-                }
-            }
-        }
-
-        // Link Clue objects in a doubly-linked circular list.
-        linkClues(clues);
-
-        // When across/down focus changes, or the current cell changes, update the currently
-        // selected clue.
-        Observer<Object> observer = o -> {
-            CellViewModel currentCell = mCurrentCell.getValue();
-            if (currentCell == null) {
-                return;
-            }
-            if (mAcrossFocus.getValue()) {
-                if (currentCell.getAcrossClue() != null) {
-                    mCurrentClue.setValue(currentCell.getAcrossClue());
-                } else if (currentCell.getDownClue() != null) {
-                    // switch directions if this cell only has a down clue
-                    mAcrossFocus.setValue(false);  // should trigger another update
-                }
-            } else {
-                if (currentCell.getDownClue() != null) {
-                    mCurrentClue.setValue(currentCell.getDownClue());
-                } else if (currentCell.getAcrossClue() != null) {
-                    // switch directions if this cell only has an across clue
-                    mAcrossFocus.setValue(true);  // should trigger another update
-                }
-            }
-        };
-        mCurrentClue.addSource(mAcrossFocus, observer);
-        mCurrentClue.addSource(mCurrentCell, observer);
-
-        // When text changes, trigger updates.
-        for (int row = 0; row < getNumRows(); row++) {
-            for (int col = 0; col < getNumColumns(); col++) {
-                CellViewModel cellViewModel = mGrid[row][col];
-                if (cellViewModel == null) {
-                    continue;
-                }
-                mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
-                    mPuzzleFile.setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
-                                                contents);
-                    mIsSolved.setValue(mPuzzleFile.isSolved());
-                    mContentsChanged.setValue(0);
-                });
-            }
-        }
+        initialize(puzzleFile, file, startWithDownClues);
     }
 
     private static void linkClues(ClueViewModel[] clues) {
@@ -191,6 +106,124 @@ public class PuzzleViewModel extends ViewModel {
 
         // Now "previousClue" should be the last clue.
         return previousClue;
+    }
+
+    public boolean initialized() {
+        return mInitialized.get();
+    }
+
+    /**
+     * Call from the UI thread.
+     */
+    @SuppressLint("StaticFieldLeak")
+    public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
+        if (!mInitialized.compareAndSet(false, true)) {
+            return;
+        }
+
+        mPuzzleFile = puzzleFile;
+        mFile = file;
+
+        // Do as much as possible off the UI thread, but some tasks (e.g. addSource) must be done
+        // on the UI thread.
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected void onPreExecute() {
+                // When across/down focus changes, or the current cell changes, update the currently
+                // selected clue.
+                Observer<Object> observer = o -> {
+                    CellViewModel currentCell = mCurrentCell.getValue();
+                    Boolean acrossFocus = mAcrossFocus.getValue();
+                    if (currentCell == null || acrossFocus == null) {
+                        return;
+                    }
+                    if (acrossFocus) {
+                        if (currentCell.getAcrossClue() != null) {
+                            mCurrentClue.setValue(currentCell.getAcrossClue());
+                        } else if (currentCell.getDownClue() != null) {
+                            // switch directions if this cell only has a down clue
+                            mAcrossFocus.setValue(false);  // should trigger another update
+                        }
+                    } else {
+                        if (currentCell.getDownClue() != null) {
+                            mCurrentClue.setValue(currentCell.getDownClue());
+                        } else if (currentCell.getAcrossClue() != null) {
+                            // switch directions if this cell only has an across clue
+                            mAcrossFocus.setValue(true);  // should trigger another update
+                        }
+                    }
+                };
+                mCurrentClue.addSource(mAcrossFocus, observer);
+                mCurrentClue.addSource(mCurrentCell, observer);
+            }
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                // Construct a structure of ClueViewModels linked to CellViewModels, and vice versa.
+                ClueViewModel[] clues = new ClueViewModel[mPuzzleFile.getNumClues()];
+                for (int i = 0; i < clues.length; i++) {
+                    AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
+                    clues[i] = new ClueViewModel(clue.isAcross(), clue.getNumber(), clue.getText());
+                }
+
+                mGrid = new CellViewModel[getNumRows()][getNumColumns()];
+                for (int row = 0; row < getNumRows(); row++) {
+                    for (int col = 0; col < getNumColumns(); col++) {
+                        if (mPuzzleFile.isBlack(row, col)) {
+                            continue;
+                        }
+
+                        mGrid[row][col] = new CellViewModel(PuzzleViewModel.this, row, col,
+                                                            mPuzzleFile.getCellContents(row, col),
+                                                            mPuzzleFile.isCircled(row, col));
+
+                        int acrossClueIndex = mPuzzleFile.getAcrossClueIndex(row, col);
+                        if (acrossClueIndex >= 0) {
+                            mGrid[row][col].setAcrossClue(clues[acrossClueIndex]);
+                            clues[acrossClueIndex].addCell(mGrid[row][col]);
+                        }
+
+                        int downClueIndex = mPuzzleFile.getDownClueIndex(row, col);
+                        if (downClueIndex >= 0) {
+                            mGrid[row][col].setDownClue(clues[downClueIndex]);
+                            clues[downClueIndex].addCell(mGrid[row][col]);
+                        }
+                    }
+                }
+
+                // Link Clue objects in a doubly-linked circular list.
+                linkClues(clues);
+
+                mAcrossFocus.postValue(!startWithDownClues);
+                mIsSolved.postValue(puzzleFile.isSolved());
+                mElapsedTime.postValue(puzzleFile.getElapsedTime());
+
+                selectFirstCell();
+
+                return null;
+            }
+
+            @SuppressLint("StaticFieldLeak")
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                // When text changes, trigger updates.
+                for (int row = 0; row < getNumRows(); row++) {
+                    for (int col = 0; col < getNumColumns(); col++) {
+                        CellViewModel cellViewModel = mGrid[row][col];
+                        if (cellViewModel == null) {
+                            continue;
+                        }
+                        mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
+                            mPuzzleFile
+                                    .setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
+                                                     contents);
+                            mIsSolved.setValue(mPuzzleFile.isSolved());
+                            mContentsChanged.setValue(0);
+                        });
+                    }
+                }
+            }
+        }.execute();
     }
 
     public CellViewModel getCellViewModel(int row, int col) {
@@ -439,6 +472,8 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void saveToFile() throws IOException {
+        assert mInitialized.get();
+        mPuzzleFile.setElapsedTime(mElapsedTime.getValue());
         try (FileOutputStream outputStream = new FileOutputStream(mFile)) {
             mPuzzleFile.savePuzzleFile(outputStream);
         }
@@ -457,6 +492,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void resetPuzzle() {
+        mElapsedTime.setValue(0L);
         for (CellViewModel[] row : mGrid) {
             for (CellViewModel cell : row) {
                 if (cell != null) {
@@ -465,7 +501,6 @@ public class PuzzleViewModel extends ViewModel {
             }
         }
         mUndoStack.clear();
-        mIsSolved.setValue(false);
     }
 
     public boolean isCorrect(int row, int col) {
@@ -559,15 +594,17 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void selectFirstCell() {
+        assert mInitialized.get();
         for (CellViewModel cellViewModel : mGrid[0]) {
             if (cellViewModel != null) {
-                mCurrentCell.setValue(cellViewModel);
+                mCurrentCell.postValue(cellViewModel);
                 return;
             }
         }
     }
 
     public void moveToNextCell() {
+        assert mInitialized.get();
         CellViewModel currentCell = mCurrentCell.getValue();
         Position position = new Position(currentCell.getRow(), currentCell.getCol());
         boolean isAcross = mAcrossFocus.getValue();
@@ -593,6 +630,10 @@ public class PuzzleViewModel extends ViewModel {
             }
         } while (mGrid[position.row][position.col] == null);
         mCurrentCell.setValue(mGrid[position.row][position.col]);
+    }
+
+    public MutableLiveData<Long> getElapsedTime() {
+        return mElapsedTime;
     }
 
     private static class Action {

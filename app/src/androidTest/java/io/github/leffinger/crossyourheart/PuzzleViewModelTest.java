@@ -1,6 +1,7 @@
 package io.github.leffinger.crossyourheart;
 
 import android.content.Context;
+import android.os.AsyncTask;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
@@ -14,6 +15,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
@@ -96,10 +98,19 @@ public class PuzzleViewModelTest {
         InputStream inputStream = PuzzleViewModelTest.class.getResourceAsStream("/mgwcc647.puz");
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
-        PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
+        PuzzleViewModel puzzleViewModel = new PuzzleViewModel();
+        final File outFile = mTemporaryFolder.newFile();
 
-        puzzleViewModel.selectFirstCell();
+        // Initialize the viewmodel off-thread.
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                puzzleViewModel.initialize(puzzleFile, outFile, false);
+                puzzleViewModel.selectFirstCell();
+                return null;
+            }
+        }.execute();
+
         LiveData<ClueViewModel> clueViewModelLiveData = puzzleViewModel.getCurrentClue();
         ClueViewModel clueViewModel;
         do {
@@ -122,7 +133,7 @@ public class PuzzleViewModelTest {
         };
         liveData.observeForever(observer);
         // Don't wait indefinitely if the LiveData is not set.
-        if (!latch.await(2, TimeUnit.SECONDS)) {
+        if (!latch.await(10, TimeUnit.SECONDS)) {
             throw new RuntimeException("LiveData value was never set.");
         }
         //noinspection unchecked

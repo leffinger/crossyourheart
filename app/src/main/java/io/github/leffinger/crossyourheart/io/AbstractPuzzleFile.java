@@ -46,6 +46,10 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract String getSolution(int row, int col);
 
+    public abstract long getElapsedTime();
+
+    public abstract void setElapsedTime(long elapsedTime);
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
     }

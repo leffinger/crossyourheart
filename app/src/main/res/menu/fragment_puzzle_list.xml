@@ -13,4 +13,9 @@
         android:icon="@drawable/folder"
         android:title="@string/open_file"
         app:showAsAction="ifRoom|withText" />
+
+    <item
+        android:id="@+id/delete_bad_files"
+        android:title="@string/delete_bad_files"
+        app:showAsAction="never" />
 </menu>

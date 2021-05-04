@@ -1,6 +1,5 @@
 package io.github.leffinger.crossyourheart.io;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
@@ -17,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
@@ -27,18 +27,15 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
  * https://code.google.com/archive/p/puz/wikis/FileFormat.wiki
  */
 public class PuzFile extends AbstractPuzzleFile {
+    public static final byte GEXT_MASK_CIRCLED = (byte) 0x80;
+    public static final byte GEXT_MASK_NONE = 0x0;
     private static final String TAG = "PuzFile";
     private static final String MAGIC = "ACROSS&DOWN";
     private static final String GRBS_SECTION_NAME = "GRBS";
     private static final String RTBL_SECTION_NAME = "RTBL";
     private static final String RUSR_SECTION_NAME = "RUSR";
     private static final String LTIM_SECTION_NAME = "LTIM";
-
     private static final String GEXT_SECTION_NAME = "GEXT";
-
-    public static final byte GEXT_MASK_CIRCLED = (byte) 0x80;
-    public static final byte GEXT_MASK_NONE = 0x0;
-
     final int mFileChecksum;
     final byte[] mMagic;
     final int mHeaderChecksum;
@@ -62,13 +59,14 @@ public class PuzFile extends AbstractPuzzleFile {
     final int[] mAcrossClueMapping;
     final int[] mDownClueMapping;
     final byte[][] mUserRebusEntries;
+    long mElapsedTime;
 
     public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
                    byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
                    byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
                    byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
                    Clue[] clues, byte[] note, List<Section> extraSections, int[] acrossClueMapping,
-                   int[] downClueMapping, byte[][] userRebusEntries) {
+                   int[] downClueMapping, byte[][] userRebusEntries, long elapsedTime) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -92,6 +90,7 @@ public class PuzFile extends AbstractPuzzleFile {
         mAcrossClueMapping = acrossClueMapping;
         mDownClueMapping = downClueMapping;
         mUserRebusEntries = userRebusEntries;
+        mElapsedTime = elapsedTime;
     }
 
     /**
@@ -271,6 +270,7 @@ public class PuzFile extends AbstractPuzzleFile {
         }
 
         byte[][] rebusUserEntries = new byte[width * height][];
+        long elapsedTime = 0;
         for (Section section : extraSections) {
             switch (section.name) {
             case RUSR_SECTION_NAME:
@@ -280,6 +280,12 @@ public class PuzFile extends AbstractPuzzleFile {
                     byte[] rebusEntry = readNullTerminatedByteString(stream);
                     rebusUserEntries[i] = rebusEntry.length == 0 ? null : rebusEntry;
                 }
+                break;
+            case LTIM_SECTION_NAME:
+                String encodedTime = new String(section.data, StandardCharsets.US_ASCII);
+                String[] tokens = encodedTime.split(",");
+                elapsedTime = Long.parseLong(tokens[0]);
+                break;
             }
         }
 
@@ -287,7 +293,7 @@ public class PuzFile extends AbstractPuzzleFile {
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
                            copyright, clues, note, extraSections, acrossClueMapping,
-                           downClueMapping, rebusUserEntries);
+                           downClueMapping, rebusUserEntries, elapsedTime);
     }
 
     /* Helper method for clue assignment. */
@@ -484,7 +490,7 @@ public class PuzFile extends AbstractPuzzleFile {
         writeSectionIfPresent(RTBL_SECTION_NAME, dataOutputStream);
         writeUserRebusSection(dataOutputStream);
         writeSectionIfPresent(GEXT_SECTION_NAME, dataOutputStream);
-        writeSectionIfPresent(LTIM_SECTION_NAME, dataOutputStream);
+        writeTimerSection(dataOutputStream);
     }
 
     private void writeSectionIfPresent(String sectionName,
@@ -508,6 +514,16 @@ public class PuzFile extends AbstractPuzzleFile {
         }
         if (shouldWrite) {
             writeSection(RUSR_SECTION_NAME, rusrSectionData.toByteArray(), dataOutputStream);
+        }
+    }
+
+    private void writeTimerSection(
+            LittleEndianDataOutputStream dataOutputStream) throws IOException {
+        Section section = findSection(LTIM_SECTION_NAME);
+        if (section != null || mElapsedTime > 0) {
+            String data = String.format(Locale.getDefault(), "%d,0", mElapsedTime);
+            writeSection(LTIM_SECTION_NAME, data.getBytes(StandardCharsets.US_ASCII),
+                         dataOutputStream);
         }
     }
 
@@ -703,6 +719,16 @@ public class PuzFile extends AbstractPuzzleFile {
     @Override
     public String getSolution(int row, int col) {
         return new String(new byte[]{mSolution[getOffset(row, col)]}, ISO_8859_1);
+    }
+
+    @Override
+    public long getElapsedTime() {
+        return mElapsedTime;
+    }
+
+    @Override
+    public void setElapsedTime(long elapsedTime) {
+        mElapsedTime = elapsedTime;
     }
 
     private int getComputedScrambledChecksum() {

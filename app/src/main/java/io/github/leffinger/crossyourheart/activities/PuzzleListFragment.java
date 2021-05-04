@@ -1,5 +1,6 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Intent;
@@ -29,7 +30,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -85,7 +85,9 @@ public class PuzzleListFragment extends Fragment {
         };
 
         // Fetch puzzles in a background task.
-        new FetchPuzzleFilesTask().execute();
+        File puzzleDir = IOUtil.getPuzzleDir(getContext());
+        File[] files = puzzleDir.listFiles();
+        new FetchPuzzleFilesTask().execute(files);
     }
 
     @Override
@@ -117,8 +119,50 @@ public class PuzzleListFragment extends Fragment {
         case R.id.download_file:
             ((Callbacks) getActivity()).onDownloadSelected();
             break;
+        case R.id.delete_bad_files:
+            deleteBadFiles();
+            break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    private void deleteBadFiles() {
+        new AsyncTask<Void, Void, List<File>>() {
+
+            @Override
+            protected List<File> doInBackground(Void... voids) {
+                File puzzleDir = IOUtil.getPuzzleDir(getContext());
+                File[] files = puzzleDir.listFiles();
+                List<File> badFiles = new ArrayList<>();
+                for (File file : files) {
+                    try (FileInputStream inputStream = new FileInputStream(file)) {
+                        PuzFile.loadPuzFile(inputStream);
+                    } catch (IOException e) {
+                        badFiles.add(file);
+                    }
+                }
+                return badFiles;
+            }
+
+            @Override
+            protected void onPostExecute(List<File> files) {
+                if (files.isEmpty()) {
+                    new AlertDialog.Builder(getContext()).setMessage("No corrupted files found")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create().show();
+                } else {
+                    AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setMessage(
+                            "Delete " + files.size() + " files?")
+                            .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                                for (File file : files) {
+                                    file.delete();
+                                }
+                            }).setCancelable(true).create();
+                    alertDialog.show();
+                }
+            }
+        }.execute();
     }
 
     @Override
@@ -149,12 +193,11 @@ public class PuzzleListFragment extends Fragment {
         void onDownloadSelected();
     }
 
-    private class FetchPuzzleFilesTask extends AsyncTask<Void, Void, Void> {
+    @SuppressLint("StaticFieldLeak")
+    private class FetchPuzzleFilesTask extends AsyncTask<File, Void, Void> {
 
         @Override
-        protected Void doInBackground(Void... voids) {
-            File puzzleDir = IOUtil.getPuzzleDir(getContext());
-            File[] files = puzzleDir.listFiles();
+        protected Void doInBackground(File... files) {
             Arrays.sort(files, (file1, file2) -> file2.getName().compareTo(file1.getName()));
             for (File file : files) {
                 try (FileInputStream inputStream = new FileInputStream(file)) {

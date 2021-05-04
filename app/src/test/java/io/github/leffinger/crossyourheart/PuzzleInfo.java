@@ -11,6 +11,11 @@ import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleS
 
 @AutoValue
 abstract class PuzzleInfo {
+    public static Builder builder() {
+        return new AutoValue_PuzzleInfo.Builder().setScrambled(UNSCRAMBLED).setNumRebusSquares(0)
+                .setElapsedTime(0);
+    }
+
     abstract String filename();
 
     abstract String title();
@@ -27,37 +32,48 @@ abstract class PuzzleInfo {
 
     abstract ImmutableSet<String> sectionNames();
 
+    abstract long elapsedTime();
+
     @Override
     public String toString() {
         return filename();
     }
 
-    public static Builder builder() {
-        return new AutoValue_PuzzleInfo.Builder().setScrambled(UNSCRAMBLED).setNumRebusSquares(0);
-    }
-
     @AutoValue.Builder
     public abstract static class Builder {
         abstract Builder setFilename(String filename);
+
         abstract Builder setTitle(String title);
+
         abstract Builder setVersionString(String versionString);
+
         abstract Builder setScrambled(ScrambleState scrambled);
+
         abstract Builder setNumRebusSquares(int numRebusSquares);
+
+        abstract Builder setElapsedTime(long elapsedTime);
+
         abstract ImmutableList.Builder<String> rebusesBuilder();
+
         Builder addRebuses(String... rebuses) {
             rebusesBuilder().add(rebuses);
             return this;
         }
+
         abstract ImmutableMultimap.Builder<Integer, Integer> circledSquaresBuilder();
+
         Builder addCircledSquare(int row, int col) {
             circledSquaresBuilder().put(row, col);
             return this;
         }
+
         abstract ImmutableSet.Builder<String> sectionNamesBuilder();
+
         Builder addSectionNames(String... sectionNames) {
             sectionNamesBuilder().add(sectionNames);
             return this;
         }
+
         abstract PuzzleInfo build();
     }
 }

@@ -47,7 +47,8 @@ public class PuzzleLoaderTest {
                                  .setScrambled(LOCKED).build())
                     .add(PuzzleInfo.builder().setFilename("/075_WoodenIdols.puz")
                                  .setTitle("\"Wooden Idols\"").setVersionString("1.4\0")
-                                 .setScrambled(LOCKED).addSectionNames("LTIM").build())
+                                 .setScrambled(LOCKED).addSectionNames("LTIM").setElapsedTime(251)
+                                 .build())
                     .add(PuzzleInfo.builder().setFilename("/mgwcc636.puz").setTitle("Team Meta")
                                  .setVersionString("1.2c").setScrambled(SCRAMBLED).build())
                     .add(PuzzleInfo.builder().setFilename("/mgwcc637.puz")
@@ -276,6 +277,11 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyExtraSectionNames() {
-        assertEquals(mPuzzleLoader.getSectionNames(), mPuzzleInfo.sectionNames());
+        assertEquals(mPuzzleInfo.sectionNames(), mPuzzleLoader.getSectionNames());
+    }
+
+    @Test
+    public void verifyElapsedTime() {
+        assertEquals(mPuzzleInfo.elapsedTime(), mPuzzleLoader.getElapsedTime());
     }
 }
