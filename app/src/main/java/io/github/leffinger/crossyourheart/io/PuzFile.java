@@ -59,14 +59,14 @@ public class PuzFile extends AbstractPuzzleFile {
     final int[] mAcrossClueMapping;
     final int[] mDownClueMapping;
     final byte[][] mUserRebusEntries;
-    long mElapsedTime;
+    TimerInfo mTimerInfo;
 
     public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
                    byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
                    byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
                    byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
                    Clue[] clues, byte[] note, List<Section> extraSections, int[] acrossClueMapping,
-                   int[] downClueMapping, byte[][] userRebusEntries, long elapsedTime) {
+                   int[] downClueMapping, byte[][] userRebusEntries, TimerInfo timerInfo) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -90,7 +90,7 @@ public class PuzFile extends AbstractPuzzleFile {
         mAcrossClueMapping = acrossClueMapping;
         mDownClueMapping = downClueMapping;
         mUserRebusEntries = userRebusEntries;
-        mElapsedTime = elapsedTime;
+        mTimerInfo = timerInfo;
     }
 
     /**
@@ -270,7 +270,7 @@ public class PuzFile extends AbstractPuzzleFile {
         }
 
         byte[][] rebusUserEntries = new byte[width * height][];
-        long elapsedTime = 0;
+        TimerInfo timerInfo = null;
         for (Section section : extraSections) {
             switch (section.name) {
             case RUSR_SECTION_NAME:
@@ -284,16 +284,20 @@ public class PuzFile extends AbstractPuzzleFile {
             case LTIM_SECTION_NAME:
                 String encodedTime = new String(section.data, StandardCharsets.US_ASCII);
                 String[] tokens = encodedTime.split(",");
-                elapsedTime = Long.parseLong(tokens[0]);
+                timerInfo = new TimerInfo(Long.parseLong(tokens[0]), tokens[1].contentEquals("0"));
                 break;
             }
+        }
+
+        if (timerInfo == null) {
+            timerInfo = new TimerInfo(0, true);
         }
 
         return new PuzFile(fileChecksum, magic, headerChecksum, maskedChecksums, versionStringBytes,
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
                            copyright, clues, note, extraSections, acrossClueMapping,
-                           downClueMapping, rebusUserEntries, elapsedTime);
+                           downClueMapping, rebusUserEntries, timerInfo);
     }
 
     /* Helper method for clue assignment. */
@@ -519,12 +523,12 @@ public class PuzFile extends AbstractPuzzleFile {
 
     private void writeTimerSection(
             LittleEndianDataOutputStream dataOutputStream) throws IOException {
-        Section section = findSection(LTIM_SECTION_NAME);
-        if (section != null || mElapsedTime > 0) {
-            String data = String.format(Locale.getDefault(), "%d,0", mElapsedTime);
-            writeSection(LTIM_SECTION_NAME, data.getBytes(StandardCharsets.US_ASCII),
-                         dataOutputStream);
+        if (mTimerInfo == null) {
+            return;
         }
+        String data = String.format(Locale.getDefault(), "%d,%s", mTimerInfo.elapsedTimeSecs,
+                                    mTimerInfo.isRunning ? "0" : "1");
+        writeSection(LTIM_SECTION_NAME, data.getBytes(StandardCharsets.US_ASCII), dataOutputStream);
     }
 
     private void writeSection(String name, byte[] data,
@@ -722,13 +726,13 @@ public class PuzFile extends AbstractPuzzleFile {
     }
 
     @Override
-    public long getElapsedTime() {
-        return mElapsedTime;
+    public TimerInfo getTimerInfo() {
+        return mTimerInfo;
     }
 
     @Override
-    public void setElapsedTime(long elapsedTime) {
-        mElapsedTime = elapsedTime;
+    public void setTimerInfo(TimerInfo timerInfo) {
+        mTimerInfo = timerInfo;
     }
 
     private int getComputedScrambledChecksum() {

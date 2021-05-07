@@ -54,6 +54,15 @@
     </group>
 
     <item
+        android:id="@+id/stop_timer"
+        android:title="@string/stop_timer"
+        app:showAsAction="never" />
+
+    <item android:id="@+id/restart_timer"
+        android:title="@string/restart_timer"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/reset_puzzle"
         android:title="@string/reset_puzzle"
         app:showAsAction="never" />

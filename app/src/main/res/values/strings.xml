@@ -42,4 +42,6 @@
     <string name="next_clue">Next clue</string>
     <string name="sample_text">A</string>
     <string name="delete_bad_files">Find and delete corrupted files...</string>
+    <string name="stop_timer">Pause Timer</string>
+    <string name="restart_timer">Resume Timer</string>
 </resources>

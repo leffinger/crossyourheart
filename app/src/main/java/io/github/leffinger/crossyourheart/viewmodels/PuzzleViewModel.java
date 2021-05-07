@@ -46,10 +46,14 @@ public class PuzzleViewModel extends ViewModel {
      * Whether the puzzle's solution is currently correct.
      */
     private final MutableLiveData<Boolean> mIsSolved = new MutableLiveData<>();
+
     /**
-     * Time elapsed so far (in seconds).
+     * Whether the timer is running, and how many seconds have elapsed.
      */
-    private final MutableLiveData<Long> mElapsedTime = new MutableLiveData<>();
+    private final MutableLiveData<AbstractPuzzleFile.TimerInfo> mTimerInfo =
+            new MutableLiveData<>();
+
+    // TODO: Is this actually needed?
     private AtomicBoolean mInitialized = new AtomicBoolean(false);
     /**
      * Representation of on-disk puzzle file.
@@ -196,7 +200,7 @@ public class PuzzleViewModel extends ViewModel {
 
                 mAcrossFocus.postValue(!startWithDownClues);
                 mIsSolved.postValue(puzzleFile.isSolved());
-                mElapsedTime.postValue(puzzleFile.getElapsedTime());
+                mTimerInfo.postValue(puzzleFile.getTimerInfo());
 
                 selectFirstCell();
 
@@ -473,7 +477,7 @@ public class PuzzleViewModel extends ViewModel {
 
     public void saveToFile() throws IOException {
         assert mInitialized.get();
-        mPuzzleFile.setElapsedTime(mElapsedTime.getValue());
+        mPuzzleFile.setTimerInfo(mTimerInfo.getValue());
         try (FileOutputStream outputStream = new FileOutputStream(mFile)) {
             mPuzzleFile.savePuzzleFile(outputStream);
         }
@@ -492,7 +496,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void resetPuzzle() {
-        mElapsedTime.setValue(0L);
+        mTimerInfo.setValue(new AbstractPuzzleFile.TimerInfo(0L, true));
         for (CellViewModel[] row : mGrid) {
             for (CellViewModel cell : row) {
                 if (cell != null) {
@@ -632,10 +636,13 @@ public class PuzzleViewModel extends ViewModel {
         mCurrentCell.setValue(mGrid[position.row][position.col]);
     }
 
-    public MutableLiveData<Long> getElapsedTime() {
-        return mElapsedTime;
+    public MutableLiveData<AbstractPuzzleFile.TimerInfo> getTimerInfo() {
+        return mTimerInfo;
     }
 
+    /**
+     * Actions are stored in the undo stack.
+     */
     private static class Action {
         final CellViewModel mModifiedCell;
         final CellViewModel mSelectedCell;

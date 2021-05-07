@@ -26,7 +26,6 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
@@ -44,6 +43,7 @@ import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleBinding;
 import io.github.leffinger.crossyourheart.databinding.TimerBinding;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.TimerInfo;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
@@ -162,44 +162,40 @@ public class PuzzleFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Wait for the elapsed time to be initialized before starting the timer (else we could
-        // overwrite the existing value).
-        // TODO: Make elapsed time a pair of (time, running) to avoid this double listener.
-        final PuzzleViewModel viewModel = getViewModel();
-        LiveData<Long> elapsedTimeLiveData = viewModel.getElapsedTime();
-        LiveData<Boolean> isSolvedLiveData = viewModel.isSolved();
-        Observer<Object> observer = new Observer<Object>() {
+        // Wait for the puzzle file's TimerInfo to be initialized before starting the timer (else
+        // we could overwrite the existing value).
+        LiveData<TimerInfo> timerInfoLiveData = getViewModel().getTimerInfo();
+        timerInfoLiveData.observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
             @Override
-            public void onChanged(Object o) {
-                Long elapsedTimeSeconds = elapsedTimeLiveData.getValue();
-                Boolean isSolved = viewModel.isSolved().getValue();
-                if (isSolved == null || elapsedTimeSeconds == null) {
-                    // LiveData is not ready yet.
+            public void onChanged(TimerInfo timerInfo) {
+                if (timerInfo == null) {
                     return;
                 }
 
-                if (!isSolved) {
-                    Log.i(TAG, "STARTING TIMER AT " + elapsedTimeSeconds + " SECONDS");
-                    mTimerBinding.timer
-                            .setBase(SystemClock.elapsedRealtime() - (elapsedTimeSeconds * 1000));
+                Log.i(TAG, "STARTING TIMER AT " + timerInfo.elapsedTimeSecs + " SECONDS");
+                mTimerBinding.timer.setBase(
+                        SystemClock.elapsedRealtime() - (timerInfo.elapsedTimeSecs * 1000));
+                if (timerInfo.isRunning) {
                     mTimerBinding.timer.start();
                 }
 
-                isSolvedLiveData.removeObserver(this);
-                elapsedTimeLiveData.removeObserver(this);
+                timerInfoLiveData.removeObserver(this);
             }
-        };
-        elapsedTimeLiveData.observe(this, observer);
-        isSolvedLiveData.observe(this, observer);
+        });
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        long elapsedTimeMillis = SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase();
-        Log.i(TAG, "STOPPING TIMER AT " + (elapsedTimeMillis / 1000) + " SECONDS");
-        getViewModel().getElapsedTime().setValue(elapsedTimeMillis / 1000);
-        mTimerBinding.timer.stop();
+
+        TimerInfo timerInfo = getViewModel().getTimerInfo().getValue();
+        if (timerInfo != null && timerInfo.isRunning) {
+            long elapsedTime =
+                    (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
+            Log.i(TAG, "PAUSING TIMER AT " + elapsedTime + " SECONDS");
+            getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, true));
+            mTimerBinding.timer.stop();
+        }
     }
 
     @Override
@@ -235,6 +231,16 @@ public class PuzzleFragment extends Fragment {
             if (key.equals(getString(R.string.preference_enable_hints))) {
                 configureCheckMenuItems();
             }
+        });
+
+        // Show option to "resume" or "pause" timer, depending on timer state.
+        getViewModel().getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
+            if (timerInfo == null) {
+                return;
+            }
+
+            mMenu.findItem(R.id.stop_timer).setVisible(timerInfo.isRunning);
+            mMenu.findItem(R.id.restart_timer).setVisible(!timerInfo.isRunning);
         });
     }
 
@@ -274,6 +280,46 @@ public class PuzzleFragment extends Fragment {
         }
         if (itemId == R.id.reveal_puzzle) {
             getViewModel().revealPuzzle();
+            return true;
+        }
+        if (itemId == R.id.stop_timer) {
+            getViewModel().getTimerInfo().observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
+                @Override
+                public void onChanged(TimerInfo timerInfo) {
+                    if (!timerInfo.isRunning) {
+                        getViewModel().getTimerInfo().removeObserver(this);
+                        return;
+                    }
+                    long elapsedTime =
+                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
+                    mTimerBinding.timer.stop();
+                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
+                    getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
+                    getViewModel().getTimerInfo().removeObserver(this);
+                }
+            });
+            return true;
+        }
+        if (itemId == R.id.restart_timer) {
+            getViewModel().getTimerInfo()
+                    .observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
+                        @Override
+                        public void onChanged(TimerInfo timerInfo) {
+                            if (timerInfo.isRunning) {
+                                getViewModel().getTimerInfo().removeObserver(this);
+                                return;
+                            }
+
+                            Log.i(TAG,
+                                  "RESTARTING TIMER AT " + timerInfo.elapsedTimeSecs + " SECONDS");
+                            mTimerBinding.timer.setBase(SystemClock.elapsedRealtime() -
+                                                                (timerInfo.elapsedTimeSecs * 1000));
+                            mTimerBinding.timer.start();
+                            getViewModel().getTimerInfo()
+                                    .setValue(new TimerInfo(timerInfo.elapsedTimeSecs, true));
+                            getViewModel().getTimerInfo().removeObserver(this);
+                        }
+                    });
             return true;
         }
         if (itemId == R.id.reset_puzzle) {
@@ -371,11 +417,11 @@ public class PuzzleFragment extends Fragment {
             public void onChanged(Boolean solved) {
                 if (solved && shouldCongratulate) {
                     // Stop the timer and save the final time in the viewModel.
-                    long elapsedTimeMillis =
-                            SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase();
-                    Log.i(TAG, "STOPPING TIMER AT " + (elapsedTimeMillis / 1000) + " SECONDS");
+                    long elapsedTime =
+                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
+                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
                     mTimerBinding.timer.stop();
-                    getViewModel().getElapsedTime().setValue(elapsedTimeMillis / 1000);
+                    getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
 
                     // Show a congratulatory dialog.
                     AlertDialog dialog =
@@ -390,9 +436,14 @@ public class PuzzleFragment extends Fragment {
         });
 
         // Restart the timer when the puzzle is reset.
-        viewModel.getElapsedTime().observe(getViewLifecycleOwner(), elapsedTime -> {
-            if (elapsedTime != null && elapsedTime == 0L) {
+        viewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
+            if (timerInfo == null) {
+                return;
+            }
+
+            if (timerInfo.elapsedTimeSecs == 0L && timerInfo.isRunning) {
                 // Puzzle was reset; restart timer from beginning.
+                Log.i(TAG, "RESTARTING TIMER AT 0");
                 mTimerBinding.timer.setBase(SystemClock.elapsedRealtime());
                 mTimerBinding.timer.start();
             }
