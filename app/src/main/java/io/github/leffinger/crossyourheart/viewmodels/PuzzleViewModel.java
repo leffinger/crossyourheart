@@ -136,6 +136,7 @@ public class PuzzleViewModel extends ViewModel {
                 // When across/down focus changes, or the current cell changes, update the currently
                 // selected clue.
                 Observer<Object> observer = o -> {
+                    ClueViewModel oldValue = mCurrentClue.getValue();
                     CellViewModel currentCell = mCurrentCell.getValue();
                     Boolean acrossFocus = mAcrossFocus.getValue();
                     if (currentCell == null || acrossFocus == null) {
@@ -155,6 +156,12 @@ public class PuzzleViewModel extends ViewModel {
                             // switch directions if this cell only has an across clue
                             mAcrossFocus.setValue(true);  // should trigger another update
                         }
+                    }
+
+                    ClueViewModel newClue = mCurrentClue.getValue();
+                    if (oldValue != mCurrentClue.getValue()) {
+                        Log.i(TAG, String.format("Selecting clue %d-%s", newClue.getNumber(),
+                                                 newClue.isAcross() ? "A" : "D"));
                     }
                 };
                 mCurrentClue.addSource(mAcrossFocus, observer);
@@ -373,8 +380,6 @@ public class PuzzleViewModel extends ViewModel {
             }
         }
 
-        Log.i(TAG,
-              String.format("Selecting clue %d-%s", prev.getNumber(), prev.isAcross() ? "A" : "D"));
         mAcrossFocus.setValue(prev.isAcross());
         mCurrentCell.setValue(cell);
     }
@@ -408,8 +413,6 @@ public class PuzzleViewModel extends ViewModel {
             }
         }
 
-        Log.i(TAG,
-              String.format("Selecting clue %d-%s", next.getNumber(), next.isAcross() ? "A" : "D"));
         mAcrossFocus.setValue(next.isAcross());
         return cell;
     }

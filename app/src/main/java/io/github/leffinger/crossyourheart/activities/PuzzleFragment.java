@@ -15,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,6 +35,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -283,21 +285,23 @@ public class PuzzleFragment extends Fragment {
             return true;
         }
         if (itemId == R.id.stop_timer) {
-            getViewModel().getTimerInfo().observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
-                @Override
-                public void onChanged(TimerInfo timerInfo) {
-                    if (!timerInfo.isRunning) {
-                        getViewModel().getTimerInfo().removeObserver(this);
-                        return;
-                    }
-                    long elapsedTime =
-                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
-                    mTimerBinding.timer.stop();
-                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
-                    getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
-                    getViewModel().getTimerInfo().removeObserver(this);
-                }
-            });
+            getViewModel().getTimerInfo()
+                    .observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
+                        @Override
+                        public void onChanged(TimerInfo timerInfo) {
+                            if (!timerInfo.isRunning) {
+                                getViewModel().getTimerInfo().removeObserver(this);
+                                return;
+                            }
+                            long elapsedTime = (SystemClock.elapsedRealtime() -
+                                    mTimerBinding.timer.getBase()) / 1000;
+                            mTimerBinding.timer.stop();
+                            Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
+                            getViewModel().getTimerInfo()
+                                    .setValue(new TimerInfo(elapsedTime, false));
+                            getViewModel().getTimerInfo().removeObserver(this);
+                        }
+                    });
             return true;
         }
         if (itemId == R.id.restart_timer) {
@@ -346,7 +350,6 @@ public class PuzzleFragment extends Fragment {
 
         // Change direction when clue is tapped (if configured).
         mFragmentPuzzleBinding.clue.setOnClickListener(view -> {
-            Log.i(TAG, "Clicked on clue");
             if (mPreferences
                     .getBoolean(getContext().getString(R.string.preference_tap_clue_behavior),
                                 true)) {
@@ -398,6 +401,7 @@ public class PuzzleFragment extends Fragment {
         mFragmentPuzzleBinding.keyboard.setOnKeyboardActionListener(new PuzzleKeyboardListener());
 
         // Persist changes in content to disk.
+        assert !viewModel.getContentsChanged().hasActiveObservers();
         viewModel.getContentsChanged().observe(getActivity(), i -> mExecutorService.submit(() -> {
             try {
                 viewModel.saveToFile();
@@ -410,6 +414,7 @@ public class PuzzleFragment extends Fragment {
 
         // If the puzzle was not solved to begin with, display a message when it is solved.
         // This also handles situations where the puzzle goes from solved to unsolved, e.g. reset.
+        assert !viewModel.isSolved().hasActiveObservers();
         viewModel.isSolved().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             private boolean shouldCongratulate = false;
 
@@ -424,10 +429,15 @@ public class PuzzleFragment extends Fragment {
                     getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
 
                     // Show a congratulatory dialog.
-                    AlertDialog dialog =
-                            new AlertDialog.Builder(getActivity()).setMessage(R.string.alert_solved)
-                                    .setPositiveButton(android.R.string.ok, null).create();
-                    dialog.show();
+                    long hours = elapsedTime / (60 * 60);
+                    long minutes = (elapsedTime - hours * 60)  / 60;
+                    long seconds = elapsedTime % 60;
+                    String time = hours > 0 ?
+                            String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes,
+                                          seconds) :
+                            String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
+                    Toast.makeText(getActivity(), getString(R.string.alert_solved, time),
+                                   Toast.LENGTH_SHORT).show();
                     shouldCongratulate = false;
                 } else if (!solved && !shouldCongratulate) {
                     shouldCongratulate = true;

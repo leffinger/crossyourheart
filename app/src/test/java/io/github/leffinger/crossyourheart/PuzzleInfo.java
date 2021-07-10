@@ -16,6 +16,14 @@ abstract class PuzzleInfo {
                 .setElapsedTime(0);
     }
 
+    public Builder toBuilder() {
+        return new AutoValue_PuzzleInfo.Builder().setFilename(filename()).setTitle(title())
+                .setVersionString(versionString()).setScrambled(scrambled())
+                .setNumRebusSquares(numRebusSquares()).addRebuses(rebuses())
+                .addCircledSquares(circledSquares()).addSectionNames(sectionNames())
+                .setElapsedTime(elapsedTime());
+    }
+
     abstract String filename();
 
     abstract String title();
@@ -60,6 +68,11 @@ abstract class PuzzleInfo {
             return this;
         }
 
+        Builder addRebuses(Iterable<String> rebuses) {
+            rebusesBuilder().addAll(rebuses);
+            return this;
+        }
+
         abstract ImmutableMultimap.Builder<Integer, Integer> circledSquaresBuilder();
 
         Builder addCircledSquare(int row, int col) {
@@ -67,10 +80,20 @@ abstract class PuzzleInfo {
             return this;
         }
 
+        Builder addCircledSquares(ImmutableMultimap<Integer, Integer> circledSquares) {
+            circledSquaresBuilder().putAll(circledSquares);
+            return this;
+        }
+
         abstract ImmutableSet.Builder<String> sectionNamesBuilder();
 
         Builder addSectionNames(String... sectionNames) {
             sectionNamesBuilder().add(sectionNames);
+            return this;
+        }
+
+        Builder addSectionNames(Iterable<String> sectionNames) {
+            sectionNamesBuilder().addAll(sectionNames);
             return this;
         }
 

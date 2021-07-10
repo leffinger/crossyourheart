@@ -284,7 +284,13 @@ public class PuzFile extends AbstractPuzzleFile {
             case LTIM_SECTION_NAME:
                 String encodedTime = new String(section.data, StandardCharsets.US_ASCII);
                 String[] tokens = encodedTime.split(",");
-                timerInfo = new TimerInfo(Long.parseLong(tokens[0]), tokens[1].contentEquals("0"));
+                long elapsedTimeSecs = Long.parseLong(tokens[0]);
+                boolean isRunning = tokens[1].contentEquals("0");
+                if (elapsedTimeSecs == 0) {
+                    // Always default to running at the start.
+                    isRunning = true;
+                }
+                timerInfo = new TimerInfo(elapsedTimeSecs, isRunning);
                 break;
             }
         }
@@ -433,7 +439,8 @@ public class PuzFile extends AbstractPuzzleFile {
         if (versionParts.length < 2) {
             throw new IOException(String.format("Bad version string: \"%s\"", versionString));
         }
-        return versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0;
+        return versionParts[0].compareTo("1") > 0 ||
+                (versionParts[0].compareTo("1") == 0 && versionParts[1].compareTo("3") >= 0);
     }
 
     /**
