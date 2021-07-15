@@ -18,4 +18,9 @@
         android:id="@+id/delete_bad_files"
         android:title="@string/delete_bad_files"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/reindex_files"
+        android:title="@string/reindex_puzzle_files"
+        app:showAsAction="never" />
 </menu>

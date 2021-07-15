@@ -6,8 +6,8 @@
     <data>
 
         <variable
-            name="viewModel"
-            type="io.github.leffinger.crossyourheart.viewmodels.PuzzleFileViewModel" />
+            name="puzzle"
+            type="io.github.leffinger.crossyourheart.room.Puzzle" />
     </data>
 
     <androidx.cardview.widget.CardView
@@ -25,7 +25,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/text_margin"
-                android:text="@{viewModel.title}"
+                android:text="@{puzzle.title}"
                 android:textAppearance="?attr/textAppearanceListItem"
                 android:textSize="24sp"
                 app:layout_constraintTop_toTopOf="parent"
@@ -37,7 +37,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/text_margin"
-                android:text="@{(viewModel.copyright.isEmpty() ? `` : viewModel.copyright + ` `) + viewModel.author}"
+                android:text="@{(puzzle.copyright.isEmpty() ? `` : puzzle.copyright + ` `) + puzzle.author}"
                 android:textAppearance="?attr/textAppearanceListItem"
                 android:textSize="18sp"
                 app:layout_constraintTop_toBottomOf="@id/title"
@@ -55,7 +55,8 @@
                 android:contentDescription="@string/solved"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:imageResource="@{puzzle.solvedStateResId}" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>

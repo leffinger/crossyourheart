@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -32,6 +33,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,6 +49,8 @@ import io.github.leffinger.crossyourheart.databinding.TimerBinding;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.TimerInfo;
 import io.github.leffinger.crossyourheart.io.IOUtil;
+import io.github.leffinger.crossyourheart.room.Database;
+import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
@@ -76,6 +80,7 @@ public class PuzzleFragment extends Fragment {
     private File mFilename;
     private Menu mMenu;
     private TimerBinding mTimerBinding;
+    private Database mDatabase;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile) {
         Bundle args = new Bundle();
@@ -98,6 +103,10 @@ public class PuzzleFragment extends Fragment {
         } else {
             bundle = requireArguments();
         }
+
+        // Create or load database.
+        mDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), Database.class,
+                                         "puzzles").build();
 
         mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
         mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable("puzzle");
@@ -132,6 +141,7 @@ public class PuzzleFragment extends Fragment {
         actionBar.setDisplayShowCustomEnabled(true);
         actionBar.setDisplayShowTitleEnabled(false);
         actionBar.setCustomView(mTimerBinding.getRoot());
+        mTimerBinding.solved.setVisibility(View.INVISIBLE);
 
         mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
         mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
@@ -414,28 +424,25 @@ public class PuzzleFragment extends Fragment {
 
         // If the puzzle was not solved to begin with, display a message when it is solved.
         // This also handles situations where the puzzle goes from solved to unsolved, e.g. reset.
-        assert !viewModel.isSolved().hasActiveObservers();
+        viewModel.isSolved().removeObservers(getViewLifecycleOwner());
         viewModel.isSolved().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             private boolean shouldCongratulate = false;
 
             @Override
             public void onChanged(Boolean solved) {
+                mTimerBinding.solved.setVisibility(solved ? View.VISIBLE : View.INVISIBLE);
+
                 if (solved && shouldCongratulate) {
                     // Stop the timer and save the final time in the viewModel.
-                    long elapsedTime =
-                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
-                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
                     mTimerBinding.timer.stop();
+                    String time = mTimerBinding.timer.getText().toString();
+                    long elapsedTime = Math.round(
+                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) /
+                                    1000.0);
+                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
                     getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
 
                     // Show a congratulatory dialog.
-                    long hours = elapsedTime / (60 * 60);
-                    long minutes = (elapsedTime - hours * 60)  / 60;
-                    long seconds = elapsedTime % 60;
-                    String time = hours > 0 ?
-                            String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes,
-                                          seconds) :
-                            String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
                     Toast.makeText(getActivity(), getString(R.string.alert_solved, time),
                                    Toast.LENGTH_SHORT).show();
                     shouldCongratulate = false;
@@ -444,6 +451,10 @@ public class PuzzleFragment extends Fragment {
                 }
             }
         });
+        viewModel.isSolved().observe(getViewLifecycleOwner(), unused -> AsyncTask.execute(
+                () -> mDatabase.puzzleDao()
+                        .update(Puzzle.fromPuzzleFile(viewModel.getFile().getName(),
+                                                      viewModel.getPuzzleFile()))));
 
         // Restart the timer when the puzzle is reset.
         viewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
