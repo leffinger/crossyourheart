@@ -151,6 +151,7 @@ public class PuzzleFragment extends Fragment {
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
         mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
+        mFragmentPuzzleBinding.keyboard.setPreviewEnabled(true);
 
         return mFragmentPuzzleBinding.getRoot();
     }

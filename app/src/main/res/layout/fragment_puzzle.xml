@@ -112,7 +112,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hapticFeedbackEnabled="true"
-            android:keyPreviewLayout="@null"
+            android:keyPreviewHeight="75dp"
+            android:keyPreviewOffset="0dp"
+            android:keyPreviewLayout="@layout/key_preview"
+            android:keyBackground="@drawable/key_background"
+            android:background="@color/colorKeyboardBackground"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

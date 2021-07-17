@@ -14,4 +14,8 @@
     <color name="colorMarkedIncorrect">#C34A32</color>
     <color name="colorMarkedCorrect">#40A06A</color>
     <color name="colorRevealed">#40A06A</color>
+    <color name="colorKeyboardPrimary">#333333</color>
+    <color name="colorKeyboardShading">#777777</color>
+    <color name="colorKeyboardLight">#AAAAAA</color>
+    <color name="colorKeyboardBackground">#222222</color>
 </resources>
