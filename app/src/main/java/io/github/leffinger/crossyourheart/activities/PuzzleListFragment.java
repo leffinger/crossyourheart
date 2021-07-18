@@ -3,11 +3,11 @@ package io.github.leffinger.crossyourheart.activities;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
@@ -16,6 +16,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,9 +30,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import io.github.leffinger.crossyourheart.R;
+import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleFileBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleListBinding;
 import io.github.leffinger.crossyourheart.io.IOUtil;
@@ -47,11 +52,9 @@ import static android.app.Activity.RESULT_OK;
 public class PuzzleListFragment extends Fragment {
     private static final String TAG = "PuzzleListFragment";
     private static final int REQUEST_CODE_OPEN_FILE = 0;
-    private static final int MESSAGE_PUZZLE = 0;
 
     private List<Puzzle> mPuzzles;
     private PuzzleFileAdapter mAdapter;
-    private Handler mHandler;
     private Database mDatabase;
 
     public static PuzzleListFragment newInstance() {
@@ -73,17 +76,53 @@ public class PuzzleListFragment extends Fragment {
         mDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), Database.class,
                                          "puzzles").build();
 
+        fetchPuzzleFiles();
+    }
+
+    @SuppressWarnings("StaticFieldLeak")
+    private void fetchPuzzleFiles() {
         // Fetch puzzles in a background task.
         new AsyncTask<Void, Void, Void>() {
+            private boolean fileMismatch = false;
+
             @Override
             protected Void doInBackground(Void... voids) {
                 mPuzzles = mDatabase.puzzleDao().getAll();
+
+                Context context = getContext();
+                if (context == null) {
+                    return null;
+                }
+                Set<String> dbFiles = new HashSet<>();
+                for (Puzzle puzzle : mPuzzles) {
+                    dbFiles.add(puzzle.filename);
+                }
+
+                File puzzleDir = IOUtil.getPuzzleDir(context);
+                String[] files = puzzleDir.list();
+                Set<String> dirFiles = new HashSet<>();
+                dirFiles.addAll(Arrays.asList(files));
+
+                fileMismatch = !dbFiles.equals(dirFiles);
+
                 return null;
             }
 
             @Override
             protected void onPostExecute(Void aVoid) {
                 mAdapter.notifyDataSetChanged();
+
+                if (fileMismatch) {
+                    Context context = getContext();
+                    if (context == null) {
+                        return;
+                    }
+                    new AlertDialog.Builder(context).setMessage(R.string.reindex_alert)
+                            .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                                reindexFiles();
+                            }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
+                            .create().show();
+                }
             }
         }.execute();
     }
@@ -129,14 +168,36 @@ public class PuzzleListFragment extends Fragment {
 
     @SuppressLint("StaticFieldLeak")
     private void reindexFiles() {
-        new AsyncTask<Void, Void, Void>() {
+        new AsyncTask<Void, Integer, Void>() {
+            private AlertDialog mAlertDialog;
+            private AlertProgressBinding mAlertProgressBinding;
+
+            @Override
+            protected void onPreExecute() {
+                mAlertProgressBinding = DataBindingUtil
+                        .inflate(getLayoutInflater(), R.layout.alert_progress, null, false);
+                mAlertDialog = new AlertDialog.Builder(getContext())
+                        .setView(mAlertProgressBinding.getRoot()).setCancelable(false)
+                        .setTitle("Reindexing files...").show();
+            }
+
+            @Override
+            protected void onProgressUpdate(Integer... values) {
+                mAlertProgressBinding.progressBar.setProgress(values[0]);
+            }
 
             @Override
             protected Void doInBackground(Void... voids) {
+                Context context = getContext();
+                if (context == null) {
+                    return null;
+                }
                 mDatabase.puzzleDao().deletePuzzles(mPuzzles);
-                File puzzleDir = IOUtil.getPuzzleDir(getContext());
+                File puzzleDir = IOUtil.getPuzzleDir(context);
                 File[] files = puzzleDir.listFiles();
-                for (File file : files) {
+                mAlertProgressBinding.progressBar.setMax(files.length);
+                for (int i = 0; i < files.length; i++) {
+                    File file = files[i];
                     try (FileInputStream inputStream = new FileInputStream(file)) {
                         PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
                         mDatabase.puzzleDao()
@@ -145,6 +206,7 @@ public class PuzzleListFragment extends Fragment {
                         Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
                         e.printStackTrace();
                     }
+                    publishProgress(i + 1);
                 }
                 mPuzzles = mDatabase.puzzleDao().getAll();
                 return null;
@@ -153,6 +215,9 @@ public class PuzzleListFragment extends Fragment {
             @Override
             protected void onPostExecute(Void aVoid) {
                 mAdapter.notifyDataSetChanged();
+                Toast.makeText(getContext(), getString(R.string.reindexed_files, mPuzzles.size()),
+                               Toast.LENGTH_SHORT).show();
+                mAlertDialog.dismiss();
             }
         }.execute();
     }
@@ -213,6 +278,13 @@ public class PuzzleListFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    private void deletePuzzle(String filename) {
+        AsyncTask.execute(() -> {
+            IOUtil.getPuzzleFile(getContext(), filename).delete();
+            mDatabase.puzzleDao().deletePuzzle(new Puzzle(filename));
+        });
+    }
+
     public interface Callbacks {
         void onFileSelected(String filename);
 
@@ -240,7 +312,7 @@ public class PuzzleListFragment extends Fragment {
                 ((Callbacks) getActivity()).onFileSelected(mBinding.getPuzzle().getFilename());
             });
 
-            // Long-clicking the puzzle file brings up an option to deete the file.
+            // Long-clicking the puzzle file brings up an option to delete the file.
             mBinding.getRoot().setOnLongClickListener(view -> {
                 AlertDialog alertDialog =
                         new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle)
@@ -248,9 +320,9 @@ public class PuzzleListFragment extends Fragment {
                                     int index = getAdapterPosition();
                                     mPuzzles.remove(index);
                                     mAdapter.notifyItemRemoved(index);
-                                    String filename = mBinding.getPuzzle().getFilename();
-                                    IOUtil.getPuzzleFile(getContext(), filename).delete();
-                                }).setCancelable(true).create();
+                                    deletePuzzle(mBinding.getPuzzle().getFilename());
+                                }).setNegativeButton(android.R.string.cancel, null)
+                                .setCancelable(true).create();
                 alertDialog.show();
                 return true;
             });

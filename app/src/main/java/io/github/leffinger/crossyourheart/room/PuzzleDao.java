@@ -25,4 +25,7 @@ public interface PuzzleDao {
 
     @Delete
     void deletePuzzles(List<Puzzle> puzzles);
+
+    @Delete
+    void deletePuzzle(Puzzle puzzle);
 }
