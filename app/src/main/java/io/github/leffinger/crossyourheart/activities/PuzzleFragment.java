@@ -2,6 +2,8 @@ package io.github.leffinger.crossyourheart.activities;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
@@ -266,6 +268,16 @@ public class PuzzleFragment extends Fragment {
                     PuzzleInfoFragment.newInstance(getViewModel().getPuzzleInfoViewModel());
             infoFragment.show(fragmentManager, "PuzzleInfo");
             return true;
+        }
+        if (itemId == R.id.pencil) {
+            PuzzleViewModel viewModel = getViewModel();
+            boolean usePencil = !viewModel.usePencil().getValue();
+            viewModel.usePencil().setValue(usePencil);
+            if (usePencil) {
+                item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
+            } else {
+                item.getIcon().clearColorFilter();
+            }
         }
         if (itemId == R.id.settings) {
             startActivity(SettingsActivity.newIntent(getContext()));

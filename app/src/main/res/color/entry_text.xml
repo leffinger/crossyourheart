@@ -3,5 +3,6 @@
     <item android:color="@color/colorRevealed" custom:isRevealed="true" />
     <item android:color="@color/colorMarkedCorrect" custom:isMarkedCorrect="true" />
     <item android:color="@color/colorMarkedIncorrect" custom:isMarkedIncorrect="true" />
+    <item android:color="@color/colorEntryTextPencil" custom:isPencil="true" />
     <item android:color="@color/colorEntryText" />
 </selector>

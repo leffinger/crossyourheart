@@ -18,4 +18,5 @@
     <color name="colorKeyboardShading">#777777</color>
     <color name="colorKeyboardLight">#AAAAAA</color>
     <color name="colorKeyboardBackground">#222222</color>
+    <color name="colorEntryTextPencil">#888888</color>
 </resources>

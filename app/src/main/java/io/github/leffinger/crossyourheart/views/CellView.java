@@ -18,6 +18,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsMarkedIncorrect;
     private boolean mIsMarkedCorrect;
     private boolean mIsRevealed;
+    private boolean mIsPencil;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -51,6 +52,11 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isRevealed")
     public static void setRevealed(CellView cellView, boolean isRevealed) {
         cellView.setRevealed(isRevealed);
+    }
+
+    @BindingAdapter("isPencil")
+    public static void setPencil(CellView cellView, boolean isPencil) {
+        cellView.setPencil(isPencil);
     }
 
     @Override
@@ -96,9 +102,16 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
+    public void setPencil(boolean isPencil) {
+        if (mIsPencil != isPencil) {
+            mIsPencil = isPencil;
+            refreshDrawableState();
+        }
+    }
+
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
-        int[] extraDrawableStates = new int[6];
+        int[] extraDrawableStates = new int[7];
         int count = 0;
         if (mIsSelected) {
             extraDrawableStates[count++] = R.attr.isSelected;
@@ -117,6 +130,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsRevealed) {
             extraDrawableStates[count++] = R.attr.isRevealed;
+        }
+        if (mIsPencil) {
+            extraDrawableStates[count++] = R.attr.isPencil;
         }
         if (count > 0) {
             int[] resized = Arrays.copyOf(extraDrawableStates, count);

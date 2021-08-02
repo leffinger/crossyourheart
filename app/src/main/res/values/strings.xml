@@ -47,4 +47,6 @@
     <string name="reindex_puzzle_files">Reindex puzzle files...</string>
     <string name="reindex_alert">We found puzzle files that are not indexed. Reindex now?</string>
     <string name="reindexed_files">Successfully indexed %d files</string>
+    <string name="pencil">Pencil</string>
+    <string name="multiple_uris_result">Loaded %d puzzle files: %d succeeded, %d duplicate, %d failed</string>
 </resources>

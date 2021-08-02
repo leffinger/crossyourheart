@@ -53,6 +53,11 @@ public class PuzzleViewModel extends ViewModel {
     private final MutableLiveData<AbstractPuzzleFile.TimerInfo> mTimerInfo =
             new MutableLiveData<>();
 
+    /**
+     * Whether the current entries should be in pencil.
+     */
+    private final MutableLiveData<Boolean> mPencil = new MutableLiveData<>(false);
+
     // TODO: Is this actually needed?
     private AtomicBoolean mInitialized = new AtomicBoolean(false);
     /**
@@ -285,6 +290,10 @@ public class PuzzleViewModel extends ViewModel {
         return mIsSolved;
     }
 
+    public MutableLiveData<Boolean> usePencil() {
+        return mPencil;
+    }
+
     public void toggleDirection() {
         mAcrossFocus.setValue(!mAcrossFocus.getValue());
     }
@@ -421,9 +430,11 @@ public class PuzzleViewModel extends ViewModel {
                                        boolean skipFilledSquares, boolean skipFilledSquaresWrap,
                                        boolean completedClueNext) {
         CellViewModel currentCell = mCurrentCell.getValue();
-        String oldContents = currentCell.setContents(newContents);
-        mUndoStack.push(new Action(currentCell, currentCell, oldContents, newContents,
-                                   mAcrossFocus.getValue()));
+        boolean pencil = currentCell.getPencil().getValue();
+        String oldContents = currentCell.getContents().getValue();
+        currentCell.setContents(newContents, mPencil.getValue());
+        mUndoStack.push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
+                                   pencil));
         CellViewModel newCell =
                 getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares,
                             skipFilledSquaresWrap, completedClueNext);
@@ -436,7 +447,7 @@ public class PuzzleViewModel extends ViewModel {
         }
 
         Action lastAction = mUndoStack.pop();
-        lastAction.mModifiedCell.setContents(lastAction.mOldContents);
+        lastAction.mModifiedCell.setContents(lastAction.mOldContents, lastAction.mPencil);
         mCurrentCell.setValue(lastAction.mSelectedCell);
         mAcrossFocus.setValue(lastAction.mAcrossFocus);
     }
@@ -466,15 +477,19 @@ public class PuzzleViewModel extends ViewModel {
             }
 
             // Delete previous cell contents and move to that cell.
-            String oldContents = newCell.setContents("");
-            mUndoStack.push(new Action(newCell, currentCell, oldContents, "",
-                                       mAcrossFocus.getValue()));
+            boolean pencil = newCell.getPencil().getValue();
+            String oldContents = newCell.getContents().getValue();
+            newCell.setContents("", false);
+            mUndoStack.push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
+                                       pencil));
             mCurrentCell.setValue(newCell);
         } else {
             // Delete current cell's contents.
-            String oldContents = currentCell.setContents("");
-            mUndoStack.push(new Action(currentCell, currentCell, oldContents, "",
-                                       mAcrossFocus.getValue()));
+            boolean pencil = currentCell.getPencil().getValue();
+            String oldContents = currentCell.getContents().getValue();
+            currentCell.setContents("", false);
+            mUndoStack.push(new Action(currentCell, currentCell, oldContents,
+                                       mAcrossFocus.getValue(), pencil));
         }
     }
 
@@ -650,16 +665,16 @@ public class PuzzleViewModel extends ViewModel {
         final CellViewModel mModifiedCell;
         final CellViewModel mSelectedCell;
         final String mOldContents;
-        final String mNewContents;
         final boolean mAcrossFocus;
+        final boolean mPencil;
 
         public Action(CellViewModel modifiedCell, CellViewModel selectedCell, String oldContents,
-                      String newContents, boolean acrossFocus) {
+                      boolean acrossFocus, boolean pencil) {
             mModifiedCell = modifiedCell;
             mSelectedCell = selectedCell;
             mOldContents = oldContents;
-            mNewContents = newContents;
             mAcrossFocus = acrossFocus;
+            mPencil = pencil;
         }
     }
 

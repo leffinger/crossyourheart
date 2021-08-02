@@ -15,6 +15,7 @@ public class CellViewModel {
     private final MutableLiveData<Boolean> mMarkedIncorrect;
     private final MutableLiveData<Boolean> mMarkedCorrect;
     private final MutableLiveData<Boolean> mRevealed;
+    private final MutableLiveData<Boolean> mPencil;
     private final MediatorLiveData<Boolean> mHighlighted;
     private final MediatorLiveData<Boolean> mSelected;
     private int mClueNumber;  // if this is the first cell in one or both directions
@@ -42,6 +43,7 @@ public class CellViewModel {
         mMarkedIncorrect = new MutableLiveData<>(false);
         mMarkedCorrect = new MutableLiveData<>(false);
         mRevealed = new MutableLiveData<>(false);
+        mPencil = new MutableLiveData<>(false);
         mHighlighted = new MediatorLiveData<>();
 
         // Set up LiveData observer for whether this cell is currently selected.
@@ -99,13 +101,14 @@ public class CellViewModel {
         return mContents;
     }
 
-    public String setContents(String newContents) {
+    public String setContents(String newContents, boolean pencil) {
         String oldContents = mContents.getValue();
         if (mMarkedCorrect.getValue() || mRevealed.getValue()) {
             return oldContents;
         }
 
         mContents.setValue(newContents);
+        mPencil.setValue(pencil);
         mMarkedIncorrect.setValue(false);
         mRevealed.setValue(false);
         return oldContents;
@@ -148,10 +151,15 @@ public class CellViewModel {
         return mSelected;
     }
 
+    public LiveData<Boolean> getPencil() {
+        return mPencil;
+    }
+
     public void reset() {
         mContents.setValue("");
         mMarkedCorrect.setValue(false);
         mMarkedIncorrect.setValue(false);
         mRevealed.setValue(false);
+        mPencil.setValue(false);
     }
 }

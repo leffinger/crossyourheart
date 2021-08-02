@@ -43,7 +43,8 @@
             custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
             custom:isMarkedCorrect="@{cellViewModel.markedCorrect}"
             custom:isRevealed="@{cellViewModel.revealed}"
-            custom:isSelected="@{cellViewModel.selected}" />
+            custom:isSelected="@{cellViewModel.selected}"
+            custom:isPencil="@{cellViewModel.pencil}" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline_vertical"

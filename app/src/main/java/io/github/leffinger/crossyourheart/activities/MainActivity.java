@@ -1,12 +1,16 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import android.app.AlertDialog;
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.databinding.DataBindingUtil;
 import androidx.room.Room;
 
 import java.io.File;
@@ -14,13 +18,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 import io.github.leffinger.crossyourheart.R;
+import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
@@ -40,98 +48,12 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     private String mFilename;
     private Database mDatabase;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_container);
-
-        if (IOUtil.getPuzzleDir(this).mkdir()) {
-            Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));
-        }
-
-        // Create or load database.
-        mDatabase =
-                Room.databaseBuilder(getApplicationContext(), Database.class, "puzzles").build();
-        mFilename = null;
-        new LoadPuzzleTask().execute(savedInstanceState);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        // Display list of puzzles.
-        PuzzleListFragment fragment = PuzzleListFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
-                .commitNow();
-    }
-
-    private class LoadPuzzleTask extends AsyncTask<Bundle, Void, String> {
-        private String error = null;
-        private Throwable exception = null;
-
-        @Override
-        protected String doInBackground(Bundle... bundles) {
-            Bundle savedInstanceState = bundles[0];
-            if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FILENAME)) {
-                 return requireNonNull(savedInstanceState.getString(ARG_FILENAME));
-            }
-            if (getIntent() == null || getIntent().getData() == null) {
-                // No file supplied.
-                return null;
-            }
-
-            // Try to load the puzzle file.
-            Uri uri = getIntent().getData();
-            try {
-                return loadUri(uri);
-            } catch (IOException e) {
-                error = e.getMessage();
-                exception = e.getCause();
-                return null;
-            } catch (DuplicateFileException e) {
-                error = "Reusing existing file";
-                return e.getMessage();
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String filename) {
-            if (error != null) {
-                Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
-                if (exception != null) {
-                    Log.e(TAG, error, exception);
-                }
-            }
-
-            mFilename = filename;
-            if (mFilename == null) {
-                // No filename found; start list activity to select file.
-                PuzzleListFragment fragment = PuzzleListFragment.newInstance();
-                getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
-                        .commitNow();
-                return;
-            }
-
-            // Start puzzle activity.
-            startActivity(PuzzleActivity.newIntent(MainActivity.this, mFilename));
-        }
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        if (mFilename != null) {
-            outState.putString(ARG_FILENAME, mFilename);
-        }
-        super.onSaveInstanceState(outState);
-    }
-
-    private String findDuplicate(PuzFile puzzleLoader) {
-        File puzzleDir = IOUtil.getPuzzleDir(this);
+    private static String findDuplicate(Context context, PuzFile puzzleLoader) {
+        File puzzleDir = IOUtil.getPuzzleDir(context);
         String[] files = puzzleDir.list();
         for (String filename : files) {
             try (FileInputStream inputStream = new FileInputStream(
-                    IOUtil.getPuzzleFile(this, filename))) {
+                    IOUtil.getPuzzleFile(context, filename))) {
                 PuzFile existingPuzzle = PuzFile.loadPuzFile(inputStream);
                 if (existingPuzzle.checkDuplicate(puzzleLoader)) {
                     return filename;
@@ -143,26 +65,15 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         return null;
     }
 
-    @Override
-    public void onFileSelected(String filename) {
-        try (InputStream inputStream = new FileInputStream(IOUtil.getPuzzleFile(this, filename))) {
-            PuzFile.verifyPuzFile(inputStream);
-            mFilename = filename;
-            startActivity(PuzzleActivity.newIntent(this, mFilename));
-        } catch (IOException e) {
-            Log.e(TAG, "Parse failed: ", e);
-            Toast.makeText(this, "Loading puzzle failed: " + e.getMessage(), Toast.LENGTH_LONG)
-                    .show();
-        }
-    }
-
-    private String loadUri(Uri uri) throws DuplicateFileException, IOException {
-        try (InputStream inputStream = requireNonNull(getContentResolver().openInputStream(uri))) {
+    private static String loadUri(Context context, Database database,
+                                  Uri uri) throws DuplicateFileException, IOException {
+        try (InputStream inputStream = requireNonNull(
+                context.getContentResolver().openInputStream(uri))) {
             try {
                 PuzFile puzzleLoader = PuzFile.verifyPuzFile(inputStream);
 
                 // Check to see if we have already loaded this file.
-                String duplicateFilename = findDuplicate(puzzleLoader);
+                String duplicateFilename = findDuplicate(context, puzzleLoader);
                 if (duplicateFilename != null) {
                     throw new DuplicateFileException(duplicateFilename);
                 }
@@ -170,9 +81,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 String date = FORMAT.format(Calendar.getInstance().getTime());
                 String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
                 try (FileOutputStream outputStream = new FileOutputStream(
-                        IOUtil.getPuzzleFile(MainActivity.this, filename))) {
+                        IOUtil.getPuzzleFile(context, filename))) {
                     puzzleLoader.savePuzzleFile(outputStream);
-                    mDatabase.puzzleDao().insert(Puzzle.fromPuzzleFile(filename, puzzleLoader));
+                    database.puzzleDao().insert(Puzzle.fromPuzzleFile(filename, puzzleLoader));
                     return filename;
                 } catch (IOException e) {
                     throw new IOException("Failed to save puzzle file", e);
@@ -186,26 +97,159 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     }
 
     @Override
-    @SuppressWarnings("StaticFieldLeak")
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_container);
+
+        if (IOUtil.getPuzzleDir(this).mkdir()) {
+            Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));
+        }
+
+        // Create or load database.
+        mDatabase =
+                Room.databaseBuilder(getApplicationContext(), Database.class, "puzzles").build();
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FILENAME)) {
+            mFilename = savedInstanceState.getString(ARG_FILENAME);
+            startActivity(PuzzleActivity.newIntent(this, mFilename));
+        } else if (getIntent() == null || getIntent().getData() == null) {
+            // No implicit intent; start list activity to select file.
+            PuzzleListFragment fragment = PuzzleListFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
+                    .commitNow();
+        } else {
+            // Load the external file specified by the implicit intent.
+            Uri uri = getIntent().getData();
+            onMultipleUrisSelected(Collections.singletonList(uri));
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (mFilename != null) {
+            outState.putString(ARG_FILENAME, mFilename);
+        }
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        // Display list of puzzles.
+        PuzzleListFragment fragment = PuzzleListFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
+                .commitNow();
+    }
+
+    @Override
+    public void onFileSelected(String filename) {
+        mFilename = filename;
+        startActivity(PuzzleActivity.newIntent(this, mFilename));
+    }
+
+    @Override
     public void onUriSelected(Uri uri) {
-        new LoadPuzzleTask().execute((Bundle)null);
+        onMultipleUrisSelected(Collections.singletonList(uri));
     }
 
     @Override
     public void onMultipleUrisSelected(List<Uri> uris) {
-        for (Uri uri : uris) {
-            try {
-                loadUri(uri);
-            } catch (DuplicateFileException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        new LoadMultipleUrisTask(this, mDatabase, uris).execute();
     }
 
     @Override
     public void onDownloadSelected() {
         startActivity(DownloadPuzzlesActivity.newIntent(this));
+    }
+
+    private static class LoadMultipleUrisTask extends AsyncTask<Void, Integer, Void> {
+        private final WeakReference<MainActivity> mActivity;
+        private final Database mDatabase;
+        private final List<Uri> mUris;
+
+        /**
+         * List of successfully loaded files.
+         */
+        private final List<String> mFilenames;
+
+        private AlertDialog mAlertDialog;
+        private AlertProgressBinding mAlertProgressBinding;
+
+        private int mDupeCount;
+        private int mFailCount;
+        private int mSuccessCount;
+
+        public LoadMultipleUrisTask(MainActivity mainActivity, Database database, List<Uri> uris) {
+            mActivity = new WeakReference<>(mainActivity);
+            mDatabase = database;
+            mUris = uris;
+            mFilenames = new ArrayList<>();
+            mDupeCount = 0;
+            mFailCount = 0;
+            mSuccessCount = 0;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            Context context = mActivity.get();
+            if (context == null) {
+                return;
+            }
+            mAlertProgressBinding = DataBindingUtil
+                    .inflate(LayoutInflater.from(context), R.layout.alert_progress, null, false);
+            mAlertDialog = new AlertDialog.Builder(context).setView(mAlertProgressBinding.getRoot())
+                    .setCancelable(false).setTitle("Loading files...").show();
+            mAlertProgressBinding.progressBar.setMax(mUris.size());
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            mAlertProgressBinding.progressBar.setProgress(values[0]);
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            MainActivity activity = mActivity.get();
+            if (activity == null) {
+                return null;
+            }
+            for (int i = 0; i < mUris.size(); i++) {
+                try {
+                    String filename = loadUri(activity, mDatabase, mUris.get(i));
+                    Log.i(TAG, "Successfully loaded " + filename);
+                    mSuccessCount++;
+                    mFilenames.add(filename);
+                } catch (DuplicateFileException e) {
+                    Log.i(TAG, "Duplicate file");
+                    mDupeCount++;
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to load puzzle file", e);
+                    mFailCount++;
+                }
+                publishProgress(i + 1);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if (mAlertDialog != null) {
+                mAlertDialog.dismiss();
+            }
+
+            MainActivity activity = mActivity.get();
+            if (activity == null) {
+                return;
+            }
+            if (mUris.size() == 1 && mSuccessCount == 1) {
+                activity.onFileSelected(mFilenames.get(0));
+            } else {
+                Toast.makeText(activity,
+                               activity.getString(R.string.multiple_uris_result, mUris.size(),
+                                                 mSuccessCount, mDupeCount, mFailCount),
+                               Toast.LENGTH_LONG).show();
+            }
+        }
     }
 }
