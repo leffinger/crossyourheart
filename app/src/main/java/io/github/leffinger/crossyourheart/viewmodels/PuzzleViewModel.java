@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -53,11 +54,6 @@ public class PuzzleViewModel extends ViewModel {
     private final MutableLiveData<AbstractPuzzleFile.TimerInfo> mTimerInfo =
             new MutableLiveData<>();
 
-    /**
-     * Whether the current entries should be in pencil.
-     */
-    private final MutableLiveData<Boolean> mPencil = new MutableLiveData<>(false);
-
     // TODO: Is this actually needed?
     private AtomicBoolean mInitialized = new AtomicBoolean(false);
     /**
@@ -68,6 +64,7 @@ public class PuzzleViewModel extends ViewModel {
      * Name of the file where the puzzle should be saved.
      */
     private File mFile;
+    private PuzzleObserver mPuzzleObserver;
     /**
      * Grid of mutable CellViewModels. Black cells are null.
      */
@@ -79,8 +76,9 @@ public class PuzzleViewModel extends ViewModel {
 
     // This can be called from a background thread, so it should not call setValue() on any
     // LiveData objects.
-    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
-        initialize(puzzleFile, file, startWithDownClues);
+    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
+                           @NonNull PuzzleObserver puzzleObserver) {
+        initialize(puzzleFile, file, startWithDownClues, puzzleObserver);
     }
 
     private static void linkClues(ClueViewModel[] clues) {
@@ -125,13 +123,15 @@ public class PuzzleViewModel extends ViewModel {
      * Call from the UI thread.
      */
     @SuppressLint("StaticFieldLeak")
-    public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
+    public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
+                           @NonNull PuzzleObserver puzzleObserver) {
         if (!mInitialized.compareAndSet(false, true)) {
             return;
         }
 
         mPuzzleFile = puzzleFile;
         mFile = file;
+        mPuzzleObserver = puzzleObserver;
 
         // Do as much as possible off the UI thread, but some tasks (e.g. addSource) must be done
         // on the UI thread.
@@ -238,6 +238,8 @@ public class PuzzleViewModel extends ViewModel {
                         });
                     }
                 }
+
+                mPuzzleObserver.onCellViewModelsReady();
             }
         }.execute();
     }
@@ -288,10 +290,6 @@ public class PuzzleViewModel extends ViewModel {
 
     public LiveData<Boolean> isSolved() {
         return mIsSolved;
-    }
-
-    public MutableLiveData<Boolean> usePencil() {
-        return mPencil;
     }
 
     public void toggleDirection() {
@@ -428,11 +426,11 @@ public class PuzzleViewModel extends ViewModel {
 
     public void setCurrentCellContents(String newContents, boolean skipFilledClues,
                                        boolean skipFilledSquares, boolean skipFilledSquaresWrap,
-                                       boolean completedClueNext) {
+                                       boolean completedClueNext, boolean usePencil) {
         CellViewModel currentCell = mCurrentCell.getValue();
         boolean pencil = currentCell.getPencil().getValue();
         String oldContents = currentCell.getContents().getValue();
-        currentCell.setContents(newContents, mPencil.getValue());
+        currentCell.setContents(newContents, usePencil);
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
                                    pencil));
         CellViewModel newCell =
@@ -488,8 +486,9 @@ public class PuzzleViewModel extends ViewModel {
             boolean pencil = currentCell.getPencil().getValue();
             String oldContents = currentCell.getContents().getValue();
             currentCell.setContents("", false);
-            mUndoStack.push(new Action(currentCell, currentCell, oldContents,
-                                       mAcrossFocus.getValue(), pencil));
+            mUndoStack
+                    .push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
+                                     pencil));
         }
     }
 
@@ -656,6 +655,11 @@ public class PuzzleViewModel extends ViewModel {
 
     public MutableLiveData<AbstractPuzzleFile.TimerInfo> getTimerInfo() {
         return mTimerInfo;
+    }
+
+    public interface PuzzleObserver {
+        /** Called from UI thread once CellViewModels are available. */
+        void onCellViewModelsReady();
     }
 
     /**

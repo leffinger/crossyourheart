@@ -41,6 +41,27 @@ public class PuzzleViewModelTest {
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
 
+    private static <T> T getOrAwaitValue(final LiveData<T> liveData) throws InterruptedException {
+        final Object[] data = new Object[1];
+        final CountDownLatch latch = new CountDownLatch(1);
+        Observer<T> observer = new Observer<T>() {
+            @Override
+            public void onChanged(@Nullable T o) {
+                data[0] = o;
+                latch.countDown();
+                liveData.removeObserver(this);
+            }
+        };
+        liveData.observeForever(observer);
+        // Don't wait indefinitely if the LiveData is not set.
+        if (!latch.await(10, TimeUnit.SECONDS)) {
+            throw new RuntimeException("LiveData value was never set.");
+        }
+        //noinspection unchecked
+        return (T) data[0];
+
+    }
+
     @Test
     public void useAppContext() {
         // Context of the app under test.
@@ -54,7 +75,8 @@ public class PuzzleViewModelTest {
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
         PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
+                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false, () -> {
+                });
         assertEquals(3, puzzleViewModel.getNumRows());
         assertEquals(3, puzzleViewModel.getNumColumns());
         assertEquals("3x3", puzzleViewModel.getTitle());
@@ -105,7 +127,9 @@ public class PuzzleViewModelTest {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
-                puzzleViewModel.initialize(puzzleFile, outFile, false);
+                puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
+
+                });
                 puzzleViewModel.selectFirstCell();
                 return null;
             }
@@ -118,26 +142,5 @@ public class PuzzleViewModelTest {
             assertNotNull(clueViewModel);
             puzzleViewModel.moveToNextClue(true, true);
         } while (clueViewModel != puzzleViewModel.getCurrentClue().getValue());
-    }
-
-    private static <T> T getOrAwaitValue(final LiveData<T> liveData) throws InterruptedException {
-        final Object[] data = new Object[1];
-        final CountDownLatch latch = new CountDownLatch(1);
-        Observer<T> observer = new Observer<T>() {
-            @Override
-            public void onChanged(@Nullable T o) {
-                data[0] = o;
-                latch.countDown();
-                liveData.removeObserver(this);
-            }
-        };
-        liveData.observeForever(observer);
-        // Don't wait indefinitely if the LiveData is not set.
-        if (!latch.await(10, TimeUnit.SECONDS)) {
-            throw new RuntimeException("LiveData value was never set.");
-        }
-        //noinspection unchecked
-        return (T) data[0];
-
     }
 }

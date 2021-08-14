@@ -42,10 +42,10 @@ import static java.util.Objects.requireNonNull;
  */
 public class MainActivity extends AppCompatActivity implements PuzzleListFragment.Callbacks {
     public static final String TAG = "MainActivity";
-    public static final String ARG_FILENAME = "filename";
+    public static final String ARG_PUZZLE = "puzzle";
     private static final SimpleDateFormat FORMAT =
             new SimpleDateFormat("yyMMddHHmmss", Locale.getDefault());
-    private String mFilename;
+    private Puzzle mPuzzle;
     private Database mDatabase;
 
     private static String findDuplicate(Context context, PuzFile puzzleLoader) {
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         return null;
     }
 
-    private static String loadUri(Context context, Database database,
+    private static Puzzle loadUri(Context context, Database database,
                                   Uri uri) throws DuplicateFileException, IOException {
         try (InputStream inputStream = requireNonNull(
                 context.getContentResolver().openInputStream(uri))) {
@@ -83,8 +83,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 try (FileOutputStream outputStream = new FileOutputStream(
                         IOUtil.getPuzzleFile(context, filename))) {
                     puzzleLoader.savePuzzleFile(outputStream);
-                    database.puzzleDao().insert(Puzzle.fromPuzzleFile(filename, puzzleLoader));
-                    return filename;
+                    Puzzle puzzle = Puzzle.fromPuzzleFile(filename, puzzleLoader, false);
+                    database.puzzleDao().insert(puzzle);
+                    return puzzle;
                 } catch (IOException e) {
                     throw new IOException("Failed to save puzzle file", e);
                 }
@@ -109,9 +110,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         mDatabase =
                 Room.databaseBuilder(getApplicationContext(), Database.class, "puzzles").build();
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_FILENAME)) {
-            mFilename = savedInstanceState.getString(ARG_FILENAME);
-            startActivity(PuzzleActivity.newIntent(this, mFilename));
+        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_PUZZLE)) {
+            mPuzzle = (Puzzle) savedInstanceState.getSerializable(ARG_PUZZLE);
+            startActivity(PuzzleActivity.newIntent(this, mPuzzle));
         } else if (getIntent() == null || getIntent().getData() == null) {
             // No implicit intent; start list activity to select file.
             PuzzleListFragment fragment = PuzzleListFragment.newInstance();
@@ -126,8 +127,8 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        if (mFilename != null) {
-            outState.putString(ARG_FILENAME, mFilename);
+        if (mPuzzle != null) {
+            outState.putSerializable(ARG_PUZZLE, mPuzzle);
         }
         super.onSaveInstanceState(outState);
     }
@@ -143,9 +144,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     }
 
     @Override
-    public void onFileSelected(String filename) {
-        mFilename = filename;
-        startActivity(PuzzleActivity.newIntent(this, mFilename));
+    public void onPuzzleSelected(Puzzle puzzle) {
+        mPuzzle = puzzle;
+        startActivity(PuzzleActivity.newIntent(MainActivity.this, mPuzzle));
     }
 
     @Override
@@ -169,9 +170,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         private final List<Uri> mUris;
 
         /**
-         * List of successfully loaded files.
+         * List of successfully loaded puzzles.
          */
-        private final List<String> mFilenames;
+        private final List<Puzzle> mPuzzles;
 
         private AlertDialog mAlertDialog;
         private AlertProgressBinding mAlertProgressBinding;
@@ -184,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             mActivity = new WeakReference<>(mainActivity);
             mDatabase = database;
             mUris = uris;
-            mFilenames = new ArrayList<>();
+            mPuzzles = new ArrayList<>();
             mDupeCount = 0;
             mFailCount = 0;
             mSuccessCount = 0;
@@ -216,10 +217,10 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             }
             for (int i = 0; i < mUris.size(); i++) {
                 try {
-                    String filename = loadUri(activity, mDatabase, mUris.get(i));
-                    Log.i(TAG, "Successfully loaded " + filename);
+                    Puzzle puzzle = loadUri(activity, mDatabase, mUris.get(i));
+                    Log.i(TAG, "Successfully loaded " + puzzle.filename);
                     mSuccessCount++;
-                    mFilenames.add(filename);
+                    mPuzzles.add(puzzle);
                 } catch (DuplicateFileException e) {
                     Log.i(TAG, "Duplicate file");
                     mDupeCount++;
@@ -243,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 return;
             }
             if (mUris.size() == 1 && mSuccessCount == 1) {
-                activity.onFileSelected(mFilenames.get(0));
+                activity.onPuzzleSelected(mPuzzles.get(0));
             } else {
                 Toast.makeText(activity,
                                activity.getString(R.string.multiple_uris_result, mUris.size(),

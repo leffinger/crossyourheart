@@ -117,7 +117,8 @@ public class PuzzleListFragment extends Fragment {
                     if (context == null) {
                         return;
                     }
-                    new AlertDialog.Builder(context).setMessage(R.string.reindex_alert)
+                    new AlertDialog.Builder(context).setTitle(R.string.reindex_alert)
+                            .setMessage(R.string.reindex_safe)
                             .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
                                 reindexFiles();
                             }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
@@ -192,22 +193,39 @@ public class PuzzleListFragment extends Fragment {
                 if (context == null) {
                     return null;
                 }
-                mDatabase.puzzleDao().deletePuzzles(mPuzzles);
+
+                // Current list of files (existing files will be updated; missing files will be
+                // deleted).
+                Set<String> currentFiles = new HashSet<>(mDatabase.puzzleDao().getFiles());
+                Set<String> foundFiles = new HashSet<>();
+
+                // Scan and update puzzle files.
                 File puzzleDir = IOUtil.getPuzzleDir(context);
                 File[] files = puzzleDir.listFiles();
                 mAlertProgressBinding.progressBar.setMax(files.length);
                 for (int i = 0; i < files.length; i++) {
                     File file = files[i];
+                    foundFiles.add(file.getName());
                     try (FileInputStream inputStream = new FileInputStream(file)) {
                         PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
                         mDatabase.puzzleDao()
-                                .insert(Puzzle.fromPuzzleFile(file.getName(), puzzleLoader));
+                                .insert(Puzzle.fromPuzzleFile(file.getName(), puzzleLoader, false));
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
                         e.printStackTrace();
                     }
                     publishProgress(i + 1);
                 }
+
+                // Delete files that were in the DB but not on disk.
+                currentFiles.removeAll(foundFiles);
+                Log.i(TAG, "Removing " + foundFiles.size() + " files from DB");
+                List<Puzzle> toBeDeleted = new ArrayList<>();
+                for (String missingFile : currentFiles) {
+                    toBeDeleted.add(new Puzzle(missingFile));
+                }
+                mDatabase.puzzleDao().deletePuzzles(toBeDeleted);
+
                 mPuzzles = mDatabase.puzzleDao().getAll();
                 return null;
             }
@@ -286,7 +304,7 @@ public class PuzzleListFragment extends Fragment {
     }
 
     public interface Callbacks {
-        void onFileSelected(String filename);
+        void onPuzzleSelected(Puzzle puzzle);
 
         void onUriSelected(Uri uri);
 
@@ -309,7 +327,7 @@ public class PuzzleListFragment extends Fragment {
             // Clicking on the puzzle file opens that file.
             mBinding.getRoot().setOnClickListener(view -> {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_PRESS);
-                ((Callbacks) getActivity()).onFileSelected(mBinding.getPuzzle().getFilename());
+                ((Callbacks) getActivity()).onPuzzleSelected(mBinding.getPuzzle());
             });
 
             // Long-clicking the puzzle file brings up an option to delete the file.

@@ -11,6 +11,7 @@
         android:id="@+id/pencil"
         android:icon="@drawable/pencil"
         android:title="@string/pencil"
+
         app:showAsAction="ifRoom" />
 
     <item
@@ -58,15 +59,6 @@
             </menu>
         </item>
     </group>
-
-    <item
-        android:id="@+id/stop_timer"
-        android:title="@string/stop_timer"
-        app:showAsAction="never" />
-
-    <item android:id="@+id/restart_timer"
-        android:title="@string/restart_timer"
-        app:showAsAction="never" />
 
     <item
         android:id="@+id/reset_puzzle"

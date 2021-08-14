@@ -151,7 +151,7 @@ public class CellViewModel {
         return mSelected;
     }
 
-    public LiveData<Boolean> getPencil() {
+    public MutableLiveData<Boolean> getPencil() {
         return mPencil;
     }
 

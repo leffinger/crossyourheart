@@ -49,4 +49,5 @@
     <string name="reindexed_files">Successfully indexed %d files</string>
     <string name="pencil">Pencil</string>
     <string name="multiple_uris_result">Loaded %d puzzle files: %d succeeded, %d duplicate, %d failed</string>
+    <string name="reindex_safe">This will not delete any of your data.</string>
 </resources>
