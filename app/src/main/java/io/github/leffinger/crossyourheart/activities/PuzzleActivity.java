@@ -4,9 +4,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.room.Room;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,11 +17,12 @@ import java.io.IOException;
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
+import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 
 public class PuzzleActivity extends AppCompatActivity {
-    private static final String TAG = "PuzzleActivity";
     public static final String KEY_PUZZLE = "puzzle";
+    private static final String TAG = "PuzzleActivity";
     private Puzzle mPuzzle;
 
     public static Intent newIntent(Context context, Puzzle puzzle) {
@@ -44,6 +47,21 @@ public class PuzzleActivity extends AppCompatActivity {
             finish();
             return;
         }
+
+        if (!mPuzzle.opened) {
+            // Mark puzzle as opened.
+            mPuzzle.opened = true;
+            Database database =
+                    Room.databaseBuilder(getApplicationContext(), Database.class, "puzzles")
+                            .build();
+            AsyncTask.execute(() -> {
+
+                database.puzzleDao().update(mPuzzle);
+                Puzzle puzzle = database.puzzleDao().getAll().get(0);
+                Log.i(TAG, "Title: " + puzzle.title + " opened? " + puzzle.opened);
+            });
+        }
+
         new LoadPuzzleFileTask().execute();
     }
 

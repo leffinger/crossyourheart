@@ -6,7 +6,7 @@
     <string name="alert_solved">You did it! You solved the puzzle in %s!</string>
     <string name="delete_puzzle">Delete this puzzle?</string>
     <string name="open_file">Open Puzzle File…</string>
-    <string name="solved">Solved</string>
+    <string name="puzzle_status">Puzzle status</string>
     <string name="download_header">Cross Your Heart supports puzzle files that end in \".puz\". Here are some sites where you can download puzzles!</string>
     <string name="download_file">Download Puzzles…</string>
     <string name="locked_message">Puzzle solution is not available</string>

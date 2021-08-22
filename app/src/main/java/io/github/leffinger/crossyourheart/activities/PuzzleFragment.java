@@ -117,6 +117,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), Database.class,
                                          "puzzles").build();
 
+
         mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
         mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable(ARG_PUZZLE);
         mCellAdapter = new CellAdapter(mPuzzleFile.getWidth(), mPuzzleFile.getHeight());
@@ -281,8 +282,10 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         if (itemId == R.id.pencil) {
             mUsePencil = !mUsePencil;
             AsyncTask.execute(() -> {
-                mDatabase.puzzleDao().update(Puzzle.fromPuzzleFile(mFilename.getName(), mPuzzleFile,
-                                                                   mUsePencil));
+                mDatabase.puzzleDao().update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
+                                                        mPuzzleFile.getAuthor(),
+                                                        mPuzzleFile.getCopyright(),
+                                                        mPuzzleFile.isSolved(), mUsePencil, true));
             });
             configurePencilButton();
         }
@@ -429,10 +432,11 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                 }
             }
         });
-        viewModel.isSolved().observe(getViewLifecycleOwner(), unused -> AsyncTask.execute(
+        viewModel.isSolved().observe(getViewLifecycleOwner(), solved -> AsyncTask.execute(
                 () -> mDatabase.puzzleDao()
-                        .update(Puzzle.fromPuzzleFile(viewModel.getFile().getName(),
-                                                      viewModel.getPuzzleFile(), mUsePencil))));
+                        .update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
+                                           mPuzzleFile.getAuthor(), mPuzzleFile.getCopyright(),
+                                           solved, mUsePencil, true))));
 
         // Restart the timer when the puzzle is reset.
         viewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
@@ -619,8 +623,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         @RequiresApi(api = Build.VERSION_CODES.O_MR1)
         @Override
         public void onPress(int i) {
-            doHapticFeedback(mFragmentPuzzleBinding.keyboard,
-                             HapticFeedbackConstants.KEYBOARD_PRESS);
+            doHapticFeedback(mFragmentPuzzleBinding.keyboard, HapticFeedbackConstants.VIRTUAL_KEY);
         }
 
         @Override

@@ -1,6 +1,5 @@
 package io.github.leffinger.crossyourheart.room;
 
-import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -29,7 +28,4 @@ public interface PuzzleDao {
 
     @Delete
     void deletePuzzle(Puzzle puzzle);
-
-    @Query("SELECT * FROM puzzle WHERE filename = :filename")
-    Puzzle getPuzzle(String filename);
 }

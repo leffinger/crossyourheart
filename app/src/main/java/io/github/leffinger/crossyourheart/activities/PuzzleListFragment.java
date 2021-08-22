@@ -39,6 +39,7 @@ import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleFileBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleListBinding;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
@@ -209,7 +210,11 @@ public class PuzzleListFragment extends Fragment {
                     try (FileInputStream inputStream = new FileInputStream(file)) {
                         PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
                         mDatabase.puzzleDao()
-                                .insert(Puzzle.fromPuzzleFile(file.getName(), puzzleLoader, false));
+                                .insert(new Puzzle(file.getName(), puzzleLoader.getTitle(),
+                                                   puzzleLoader.getAuthor(),
+                                                   puzzleLoader.getCopyright(),
+                                                   puzzleLoader.isSolved(), false,
+                                                   !puzzleLoader.isEmpty()));
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
                         e.printStackTrace();

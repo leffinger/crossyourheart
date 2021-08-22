@@ -717,6 +717,16 @@ public class PuzFile extends AbstractPuzzleFile {
     }
 
     @Override
+    public boolean isEmpty() {
+        for (byte b : mGrid) {
+            if (!(b == '.' || b == '-')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public boolean isCorrect(int row, int col) {
         switch (getScrambleState()) {
         case UNSCRAMBLED:

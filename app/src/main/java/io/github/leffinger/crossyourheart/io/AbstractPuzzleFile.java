@@ -49,6 +49,8 @@ public abstract class AbstractPuzzleFile implements Serializable {
     public abstract TimerInfo getTimerInfo();
     public abstract void setTimerInfo(TimerInfo timerInfo);
 
+    public abstract boolean isEmpty();
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
     }

@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
@@ -83,7 +84,11 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 try (FileOutputStream outputStream = new FileOutputStream(
                         IOUtil.getPuzzleFile(context, filename))) {
                     puzzleLoader.savePuzzleFile(outputStream);
-                    Puzzle puzzle = Puzzle.fromPuzzleFile(filename, puzzleLoader, false);
+                    Puzzle puzzle = new Puzzle(filename, puzzleLoader.getTitle(),
+                                               puzzleLoader.getAuthor(),
+                                               puzzleLoader.getCopyright(),
+                                               puzzleLoader.isSolved(), false,
+                                               !puzzleLoader.isEmpty());
                     database.puzzleDao().insert(puzzle);
                     return puzzle;
                 } catch (IOException e) {
@@ -248,7 +253,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             } else {
                 Toast.makeText(activity,
                                activity.getString(R.string.multiple_uris_result, mUris.size(),
-                                                 mSuccessCount, mDupeCount, mFailCount),
+                                                  mSuccessCount, mDupeCount, mFailCount),
                                Toast.LENGTH_LONG).show();
             }
         }
