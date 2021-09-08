@@ -17,6 +17,10 @@ public interface PuzzleDao {
     @Query("SELECT filename FROM puzzle")
     List<String> getFiles();
 
+    @Query("SELECT * FROM puzzle p JOIN puzfilemetadata m ON p.filename = m.filename WHERE title " +
+                   "= :title AND author = :author AND headerChecksum = :headerChecksum")
+    List<Puzzle> getMatchingPuzFiles(String title, String author, int headerChecksum);
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void insert(Puzzle puzzle);
 

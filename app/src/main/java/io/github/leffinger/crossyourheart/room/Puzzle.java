@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey;
 import java.io.Serializable;
 
 import io.github.leffinger.crossyourheart.R;
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
+import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 
 @Entity
 public class Puzzle implements Serializable {
@@ -28,6 +28,8 @@ public class Puzzle implements Serializable {
     public boolean usePencil;
     @ColumnInfo(defaultValue = "true")
     public boolean opened;
+    @ColumnInfo(defaultValue = "NULL")
+    public ScrambleState scrambleState;
 
     @Ignore
     public Puzzle(@NonNull String filename) {
@@ -35,7 +37,7 @@ public class Puzzle implements Serializable {
     }
 
     public Puzzle(@NonNull String filename, String title, String author, String copyright,
-                  boolean solved, boolean usePencil, boolean opened) {
+                  boolean solved, boolean usePencil, boolean opened, ScrambleState scrambleState) {
         this.filename = filename;
         this.title = title;
         this.author = author;
@@ -43,11 +45,20 @@ public class Puzzle implements Serializable {
         this.solved = solved;
         this.usePencil = usePencil;
         this.opened = opened;
+        this.scrambleState = scrambleState;
     }
 
     public int getPuzzleStatusResId() {
-        return solved ? R.drawable.solved :
-                (opened ? R.drawable.in_progress : R.drawable.new_puzzle);
+        if (solved) {
+            return R.drawable.solved;
+        }
+        if (scrambleState == ScrambleState.LOCKED) {
+            return R.drawable.locked;
+        }
+        if (opened) {
+            return R.drawable.in_progress;
+        }
+        return R.drawable.new_puzzle_png;
     }
 
     public String getFilename() {

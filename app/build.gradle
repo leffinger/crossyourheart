@@ -35,7 +35,20 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    sourceSets {
+        androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
+    }
 }
+
+repositories {
+    maven { url "https://jitpack.io" }
+}
+
+dependencies {
+    // AndroidX Capable version
+    implementation 'com.github.AppIntro:AppIntro:6.1.0'
+}
+
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -58,4 +71,5 @@ dependencies {
     testAnnotationProcessor 'com.google.auto.value:auto-value:1.4'
     annotationProcessor 'androidx.room:room-compiler:2.4.0-alpha04'
     implementation 'androidx.room:room-migration:2.4.0-alpha04'
+    androidTestImplementation 'androidx.room:room-testing:2.4.0-alpha04'
 }

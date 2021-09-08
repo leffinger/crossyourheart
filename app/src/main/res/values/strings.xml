@@ -50,4 +50,5 @@
     <string name="pencil">Pencil</string>
     <string name="multiple_uris_result">Loaded %d puzzle files: %d succeeded, %d duplicate, %d failed</string>
     <string name="reindex_safe">This will not delete any of your data.</string>
+    <string name="show_tutorial">Show Tutorial...</string>
 </resources>

@@ -24,7 +24,6 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Room;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,10 +38,10 @@ import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleFileBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleListBinding;
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
+import io.github.leffinger.crossyourheart.room.PuzFileMetadata;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 
 import static android.app.Activity.RESULT_OK;
@@ -74,8 +73,7 @@ public class PuzzleListFragment extends Fragment {
         mAdapter = new PuzzleFileAdapter();
 
         // Create or load database.
-        mDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), Database.class,
-                                         "puzzles").build();
+        mDatabase = Database.getInstance(getActivity().getApplicationContext());
 
         fetchPuzzleFiles();
     }
@@ -154,16 +152,19 @@ public class PuzzleListFragment extends Fragment {
             intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
-            break;
+            return true;
         case R.id.download_file:
             ((Callbacks) getActivity()).onDownloadSelected();
-            break;
+            return true;
         case R.id.delete_bad_files:
             deleteBadFiles();
-            break;
+            return true;
         case R.id.reindex_files:
             reindexFiles();
-            break;
+            return true;
+        case R.id.show_tutorial:
+            startActivity(new Intent(getContext(), AppIntroActivity.class));
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -214,7 +215,11 @@ public class PuzzleListFragment extends Fragment {
                                                    puzzleLoader.getAuthor(),
                                                    puzzleLoader.getCopyright(),
                                                    puzzleLoader.isSolved(), false,
-                                                   !puzzleLoader.isEmpty()));
+                                                   !puzzleLoader.isEmpty(),
+                                                   puzzleLoader.getScrambleState()));
+                        mDatabase.puzFileMetadataDao().insert(
+                                new PuzFileMetadata(file.getName(),
+                                                    puzzleLoader.getHeaderChecksum()));
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
                         e.printStackTrace();

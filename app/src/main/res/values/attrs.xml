@@ -8,5 +8,6 @@
         <attr name="isMarkedCorrect" format="boolean" />
         <attr name="isRevealed" format="boolean" />
         <attr name="isPencil" format="boolean" />
+        <attr name="isReferenced" format="boolean" />
     </declare-styleable>
 </resources>

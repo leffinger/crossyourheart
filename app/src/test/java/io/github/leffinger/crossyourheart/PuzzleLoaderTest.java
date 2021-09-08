@@ -78,7 +78,12 @@ public class PuzzleLoaderTest {
                     .add(PuzzleInfo.builder().setFilename("/wp210620.puz")
                                  .setTitle("Drawing a Blank (PLEASE SEE NOTEPAD BEFORE SOLVING)")
                                  .setVersionString("2.0\0").addSectionNames("LTIM").build())
-                    .build();
+                    .add(PuzzleInfo.builder().setFilename("/lollapuzzoola2.puz")
+                                 .setTitle("Puzzle 2: Tag! [Go ahead and call out the answers!]")
+                                 .setVersionString("1.3\0").build())
+                    .add(PuzzleInfo.builder().setFilename("/THemeless 19.puz")
+                                 .setTitle("Themeless #19").setVersionString("1.4\0")
+                                 .addSectionNames("GRBS", "LTIM").build()).build();
     private final boolean mSerializeFirst;
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
@@ -283,10 +288,5 @@ public class PuzzleLoaderTest {
     @Test
     public void verifyExtraSectionNames() {
         assertEquals(mPuzzleInfo.sectionNames(), mPuzzleLoader.getSectionNames());
-    }
-
-    @Test
-    public void verifyElapsedTime() {
-//        assertEquals(mPuzzleInfo.elapsedTime(), mPuzzleLoader.getElapsedTime());
     }
 }

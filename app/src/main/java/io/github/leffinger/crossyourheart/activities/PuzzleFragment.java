@@ -1,6 +1,7 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -114,9 +115,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         }
 
         // Create or load database.
-        mDatabase = Room.databaseBuilder(getActivity().getApplicationContext(), Database.class,
-                                         "puzzles").build();
-
+        mDatabase = Database.getInstance(getActivity().getApplicationContext());
 
         mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
         mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable(ARG_PUZZLE);
@@ -135,6 +134,31 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         PuzzleViewModel viewModel = new ViewModelProvider(getActivity()).get(PuzzleViewModel.class);
         assert viewModel.initialized();
         return viewModel;
+    }
+
+    private class PuzzleLayoutManager extends GridLayoutManager {
+
+        private int mWidth;
+
+        public PuzzleLayoutManager(Context context, int spanCount, int orientation,
+                                   boolean reverseLayout) {
+            super(context, spanCount, orientation, reverseLayout);
+        }
+
+        @Override
+        public void onMeasure(@NonNull RecyclerView.Recycler recycler,
+                              @NonNull RecyclerView.State state, int widthSpec, int heightSpec) {
+            super.onMeasure(recycler, state, widthSpec, heightSpec);
+
+            mWidth = getView().getMeasuredWidth();
+            Log.i(TAG, "Width of the puzzle View: " + mWidth);
+            Log.i(TAG, "So the width of each square should be " + (mWidth / getSpanCount()));
+        }
+
+        @Override
+        public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+            super.onLayoutChildren(recycler, state);
+        }
     }
 
     @Nullable
@@ -156,10 +180,11 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mTimerBinding.solved.setVisibility(View.INVISIBLE);
 
         mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
+        mGridLayoutManager = new PuzzleLayoutManager(getActivity(), mPuzzleFile.getWidth(),
                                                    GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
+        mFragmentPuzzleBinding.puzzle.setPuzzleWidth(mPuzzleFile.getWidth());
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
         mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
@@ -285,7 +310,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                 mDatabase.puzzleDao().update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
                                                         mPuzzleFile.getAuthor(),
                                                         mPuzzleFile.getCopyright(),
-                                                        mPuzzleFile.isSolved(), mUsePencil, true));
+                                                        mPuzzleFile.isSolved(), mUsePencil, true,
+                                                        mPuzzleFile.getScrambleState()));
             });
             configurePencilButton();
         }
@@ -436,7 +462,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                 () -> mDatabase.puzzleDao()
                         .update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
                                            mPuzzleFile.getAuthor(), mPuzzleFile.getCopyright(),
-                                           solved, mUsePencil, true))));
+                                           solved, mUsePencil, true,
+                                           mPuzzleFile.getScrambleState()))));
 
         // Restart the timer when the puzzle is reset.
         viewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {

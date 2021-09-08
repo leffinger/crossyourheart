@@ -19,6 +19,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsMarkedCorrect;
     private boolean mIsRevealed;
     private boolean mIsPencil;
+    private boolean mIsReferenced;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -57,6 +58,23 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isPencil")
     public static void setPencil(CellView cellView, boolean isPencil) {
         cellView.setPencil(isPencil);
+    }
+
+    @BindingAdapter("isReferenced")
+    public static void setReferenced(CellView cellView, boolean isReferenced) {
+        cellView.setReferenced(isReferenced);
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+        // Get cell width from parent. This ensures that all cells have the same size.
+        PuzzleView puzzleView = getRootView().findViewById(R.id.puzzle);
+        int cellWidth = puzzleView.getCellWidth();
+        if (cellWidth > 0) {
+            setMeasuredDimension(cellWidth, cellWidth);
+        }
     }
 
     @Override
@@ -105,6 +123,13 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     public void setPencil(boolean isPencil) {
         if (mIsPencil != isPencil) {
             mIsPencil = isPencil;
+            refreshDrawableState();
+        }
+    }
+
+    public void setReferenced(boolean isReferenced) {
+        if (mIsReferenced != isReferenced) {
+            mIsReferenced = isReferenced;
             refreshDrawableState();
         }
     }

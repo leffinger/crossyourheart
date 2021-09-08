@@ -9,6 +9,7 @@
         android:roundIcon="@mipmap/heart_outline_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".activities.AppIntroActivity"></activity>
         <activity
             android:name=".activities.SettingsActivity"
             android:label="@string/title_activity_settings" />

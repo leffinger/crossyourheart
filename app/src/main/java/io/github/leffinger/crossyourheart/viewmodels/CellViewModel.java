@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.Transformations;
 
 
 public class CellViewModel {
@@ -18,6 +19,7 @@ public class CellViewModel {
     private final MutableLiveData<Boolean> mPencil;
     private final MediatorLiveData<Boolean> mHighlighted;
     private final MediatorLiveData<Boolean> mSelected;
+    private final MediatorLiveData<Boolean> mReferenced;
     private int mClueNumber;  // if this is the first cell in one or both directions
     private ClueViewModel mAcrossClue;
     private ClueViewModel mDownClue;
@@ -45,6 +47,7 @@ public class CellViewModel {
         mRevealed = new MutableLiveData<>(false);
         mPencil = new MutableLiveData<>(false);
         mHighlighted = new MediatorLiveData<>();
+        mReferenced = new MediatorLiveData<>();
 
         // Set up LiveData observer for whether this cell is currently selected.
         mSelected.addSource(mPuzzleViewModel.getCurrentCell(),
@@ -63,6 +66,21 @@ public class CellViewModel {
         };
         mHighlighted.addSource(mPuzzleViewModel.getAcrossFocus(), observer);
         mHighlighted.addSource(mPuzzleViewModel.getCurrentClue(), observer);
+    }
+
+    private void arrangeReferencedLiveData() {
+        if (mAcrossClue == null || mDownClue == null) {
+            return;
+        }
+
+        // Set up LiveData observers for whether this cell is referenced by the current clue.
+        Observer<Object> observer = o -> {
+            boolean acrossReferenced = mAcrossClue.isReferenced().getValue();
+            boolean downReferenced = mDownClue.isReferenced().getValue();
+            mReferenced.setValue(acrossReferenced || downReferenced);
+        };
+        mReferenced.addSource(mAcrossClue.isReferenced(), observer);
+        mReferenced.addSource(mDownClue.isReferenced(), observer);
     }
 
     public int getRow() {
@@ -87,6 +105,7 @@ public class CellViewModel {
 
     public void setAcrossClue(ClueViewModel acrossClue) {
         mAcrossClue = acrossClue;
+        arrangeReferencedLiveData();
     }
 
     public ClueViewModel getDownClue() {
@@ -95,6 +114,7 @@ public class CellViewModel {
 
     public void setDownClue(ClueViewModel downClue) {
         mDownClue = downClue;
+        arrangeReferencedLiveData();
     }
 
     public LiveData<String> getContents() {
@@ -154,6 +174,8 @@ public class CellViewModel {
     public MutableLiveData<Boolean> getPencil() {
         return mPencil;
     }
+
+    public LiveData<Boolean> getReferenced() { return mReferenced; }
 
     public void reset() {
         mContents.setValue("");

@@ -26,7 +26,7 @@
             app:layout_constraintStart_toStartOf="@id/puzzle"
             app:layout_constraintEnd_toEndOf="@id/puzzle" />
 
-        <androidx.recyclerview.widget.RecyclerView
+        <io.github.leffinger.crossyourheart.views.PuzzleView
             android:id="@+id/puzzle"
             android:layout_width="0dp"
             android:layout_height="0dp"

@@ -51,9 +51,7 @@ public class PuzzleActivity extends AppCompatActivity {
         if (!mPuzzle.opened) {
             // Mark puzzle as opened.
             mPuzzle.opened = true;
-            Database database =
-                    Room.databaseBuilder(getApplicationContext(), Database.class, "puzzles")
-                            .build();
+            Database database = Database.getInstance(getApplicationContext());
             AsyncTask.execute(() -> {
 
                 database.puzzleDao().update(mPuzzle);

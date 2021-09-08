@@ -179,7 +179,8 @@ public class PuzzleViewModel extends ViewModel {
                 ClueViewModel[] clues = new ClueViewModel[mPuzzleFile.getNumClues()];
                 for (int i = 0; i < clues.length; i++) {
                     AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
-                    clues[i] = new ClueViewModel(clue.isAcross(), clue.getNumber(), clue.getText());
+                    clues[i] = new ClueViewModel(PuzzleViewModel.this, clue.isAcross(),
+                                                 clue.getNumber(), clue.getText());
                 }
 
                 mGrid = new CellViewModel[getNumRows()][getNumColumns()];
@@ -658,7 +659,9 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public interface PuzzleObserver {
-        /** Called from UI thread once CellViewModels are available. */
+        /**
+         * Called from UI thread once CellViewModels are available.
+         */
         void onCellViewModelsReady();
     }
 
