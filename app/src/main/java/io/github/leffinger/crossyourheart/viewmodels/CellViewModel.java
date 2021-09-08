@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -8,6 +10,7 @@ import androidx.lifecycle.Transformations;
 
 
 public class CellViewModel {
+    private static final String TAG = "CellViewModel";
     private final PuzzleViewModel mPuzzleViewModel;
     private final int mRow;
     private final int mCol;
@@ -73,11 +76,18 @@ public class CellViewModel {
             return;
         }
 
+        Log.i(TAG, "Setting up isReferenced for cell " + this);
+
         // Set up LiveData observers for whether this cell is referenced by the current clue.
         Observer<Object> observer = o -> {
-            boolean acrossReferenced = mAcrossClue.isReferenced().getValue();
-            boolean downReferenced = mDownClue.isReferenced().getValue();
-            mReferenced.setValue(acrossReferenced || downReferenced);
+            Boolean acrossReferenced = mAcrossClue.isReferenced().getValue();
+            boolean acrossReferencedUnboxed = acrossReferenced == null ? false : acrossReferenced;
+            Boolean downReferenced = mDownClue.isReferenced().getValue();
+            boolean downReferencedUnboxed = downReferenced == null ? false : downReferenced;
+            if (acrossReferencedUnboxed || downReferencedUnboxed) {
+                Log.i(TAG, "Cell is referenced: " + this);
+            }
+            mReferenced.setValue(acrossReferencedUnboxed || downReferencedUnboxed);
         };
         mReferenced.addSource(mAcrossClue.isReferenced(), observer);
         mReferenced.addSource(mDownClue.isReferenced(), observer);
@@ -183,5 +193,10 @@ public class CellViewModel {
         mMarkedIncorrect.setValue(false);
         mRevealed.setValue(false);
         mPencil.setValue(false);
+    }
+
+    @Override
+    public String toString() {
+        return "CellViewModel{" + "mRow=" + mRow + ", mCol=" + mCol + '}';
     }
 }

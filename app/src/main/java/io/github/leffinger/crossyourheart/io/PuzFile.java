@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.io;
 
+import android.util.Log;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
@@ -17,6 +19,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
@@ -59,6 +64,7 @@ public class PuzFile extends AbstractPuzzleFile {
     final int[] mAcrossClueMapping;
     final int[] mDownClueMapping;
     final byte[][] mUserRebusEntries;
+    final boolean[][] mClueReferences;
     TimerInfo mTimerInfo;
 
     public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
@@ -66,7 +72,8 @@ public class PuzFile extends AbstractPuzzleFile {
                    byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
                    byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
                    Clue[] clues, byte[] note, List<Section> extraSections, int[] acrossClueMapping,
-                   int[] downClueMapping, byte[][] userRebusEntries, TimerInfo timerInfo) {
+                   int[] downClueMapping, byte[][] userRebusEntries, boolean[][] clueReferences,
+                   TimerInfo timerInfo) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -90,6 +97,7 @@ public class PuzFile extends AbstractPuzzleFile {
         mAcrossClueMapping = acrossClueMapping;
         mDownClueMapping = downClueMapping;
         mUserRebusEntries = userRebusEntries;
+        mClueReferences = clueReferences;
         mTimerInfo = timerInfo;
     }
 
@@ -269,6 +277,10 @@ public class PuzFile extends AbstractPuzzleFile {
             }
         }
 
+        // Identify clues that reference each other and persist this information so it can be
+        // displayed.
+        boolean[][] clueReferences = findClueReferences(clues);
+
         byte[][] rebusUserEntries = new byte[width * height][];
         TimerInfo timerInfo = null;
         for (Section section : extraSections) {
@@ -303,7 +315,31 @@ public class PuzFile extends AbstractPuzzleFile {
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
                            copyright, clues, note, extraSections, acrossClueMapping,
-                           downClueMapping, rebusUserEntries, timerInfo);
+                           downClueMapping, rebusUserEntries, clueReferences, timerInfo);
+    }
+
+    private static boolean[][] findClueReferences(Clue[] clues) {
+        boolean[][] clueReferences = new boolean[clues.length][clues.length];
+        Pattern pattern = Pattern.compile(".*\\b(\\d+)-(Across|across|Down|down)\\b.*");
+        for (int i = 0; i < clues.length; i++) {
+            Clue clue = clues[i];
+            Matcher m = pattern.matcher(clue.getText());
+            if (m.matches()) {
+                Log.i(TAG,
+                      "Pattern matched! " + clue.getNumber() + " " + m.group(1) + " " + m.group(2));
+                int num = Integer.parseInt(Objects.requireNonNull(m.group(1)));
+                boolean across = Objects.requireNonNull(m.group(2)).equalsIgnoreCase("Across");
+                Log.i(TAG, "Searching for clue " + num + "-" + (across ? "Across" : "Down"));
+                for (int j = 0; j < clues.length; j++) {
+                    Clue otherClue = clues[j];
+                    if (otherClue.getNumber() == num && across == otherClue.isAcross()) {
+                        Log.i(TAG, "Found the matching clue: " + otherClue.getText());
+                        clueReferences[i][j] = true;
+                    }
+                }
+            }
+        }
+        return clueReferences;
     }
 
     /* Helper method for clue assignment. */
@@ -853,6 +889,11 @@ public class PuzFile extends AbstractPuzzleFile {
     @Override
     public int getDownClueIndex(int row, int col) {
         return mDownClueMapping[getOffset(row, col)] - 1;
+    }
+
+    @Override
+    public boolean[][] getClueReferences() {
+        return mClueReferences;
     }
 
     public ImmutableSet<String> getSectionNames() {

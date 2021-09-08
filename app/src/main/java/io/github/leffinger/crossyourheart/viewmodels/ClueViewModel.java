@@ -1,8 +1,9 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
-import androidx.lifecycle.Observer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,27 +12,26 @@ import java.util.List;
  * An entire clue, including its clue number, clue text, and the cells in the clue.
  */
 public class ClueViewModel {
+    private static final String TAG = "ClueViewModel";
     private final boolean mAcross;
     private final int mNumber;
     private final String mText;
-    private final String mExactClueNumber;
 
     private ClueViewModel mNextClue;
     private ClueViewModel mPreviousClue;
-    private List<CellViewModel> mCells = new ArrayList<>();
+    private final List<CellViewModel> mCells = new ArrayList<>();
+    private final List<ClueViewModel> mReferences = new ArrayList<>();
 
-    private MediatorLiveData<Boolean> mIsReferenced;
+    private final MediatorLiveData<Boolean> mIsReferenced;
 
     public ClueViewModel(PuzzleViewModel puzzleViewModel, boolean across, int number, String text) {
         mAcross = across;
         mNumber = number;
         mText = text;
-        mExactClueNumber = mNumber + "-" + (mAcross ? "Across" : "Down");
 
         mIsReferenced = new MediatorLiveData<>();
-        mIsReferenced.addSource(puzzleViewModel.getCurrentClueText(), clueText -> {
-            mIsReferenced.setValue(clueText.contains(mExactClueNumber));
-        });
+        mIsReferenced.addSource(puzzleViewModel.getCurrentClue(), currentClue -> mIsReferenced
+                .setValue(mReferences.contains(currentClue)));
     }
 
     public boolean isAcross() {
@@ -82,7 +82,17 @@ public class ClueViewModel {
         mCells.add(cellViewModel);
     }
 
+    public void addReference(ClueViewModel otherClue) {
+        Log.i(TAG, "Linking clue " + this + " to clue " + otherClue);
+        mReferences.add(otherClue);
+    }
+
     public LiveData<Boolean> isReferenced() {
         return mIsReferenced;
+    }
+
+    @Override
+    public String toString() {
+        return "ClueViewModel{" + "mAcross=" + mAcross + ", mNumber=" + mNumber + '}';
     }
 }

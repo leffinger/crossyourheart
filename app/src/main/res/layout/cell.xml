@@ -40,11 +40,12 @@
             app:layout_constraintTop_toTopOf="parent"
             custom:isCircled="@{cellViewModel.circled}"
             custom:isHighlighted="@{cellViewModel.highlighted}"
-            custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
             custom:isMarkedCorrect="@{cellViewModel.markedCorrect}"
+            custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
+            custom:isPencil="@{cellViewModel.pencil}"
+            custom:isReferenced="@{cellViewModel.referenced}"
             custom:isRevealed="@{cellViewModel.revealed}"
-            custom:isSelected="@{cellViewModel.selected}"
-            custom:isPencil="@{cellViewModel.pencil}" />
+            custom:isSelected="@{cellViewModel.selected}" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline_vertical"

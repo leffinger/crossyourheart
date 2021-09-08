@@ -136,7 +136,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
 
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
-        int[] extraDrawableStates = new int[7];
+        int[] extraDrawableStates = new int[8];
         int count = 0;
         if (mIsSelected) {
             extraDrawableStates[count++] = R.attr.isSelected;
@@ -158,6 +158,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsPencil) {
             extraDrawableStates[count++] = R.attr.isPencil;
+        }
+        if (mIsReferenced) {
+            extraDrawableStates[count++] = R.attr.isReferenced;
         }
         if (count > 0) {
             int[] resized = Arrays.copyOf(extraDrawableStates, count);

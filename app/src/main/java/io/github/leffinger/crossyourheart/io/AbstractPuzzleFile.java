@@ -51,6 +51,8 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract boolean isEmpty();
 
+    public abstract boolean[][] getClueReferences();
+
     public enum ScrambleState {
         UNSCRAMBLED, LOCKED, SCRAMBLED, UNKNOWN
     }

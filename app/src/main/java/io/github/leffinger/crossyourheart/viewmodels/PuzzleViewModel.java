@@ -211,6 +211,16 @@ public class PuzzleViewModel extends ViewModel {
                 // Link Clue objects in a doubly-linked circular list.
                 linkClues(clues);
 
+                // Adds clue references (e.g. "see 15-Across") to ClueViewModels.
+                boolean[][] clueReferences = mPuzzleFile.getClueReferences();
+                for (int i = 0; i < clues.length; i++) {
+                    for (int j = 0; j < clues.length; j++) {
+                        if (clueReferences[i][j]) {
+                            clues[j].addReference(clues[i]);
+                        }
+                    }
+                }
+
                 mAcrossFocus.postValue(!startWithDownClues);
                 mIsSolved.postValue(puzzleFile.isSolved());
                 mTimerInfo.postValue(puzzleFile.getTimerInfo());
