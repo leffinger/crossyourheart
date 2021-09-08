@@ -83,7 +83,6 @@ public class ClueViewModel {
     }
 
     public void addReference(ClueViewModel otherClue) {
-        Log.i(TAG, "Linking clue " + this + " to clue " + otherClue);
         mReferences.add(otherClue);
     }
 

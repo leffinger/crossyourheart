@@ -76,17 +76,12 @@ public class CellViewModel {
             return;
         }
 
-        Log.i(TAG, "Setting up isReferenced for cell " + this);
-
         // Set up LiveData observers for whether this cell is referenced by the current clue.
         Observer<Object> observer = o -> {
             Boolean acrossReferenced = mAcrossClue.isReferenced().getValue();
             boolean acrossReferencedUnboxed = acrossReferenced == null ? false : acrossReferenced;
             Boolean downReferenced = mDownClue.isReferenced().getValue();
             boolean downReferencedUnboxed = downReferenced == null ? false : downReferenced;
-            if (acrossReferencedUnboxed || downReferencedUnboxed) {
-                Log.i(TAG, "Cell is referenced: " + this);
-            }
             mReferenced.setValue(acrossReferencedUnboxed || downReferencedUnboxed);
         };
         mReferenced.addSource(mAcrossClue.isReferenced(), observer);

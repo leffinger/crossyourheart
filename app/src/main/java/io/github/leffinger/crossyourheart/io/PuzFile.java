@@ -320,20 +320,16 @@ public class PuzFile extends AbstractPuzzleFile {
 
     private static boolean[][] findClueReferences(Clue[] clues) {
         boolean[][] clueReferences = new boolean[clues.length][clues.length];
-        Pattern pattern = Pattern.compile(".*\\b(\\d+)-(Across|across|Down|down)\\b.*");
+        Pattern pattern = Pattern.compile(".*\\b(\\d+)[ -](Across|across|Down|down)\\b.*");
         for (int i = 0; i < clues.length; i++) {
             Clue clue = clues[i];
             Matcher m = pattern.matcher(clue.getText());
             if (m.matches()) {
-                Log.i(TAG,
-                      "Pattern matched! " + clue.getNumber() + " " + m.group(1) + " " + m.group(2));
                 int num = Integer.parseInt(Objects.requireNonNull(m.group(1)));
                 boolean across = Objects.requireNonNull(m.group(2)).equalsIgnoreCase("Across");
-                Log.i(TAG, "Searching for clue " + num + "-" + (across ? "Across" : "Down"));
                 for (int j = 0; j < clues.length; j++) {
                     Clue otherClue = clues[j];
                     if (otherClue.getNumber() == num && across == otherClue.isAcross()) {
-                        Log.i(TAG, "Found the matching clue: " + otherClue.getText());
                         clueReferences[i][j] = true;
                     }
                 }

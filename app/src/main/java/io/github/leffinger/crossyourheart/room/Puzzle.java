@@ -49,16 +49,16 @@ public class Puzzle implements Serializable {
     }
 
     public int getPuzzleStatusResId() {
+        if (!opened) {
+            return R.drawable.new_puzzle_png;
+        }
         if (solved) {
             return R.drawable.solved;
         }
         if (scrambleState == ScrambleState.LOCKED) {
             return R.drawable.locked;
         }
-        if (opened) {
-            return R.drawable.in_progress;
-        }
-        return R.drawable.new_puzzle_png;
+        return R.drawable.in_progress;
     }
 
     public String getFilename() {
