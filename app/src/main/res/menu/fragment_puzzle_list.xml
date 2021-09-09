@@ -30,4 +30,9 @@
         android:id="@+id/show_tutorial"
         android:title="@string/show_tutorial"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/send_feedback"
+        android:title="@string/send_feedback"
+        app:showAsAction="never" />
 </menu>

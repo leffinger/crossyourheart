@@ -8,4 +8,6 @@
     <string name="preference_start_with_down_clues">startWithDownClues</string>
     <string name="preference_enable_hints">enableHints</string>
     <string name="preference_completed_clue_next">completedClueNext</string>
+    <string name="preference_intro_puzzle_copied">introPuzzleCopied</string>
+    <string name="preference_start_tutorial_on_open">startTutorialOnOpen</string>
 </resources>

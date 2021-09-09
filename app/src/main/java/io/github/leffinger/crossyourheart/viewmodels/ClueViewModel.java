@@ -1,7 +1,5 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
-import android.util.Log;
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 
@@ -16,13 +14,11 @@ public class ClueViewModel {
     private final boolean mAcross;
     private final int mNumber;
     private final String mText;
-
-    private ClueViewModel mNextClue;
-    private ClueViewModel mPreviousClue;
     private final List<CellViewModel> mCells = new ArrayList<>();
     private final List<ClueViewModel> mReferences = new ArrayList<>();
-
     private final MediatorLiveData<Boolean> mIsReferenced;
+    private ClueViewModel mNextClue;
+    private ClueViewModel mPreviousClue;
 
     public ClueViewModel(PuzzleViewModel puzzleViewModel, boolean across, int number, String text) {
         mAcross = across;

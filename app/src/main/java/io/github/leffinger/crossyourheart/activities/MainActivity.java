@@ -2,6 +2,8 @@ package io.github.leffinger.crossyourheart.activities;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,15 +13,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
-
-import com.google.common.base.Stopwatch;
+import androidx.preference.PreferenceManager;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -59,52 +59,47 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         return matchingPuzzles.get(0).filename;
     }
 
+
     private static Puzzle loadUri(Context context, Database database,
                                   Uri uri) throws DuplicateFileException, IOException {
         try (InputStream inputStream = requireNonNull(
                 context.getContentResolver().openInputStream(uri))) {
-            try {
-                Stopwatch stopwatch = Stopwatch.createStarted();
-                PuzFile puzzleLoader = PuzFile.verifyPuzFile(inputStream);
-                Duration loadTime = stopwatch.elapsed();
-                Log.i(TAG, "Loaded puzzle in " + loadTime.toString());
-                stopwatch.reset();
-
-                // Check to see if we have already loaded this file.
-                stopwatch.start();
-                String duplicateFilename = findDuplicate(database, puzzleLoader);
-                Duration dupeCheckTime = stopwatch.elapsed();
-                Log.i(TAG, "Dupe checked puzzle in " + dupeCheckTime.toString());
-                stopwatch.reset();
-                if (duplicateFilename != null) {
-                    throw new DuplicateFileException(duplicateFilename);
-                }
-
-                String date = FORMAT.format(Calendar.getInstance().getTime());
-                String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
-                try (FileOutputStream outputStream = new FileOutputStream(
-                        IOUtil.getPuzzleFile(context, filename))) {
-                    stopwatch.start();
-                    puzzleLoader.savePuzzleFile(outputStream);
-                    Duration saveTime = stopwatch.elapsed();
-                    Log.i(TAG, "Saved puzzle in " + saveTime.toString());
-                    stopwatch.reset();
-                    Puzzle puzzle =
-                            new Puzzle(filename, puzzleLoader.getTitle(), puzzleLoader.getAuthor(),
-                                       puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false,
-                                       !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState());
-                    database.puzzleDao().insert(puzzle);
-                    database.puzFileMetadataDao().insert(new PuzFileMetadata(filename, puzzleLoader
-                            .getHeaderChecksum()));
-                    return puzzle;
-                } catch (IOException e) {
-                    throw new IOException("Failed to save puzzle file", e);
-                }
-            } catch (IOException e) {
-                throw new IOException("Failed to parse puzzle file", e);
-            }
+            return loadInputStream(context, database, inputStream);
         } catch (IOException e) {
             throw new IOException("Failed to open puzzle file", e);
+        }
+    }
+
+    private static Puzzle loadInputStream(Context context, Database database,
+                                          InputStream inputStream) throws DuplicateFileException,
+            IOException {
+        try {
+            PuzFile puzzleLoader = PuzFile.verifyPuzFile(inputStream);
+
+            // Check to see if we have already loaded this file.
+            String duplicateFilename = findDuplicate(database, puzzleLoader);
+            if (duplicateFilename != null) {
+                throw new DuplicateFileException(duplicateFilename);
+            }
+
+            String date = FORMAT.format(Calendar.getInstance().getTime());
+            String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
+            try (FileOutputStream outputStream = new FileOutputStream(
+                    IOUtil.getPuzzleFile(context, filename))) {
+                puzzleLoader.savePuzzleFile(outputStream);
+                Puzzle puzzle =
+                        new Puzzle(filename, puzzleLoader.getTitle(), puzzleLoader.getAuthor(),
+                                   puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false,
+                                   !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState());
+                database.puzzleDao().insert(puzzle);
+                database.puzFileMetadataDao()
+                        .insert(new PuzFileMetadata(filename, puzzleLoader.getHeaderChecksum()));
+                return puzzle;
+            } catch (IOException e) {
+                throw new IOException("Failed to save puzzle file", e);
+            }
+        } catch (IOException e) {
+            throw new IOException("Failed to parse puzzle file", e);
         }
     }
 
@@ -120,7 +115,28 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         // Create or load database.
         mDatabase = Database.getInstance(getApplicationContext());
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(ARG_PUZZLE)) {
+        // Perform first-start-up tasks.
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!preferences.getBoolean(getString(R.string.preference_intro_puzzle_copied), false)) {
+            AsyncTask.execute(() -> {
+                try {
+                    loadInputStream(MainActivity.this, mDatabase,
+                                    getAssets().open("intro_puzzle.puz"));
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to load intro puzzle", e);
+                }
+            });
+            preferences.edit().putBoolean(getString(R.string.preference_intro_puzzle_copied), true)
+                    .apply();
+        }
+
+        if (preferences.getBoolean(getString(R.string.preference_start_tutorial_on_open), true)) {
+            // Show tutorial the first time the app is opened.
+            startActivity(new Intent(this, TutorialActivity.class));
+            preferences.edit()
+                    .putBoolean(getString(R.string.preference_start_tutorial_on_open), false)
+                    .apply();
+        } else if (savedInstanceState != null && savedInstanceState.containsKey(ARG_PUZZLE)) {
             mPuzzle = (Puzzle) savedInstanceState.getSerializable(ARG_PUZZLE);
             startActivity(PuzzleActivity.newIntent(this, mPuzzle));
         } else if (getIntent() == null || getIntent().getData() == null) {

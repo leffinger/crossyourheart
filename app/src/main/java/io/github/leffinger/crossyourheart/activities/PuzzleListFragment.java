@@ -146,13 +146,14 @@ public class PuzzleListFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
-        case R.id.open_file:
+        case R.id.open_file: {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
             return true;
+        }
         case R.id.download_file:
             ((Callbacks) getActivity()).onDownloadSelected();
             return true;
@@ -163,8 +164,15 @@ public class PuzzleListFragment extends Fragment {
             reindexFiles();
             return true;
         case R.id.show_tutorial:
-            startActivity(new Intent(getContext(), AppIntroActivity.class));
+            startActivity(new Intent(getContext(), TutorialActivity.class));
             return true;
+        case R.id.send_feedback: {
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(Uri.parse("mailto:"));
+            intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"crossyourheartapp@gmail.com"});
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Feedback");
+            startActivity(intent);
+        }
         }
         return super.onOptionsItemSelected(item);
     }
