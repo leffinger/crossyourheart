@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="url_nytimes">https://www.nytimes.com/crosswords</string>
-    <string name="description_nytimes">NY Times (subscription required)</string>
-    <string name="url_mgwcc">http://www.xwordcontest.com</string>
-    <string name="description_mgwcc">Matt Gaffney\'s Weekly Crossword Contest (subscription required)</string>
-    <string name="url_beq">https://www.brendanemmettquigley.com</string>
-    <string name="description_beq">Brendan Emmett Quigley</string>
     <string name="url_fiend">https://crosswordfiend.com/download/</string>
-    <string name="description_fiend">Crossword Fiend (daily blog with links)</string>
+    <string name="description_fiend">Crossword Fiend</string>
+    <string name="url_daily_links">https://crosswordlinks.substack.com/</string>
+    <string name="description_daily_links">Daily Crossword Links</string>
 </resources>

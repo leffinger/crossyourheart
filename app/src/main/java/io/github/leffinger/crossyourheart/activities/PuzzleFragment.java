@@ -1,7 +1,6 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -37,7 +36,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Room;
 
 import java.io.File;
 import java.io.IOException;
@@ -136,31 +134,6 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         return viewModel;
     }
 
-    private class PuzzleLayoutManager extends GridLayoutManager {
-
-        private int mWidth;
-
-        public PuzzleLayoutManager(Context context, int spanCount, int orientation,
-                                   boolean reverseLayout) {
-            super(context, spanCount, orientation, reverseLayout);
-        }
-
-        @Override
-        public void onMeasure(@NonNull RecyclerView.Recycler recycler,
-                              @NonNull RecyclerView.State state, int widthSpec, int heightSpec) {
-            super.onMeasure(recycler, state, widthSpec, heightSpec);
-
-            mWidth = getView().getMeasuredWidth();
-            Log.i(TAG, "Width of the puzzle View: " + mWidth);
-            Log.i(TAG, "So the width of each square should be " + (mWidth / getSpanCount()));
-        }
-
-        @Override
-        public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
-            super.onLayoutChildren(recycler, state);
-        }
-    }
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -180,7 +153,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mTimerBinding.solved.setVisibility(View.INVISIBLE);
 
         mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mGridLayoutManager = new PuzzleLayoutManager(getActivity(), mPuzzleFile.getWidth(),
+        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
                                                    GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);

@@ -59,7 +59,6 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         return matchingPuzzles.get(0).filename;
     }
 
-
     private static Puzzle loadUri(Context context, Database database,
                                   Uri uri) throws DuplicateFileException, IOException {
         try (InputStream inputStream = requireNonNull(

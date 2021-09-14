@@ -114,6 +114,7 @@
             android:hapticFeedbackEnabled="true"
             android:keyPreviewHeight="75dp"
             android:keyPreviewOffset="0dp"
+            android:verticalCorrection="5dp"
             android:keyPreviewLayout="@layout/key_preview"
             android:keyBackground="@drawable/key_background"
             android:background="@color/colorKeyboardBackground"

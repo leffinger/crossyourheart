@@ -20,9 +20,8 @@ import io.github.leffinger.crossyourheart.databinding.FragmentWebsiteBinding;
 public class DownloadPuzzlesFragment extends Fragment {
 
     private Website[] mWebsites =
-            new Website[]{new Website(R.string.url_mgwcc, R.string.description_mgwcc),
-                          new Website(R.string.url_beq, R.string.description_beq),
-                          new Website(R.string.url_fiend, R.string.description_fiend)};
+            new Website[]{new Website(R.string.url_fiend, R.string.description_fiend),
+                          new Website(R.string.url_daily_links, R.string.description_daily_links)};
 
     public DownloadPuzzlesFragment() {
         // Required empty public constructor
