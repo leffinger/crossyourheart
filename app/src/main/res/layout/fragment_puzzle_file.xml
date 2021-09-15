@@ -6,8 +6,8 @@
     <data>
 
         <variable
-            name="viewModel"
-            type="io.github.leffinger.crossyourheart.viewmodels.PuzzleFileViewModel" />
+            name="puzzle"
+            type="io.github.leffinger.crossyourheart.room.Puzzle" />
     </data>
 
     <androidx.cardview.widget.CardView
@@ -25,37 +25,38 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/text_margin"
-                android:text="@{viewModel.title}"
+                android:text="@{puzzle.title}"
                 android:textAppearance="?attr/textAppearanceListItem"
                 android:textSize="24sp"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/solved" />
+                app:layout_constraintEnd_toStartOf="@id/status" />
 
             <TextView
                 android:id="@+id/author"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/text_margin"
-                android:text="@{(viewModel.copyright.isEmpty() ? `` : viewModel.copyright + ` `) + viewModel.author}"
+                android:text="@{(puzzle.copyright.isEmpty() ? `` : puzzle.copyright + ` `) + puzzle.author}"
                 android:textAppearance="?attr/textAppearanceListItem"
                 android:textSize="18sp"
                 app:layout_constraintTop_toBottomOf="@id/title"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/solved" />
+                app:layout_constraintEnd_toStartOf="@id/status" />
 
             <ImageView
-                android:id="@+id/solved"
+                android:id="@+id/status"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="8dp"
-                android:contentDescription="@string/solved"
+                android:contentDescription="@string/puzzle_status"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:imageResource="@{puzzle.puzzleStatusResId}" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>

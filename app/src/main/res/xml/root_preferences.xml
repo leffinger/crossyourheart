@@ -11,9 +11,19 @@
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
+            android:title="@string/completed_clue_next"
+            app:key="@string/preference_completed_clue_next"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
             android:title="@string/skip_filled_clues"
             app:key="@string/preference_skip_filled_clues"
             app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/within_clue_preferences">
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
@@ -21,6 +31,12 @@
             app:key="@string/preference_skip_filled_squares"
             app:singleLineTitle="false" />
 
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:dependency="@string/preference_skip_filled_squares"
+            android:title="@string/skip_filled_squares_wrap"
+            app:key="@string/preference_skip_filled_squares_wrap"
+            app:singleLineTitle="false" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/user_experience">

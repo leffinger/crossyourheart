@@ -1,7 +1,12 @@
 package io.github.leffinger.crossyourheart;
 
 import android.content.Context;
+import android.os.AsyncTask;
 
+import androidx.annotation.Nullable;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
+import androidx.test.annotation.UiThreadTest;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -10,8 +15,11 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 import io.github.leffinger.crossyourheart.io.PuzFile;
@@ -33,6 +41,27 @@ public class PuzzleViewModelTest {
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
 
+    private static <T> T getOrAwaitValue(final LiveData<T> liveData) throws InterruptedException {
+        final Object[] data = new Object[1];
+        final CountDownLatch latch = new CountDownLatch(1);
+        Observer<T> observer = new Observer<T>() {
+            @Override
+            public void onChanged(@Nullable T o) {
+                data[0] = o;
+                latch.countDown();
+                liveData.removeObserver(this);
+            }
+        };
+        liveData.observeForever(observer);
+        // Don't wait indefinitely if the LiveData is not set.
+        if (!latch.await(10, TimeUnit.SECONDS)) {
+            throw new RuntimeException("LiveData value was never set.");
+        }
+        //noinspection unchecked
+        return (T) data[0];
+
+    }
+
     @Test
     public void useAppContext() {
         // Context of the app under test.
@@ -46,7 +75,8 @@ public class PuzzleViewModelTest {
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
         PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
+                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false, () -> {
+                });
         assertEquals(3, puzzleViewModel.getNumRows());
         assertEquals(3, puzzleViewModel.getNumColumns());
         assertEquals("3x3", puzzleViewModel.getTitle());
@@ -82,5 +112,35 @@ public class PuzzleViewModelTest {
         ClueViewModel down12 = cell12.getDownClue();
         assertEquals(2, down12.getNumber());
         assertEquals("B", down12.getText());
+    }
+
+    @Test
+    @UiThreadTest
+    public void loadAllClues() throws IOException, InterruptedException {
+        InputStream inputStream = PuzzleViewModelTest.class.getResourceAsStream("/mgwcc647.puz");
+        assertNotNull(inputStream);
+        AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
+        PuzzleViewModel puzzleViewModel = new PuzzleViewModel();
+        final File outFile = mTemporaryFolder.newFile();
+
+        // Initialize the viewmodel off-thread.
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
+
+                });
+                puzzleViewModel.selectFirstCell();
+                return null;
+            }
+        }.execute();
+
+        LiveData<ClueViewModel> clueViewModelLiveData = puzzleViewModel.getCurrentClue();
+        ClueViewModel clueViewModel;
+        do {
+            clueViewModel = getOrAwaitValue(clueViewModelLiveData);
+            assertNotNull(clueViewModel);
+            puzzleViewModel.moveToNextClue(true, true);
+        } while (clueViewModel != puzzleViewModel.getCurrentClue().getValue());
     }
 }

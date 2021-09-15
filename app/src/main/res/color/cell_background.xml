@@ -3,5 +3,6 @@
     <item android:color="@color/colorBlackSquare" android:state_enabled="false" />
     <item android:color="@color/colorSelectedSquare" custom:isSelected="true" />
     <item android:color="@color/colorHighlightedSquare" custom:isHighlighted="true" />
+    <item android:color="@color/colorReferenced" custom:isReferenced="true" />
     <item android:color="@color/colorWhiteSquare" />
 </selector>

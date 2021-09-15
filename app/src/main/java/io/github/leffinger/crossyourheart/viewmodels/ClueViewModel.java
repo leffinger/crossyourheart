@@ -1,5 +1,8 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,17 +10,24 @@ import java.util.List;
  * An entire clue, including its clue number, clue text, and the cells in the clue.
  */
 public class ClueViewModel {
-    private boolean mAcross;
-    private int mNumber;
-    private String mText;
+    private static final String TAG = "ClueViewModel";
+    private final boolean mAcross;
+    private final int mNumber;
+    private final String mText;
+    private final List<CellViewModel> mCells = new ArrayList<>();
+    private final List<ClueViewModel> mReferences = new ArrayList<>();
+    private final MediatorLiveData<Boolean> mIsReferenced;
     private ClueViewModel mNextClue;
     private ClueViewModel mPreviousClue;
-    private List<CellViewModel> mCells = new ArrayList<>();
 
-    public ClueViewModel(boolean across, int number, String text) {
+    public ClueViewModel(PuzzleViewModel puzzleViewModel, boolean across, int number, String text) {
         mAcross = across;
         mNumber = number;
         mText = text;
+
+        mIsReferenced = new MediatorLiveData<>();
+        mIsReferenced.addSource(puzzleViewModel.getCurrentClue(), currentClue -> mIsReferenced
+                .setValue(mReferences.contains(currentClue)));
     }
 
     public boolean isAcross() {
@@ -30,10 +40,6 @@ public class ClueViewModel {
 
     public String getText() {
         return mText;
-    }
-
-    public void setText(String text) {
-        mText = text;
     }
 
     public ClueViewModel getNextClue() {
@@ -56,20 +62,6 @@ public class ClueViewModel {
         return mCells;
     }
 
-    public void setClueInfo(boolean isAcross, List<CellViewModel> cellViewModels, int clueNumber) {
-        mAcross = isAcross;
-        mCells = cellViewModels;
-        for (CellViewModel cell : cellViewModels) {
-            if (mAcross) {
-                cell.setAcrossClue(this);
-            } else {
-                cell.setDownClue(this);
-            }
-        }
-        mNumber = clueNumber;
-        getCells().get(0).setClueNumber(clueNumber);
-    }
-
     public boolean isFilled() {
         for (CellViewModel cell : mCells) {
             if (cell.getContents().getValue().isEmpty()) {
@@ -84,5 +76,18 @@ public class ClueViewModel {
             cellViewModel.setClueNumber(mNumber);
         }
         mCells.add(cellViewModel);
+    }
+
+    public void addReference(ClueViewModel otherClue) {
+        mReferences.add(otherClue);
+    }
+
+    public LiveData<Boolean> isReferenced() {
+        return mIsReferenced;
+    }
+
+    @Override
+    public String toString() {
+        return "ClueViewModel{" + "mAcross=" + mAcross + ", mNumber=" + mNumber + '}';
     }
 }

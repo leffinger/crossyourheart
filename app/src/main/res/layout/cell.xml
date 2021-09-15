@@ -22,12 +22,13 @@
             android:id="@+id/entry"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_margin="0dp"
             android:background="@drawable/cell"
             android:enabled="@{cellViewModel != null}"
             android:gravity="center"
-            android:padding="2dp"
             android:text="@{cellViewModel.contents}"
             android:textColor="@color/entry_text"
+            android:textStyle="bold"
             app:autoSizeMaxTextSize="100sp"
             app:autoSizeMinTextSize="4sp"
             app:autoSizeStepGranularity="2sp"
@@ -39,7 +40,11 @@
             app:layout_constraintTop_toTopOf="parent"
             custom:isCircled="@{cellViewModel.circled}"
             custom:isHighlighted="@{cellViewModel.highlighted}"
+            custom:isMarkedCorrect="@{cellViewModel.markedCorrect}"
             custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
+            custom:isPencil="@{cellViewModel.pencil}"
+            custom:isReferenced="@{cellViewModel.referenced}"
+            custom:isRevealed="@{cellViewModel.revealed}"
             custom:isSelected="@{cellViewModel.selected}" />
 
         <androidx.constraintlayout.widget.Guideline

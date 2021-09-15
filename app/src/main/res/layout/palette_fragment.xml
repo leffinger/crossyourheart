@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/normal_text_not_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorWhiteSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryText"
+        android:textSize="48sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/incorrect_not_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorWhiteSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorMarkedIncorrect"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/normal_text_not_highlighted"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/revealed_not_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorWhiteSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorRevealed"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/incorrect_not_highlighted"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/pencil_not_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorWhiteSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryTextPencil"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/revealed_not_highlighted"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/normal_text_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorHighlightedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryText"
+        android:textSize="48sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_not_highlighted" />
+
+    <TextView
+        android:id="@+id/incorrect_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorHighlightedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorMarkedIncorrect"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/normal_text_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_not_highlighted" />
+
+    <TextView
+        android:id="@+id/revealed_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorHighlightedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorRevealed"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/incorrect_not_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_not_highlighted" />
+
+    <TextView
+        android:id="@+id/pencil_highlighted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorHighlightedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryTextPencil"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/revealed_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_not_highlighted" />
+
+    <TextView
+        android:id="@+id/normal_text_selected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSelectedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryText"
+        android:textSize="48sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_highlighted" />
+
+    <TextView
+        android:id="@+id/incorrect_selected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSelectedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorMarkedIncorrect"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/normal_text_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_highlighted" />
+
+    <TextView
+        android:id="@+id/revealed_selected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSelectedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorRevealed"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/incorrect_not_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_highlighted" />
+
+    <TextView
+        android:id="@+id/pencil_selected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSelectedSquare"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryTextPencil"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/revealed_selected"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_highlighted" />
+
+    <TextView
+        android:id="@+id/normal_text_referenced"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorReferenced"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryText"
+        android:textSize="48sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
+
+    <TextView
+        android:id="@+id/incorrect_referenced"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorReferenced"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorMarkedIncorrect"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/normal_text_referenced"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
+
+    <TextView
+        android:id="@+id/revealed_referenced"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorReferenced"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorRevealed"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/incorrect_not_highlighted"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
+
+    <TextView
+        android:id="@+id/pencil_referenced"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorReferenced"
+        android:text="@string/sample_text"
+        android:textColor="@color/colorEntryTextPencil"
+        android:textSize="48sp"
+        app:layout_constraintStart_toEndOf="@id/revealed_selected"
+        app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

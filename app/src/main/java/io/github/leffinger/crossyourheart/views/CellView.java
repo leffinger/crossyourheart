@@ -16,6 +16,10 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsCircled;
     private boolean mIsHighlighted;
     private boolean mIsMarkedIncorrect;
+    private boolean mIsMarkedCorrect;
+    private boolean mIsRevealed;
+    private boolean mIsPencil;
+    private boolean mIsReferenced;
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -39,6 +43,38 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     @BindingAdapter("isMarkedIncorrect")
     public static void setMarkedIncorrect(CellView cellView, boolean isMarkedIncorrect) {
         cellView.setMarkedIncorrect(isMarkedIncorrect);
+    }
+
+    @BindingAdapter("isMarkedCorrect")
+    public static void setMarkedCorrect(CellView cellView, boolean isMarkedCorrect) {
+        cellView.setMarkedCorrect(isMarkedCorrect);
+    }
+
+    @BindingAdapter("isRevealed")
+    public static void setRevealed(CellView cellView, boolean isRevealed) {
+        cellView.setRevealed(isRevealed);
+    }
+
+    @BindingAdapter("isPencil")
+    public static void setPencil(CellView cellView, boolean isPencil) {
+        cellView.setPencil(isPencil);
+    }
+
+    @BindingAdapter("isReferenced")
+    public static void setReferenced(CellView cellView, boolean isReferenced) {
+        cellView.setReferenced(isReferenced);
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+        // Get cell width from parent. This ensures that all cells have the same size.
+        PuzzleView puzzleView = getRootView().findViewById(R.id.puzzle);
+        int cellWidth = puzzleView.getCellWidth();
+        if (cellWidth > 0) {
+            setMeasuredDimension(cellWidth, cellWidth);
+        }
     }
 
     @Override
@@ -70,9 +106,37 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
+    public void setMarkedCorrect(boolean markedCorrect) {
+        if (mIsMarkedCorrect != markedCorrect) {
+            mIsMarkedCorrect = markedCorrect;
+            refreshDrawableState();
+        }
+    }
+
+    public void setRevealed(boolean isRevealed) {
+        if (mIsRevealed != isRevealed) {
+            mIsRevealed = isRevealed;
+            refreshDrawableState();
+        }
+    }
+
+    public void setPencil(boolean isPencil) {
+        if (mIsPencil != isPencil) {
+            mIsPencil = isPencil;
+            refreshDrawableState();
+        }
+    }
+
+    public void setReferenced(boolean isReferenced) {
+        if (mIsReferenced != isReferenced) {
+            mIsReferenced = isReferenced;
+            refreshDrawableState();
+        }
+    }
+
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
-        int[] extraDrawableStates = new int[4];
+        int[] extraDrawableStates = new int[8];
         int count = 0;
         if (mIsSelected) {
             extraDrawableStates[count++] = R.attr.isSelected;
@@ -85,6 +149,18 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         }
         if (mIsMarkedIncorrect) {
             extraDrawableStates[count++] = R.attr.isMarkedIncorrect;
+        }
+        if (mIsMarkedCorrect) {
+            extraDrawableStates[count++] = R.attr.isMarkedCorrect;
+        }
+        if (mIsRevealed) {
+            extraDrawableStates[count++] = R.attr.isRevealed;
+        }
+        if (mIsPencil) {
+            extraDrawableStates[count++] = R.attr.isPencil;
+        }
+        if (mIsReferenced) {
+            extraDrawableStates[count++] = R.attr.isReferenced;
         }
         if (count > 0) {
             int[] resized = Arrays.copyOf(extraDrawableStates, count);

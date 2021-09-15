@@ -9,7 +9,7 @@
             android:id="@+id/website"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
+            android:textSize="24sp"
             android:paddingVertical="8sp"
             android:focusable="true"
             android:clickable="true"

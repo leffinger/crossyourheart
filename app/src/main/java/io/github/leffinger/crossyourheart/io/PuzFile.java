@@ -1,8 +1,13 @@
 package io.github.leffinger.crossyourheart.io;
 
+import android.util.Log;
+
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,6 +18,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 /**
  * Parses and updates Across Lite (puz) files.
@@ -21,14 +32,15 @@ import java.util.List;
  * https://code.google.com/archive/p/puz/wikis/FileFormat.wiki
  */
 public class PuzFile extends AbstractPuzzleFile {
+    public static final byte GEXT_MASK_CIRCLED = (byte) 0x80;
+    public static final byte GEXT_MASK_NONE = 0x0;
     private static final String TAG = "PuzFile";
     private static final String MAGIC = "ACROSS&DOWN";
     private static final String GRBS_SECTION_NAME = "GRBS";
     private static final String RTBL_SECTION_NAME = "RTBL";
-
+    private static final String RUSR_SECTION_NAME = "RUSR";
+    private static final String LTIM_SECTION_NAME = "LTIM";
     private static final String GEXT_SECTION_NAME = "GEXT";
-    private static final int GEXT_MASK_CIRCLED = 0x80;
-
     final int mFileChecksum;
     final byte[] mMagic;
     final int mHeaderChecksum;
@@ -51,13 +63,17 @@ public class PuzFile extends AbstractPuzzleFile {
     final List<Section> mExtraSections;
     final int[] mAcrossClueMapping;
     final int[] mDownClueMapping;
+    final byte[][] mUserRebusEntries;
+    final boolean[][] mClueReferences;
+    TimerInfo mTimerInfo;
 
     public PuzFile(int fileChecksum, byte[] magic, int headerChecksum, byte[] maskedChecksums,
                    byte[] versionString, boolean includeNoteInTextChecksum, int scrambledChecksum,
                    byte width, byte height, int numClues, int unknownBitmask, int scrambledTag,
                    byte[] solution, byte[] grid, byte[] title, byte[] author, byte[] copyright,
                    Clue[] clues, byte[] note, List<Section> extraSections, int[] acrossClueMapping,
-                   int[] downClueMapping) {
+                   int[] downClueMapping, byte[][] userRebusEntries, boolean[][] clueReferences,
+                   TimerInfo timerInfo) {
         mFileChecksum = fileChecksum;
         mMagic = magic;
         mHeaderChecksum = headerChecksum;
@@ -80,6 +96,9 @@ public class PuzFile extends AbstractPuzzleFile {
         mClues = clues;
         mAcrossClueMapping = acrossClueMapping;
         mDownClueMapping = downClueMapping;
+        mUserRebusEntries = userRebusEntries;
+        mClueReferences = clueReferences;
+        mTimerInfo = timerInfo;
     }
 
     /**
@@ -98,7 +117,7 @@ public class PuzFile extends AbstractPuzzleFile {
         final byte[] magic = readNullTerminatedByteString(dataInputStream);
 
         // Error out early if the magic string is wrong (not a puz file at all).
-        String magicString = new String(magic, StandardCharsets.ISO_8859_1);
+        String magicString = new String(magic, ISO_8859_1);
         if (!magicString.equals(MAGIC)) {
             throw new IOException("Wrong file magic; is this a puz file?");
         }
@@ -158,7 +177,7 @@ public class PuzFile extends AbstractPuzzleFile {
         // there is an issue assigning clues.
         Clue[] clues = new Clue[numClues];
         for (int i = 0; i < numClues; i++) {
-            clues[i] = new Clue(new String(clueTexts[i], StandardCharsets.ISO_8859_1));
+            clues[i] = new Clue(new String(clueTexts[i], ISO_8859_1));
         }
         int[] acrossClueMapping = new int[height * width];
         int[] downClueMapping = new int[height * width];
@@ -258,11 +277,65 @@ public class PuzFile extends AbstractPuzzleFile {
             }
         }
 
+        // Identify clues that reference each other and persist this information so it can be
+        // displayed.
+        boolean[][] clueReferences = findClueReferences(clues);
+
+        byte[][] rebusUserEntries = new byte[width * height][];
+        TimerInfo timerInfo = null;
+        for (Section section : extraSections) {
+            switch (section.name) {
+            case RUSR_SECTION_NAME:
+                LittleEndianDataInputStream stream =
+                        new LittleEndianDataInputStream(new ByteArrayInputStream(section.data));
+                for (int i = 0; i < width * height; i++) {
+                    byte[] rebusEntry = readNullTerminatedByteString(stream);
+                    rebusUserEntries[i] = rebusEntry.length == 0 ? null : rebusEntry;
+                }
+                break;
+            case LTIM_SECTION_NAME:
+                String encodedTime = new String(section.data, StandardCharsets.US_ASCII);
+                String[] tokens = encodedTime.split(",");
+                long elapsedTimeSecs = Long.parseLong(tokens[0]);
+                boolean isRunning = tokens[1].contentEquals("0");
+                if (elapsedTimeSecs == 0) {
+                    // Always default to running at the start.
+                    isRunning = true;
+                }
+                timerInfo = new TimerInfo(elapsedTimeSecs, isRunning);
+                break;
+            }
+        }
+
+        if (timerInfo == null) {
+            timerInfo = new TimerInfo(0, true);
+        }
+
         return new PuzFile(fileChecksum, magic, headerChecksum, maskedChecksums, versionStringBytes,
                            includeNoteInTextChecksum, scrambledChecksum, width, height, numClues,
                            unknownBitmask, scrambledTag, solution, puzzleState, title, author,
                            copyright, clues, note, extraSections, acrossClueMapping,
-                           downClueMapping);
+                           downClueMapping, rebusUserEntries, clueReferences, timerInfo);
+    }
+
+    private static boolean[][] findClueReferences(Clue[] clues) {
+        boolean[][] clueReferences = new boolean[clues.length][clues.length];
+        Pattern pattern = Pattern.compile(".*\\b(\\d+)[ -](Across|across|Down|down)\\b.*");
+        for (int i = 0; i < clues.length; i++) {
+            Clue clue = clues[i];
+            Matcher m = pattern.matcher(clue.getText());
+            if (m.matches()) {
+                int num = Integer.parseInt(Objects.requireNonNull(m.group(1)));
+                boolean across = Objects.requireNonNull(m.group(2)).equalsIgnoreCase("Across");
+                for (int j = 0; j < clues.length; j++) {
+                    Clue otherClue = clues[j];
+                    if (otherClue.getNumber() == num && across == otherClue.isAcross()) {
+                        clueReferences[i][j] = true;
+                    }
+                }
+            }
+        }
+        return clueReferences;
     }
 
     /* Helper method for clue assignment. */
@@ -393,12 +466,13 @@ public class PuzFile extends AbstractPuzzleFile {
      * @throws IOException if version string cannot be parsed
      */
     private static boolean includeNoteInTextChecksum(byte[] versionStringBytes) throws IOException {
-        final String versionString = new String(versionStringBytes, StandardCharsets.ISO_8859_1);
+        final String versionString = new String(versionStringBytes, ISO_8859_1);
         String[] versionParts = versionString.split("\\.", 2);
         if (versionParts.length < 2) {
             throw new IOException(String.format("Bad version string: \"%s\"", versionString));
         }
-        return versionParts[0].compareTo("1") >= 0 && versionParts[1].compareTo("3") >= 0;
+        return versionParts[0].compareTo("1") > 0 ||
+                (versionParts[0].compareTo("1") == 0 && versionParts[1].compareTo("3") >= 0);
     }
 
     /**
@@ -411,17 +485,17 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public String getAuthor() {
-        return new String(mAuthor, StandardCharsets.ISO_8859_1);
+        return new String(mAuthor, ISO_8859_1);
     }
 
     @Override
     public String getCopyright() {
-        return new String(mCopyright, StandardCharsets.ISO_8859_1);
+        return new String(mCopyright, ISO_8859_1);
     }
 
     @Override
     public String getNote() {
-        return new String(mNote, StandardCharsets.ISO_8859_1);
+        return new String(mNote, ISO_8859_1);
     }
 
     @Override
@@ -449,21 +523,68 @@ public class PuzFile extends AbstractPuzzleFile {
         writeNullTerminatedByteString(mAuthor, dataOutputStream);
         writeNullTerminatedByteString(mCopyright, dataOutputStream);
         for (Clue clue : mClues) {
-            byte[] bytes = clue.getText().getBytes(StandardCharsets.ISO_8859_1);
+            byte[] bytes = clue.getText().getBytes(ISO_8859_1);
             writeNullTerminatedByteString(bytes, dataOutputStream);
         }
         writeNullTerminatedByteString(mNote, dataOutputStream);
-        for (Section section : mExtraSections) {
-            section.writeSection(dataOutputStream);
+
+        // Write extra sections.
+        writeSectionIfPresent(GRBS_SECTION_NAME, dataOutputStream);
+        writeSectionIfPresent(RTBL_SECTION_NAME, dataOutputStream);
+        writeUserRebusSection(dataOutputStream);
+        writeSectionIfPresent(GEXT_SECTION_NAME, dataOutputStream);
+        writeTimerSection(dataOutputStream);
+    }
+
+    private void writeSectionIfPresent(String sectionName,
+                                       LittleEndianDataOutputStream dataOutputStream) throws IOException {
+        Section section = findSection(sectionName);
+        if (section != null) {
+            writeSection(sectionName, section.data, dataOutputStream);
         }
     }
 
+    private void writeUserRebusSection(
+            LittleEndianDataOutputStream dataOutputStream) throws IOException {
+        ByteArrayOutputStream rusrSectionData = new ByteArrayOutputStream();
+        boolean shouldWrite = false;
+        for (byte[] userRebusEntry : mUserRebusEntries) {
+            if (userRebusEntry != null) {
+                shouldWrite = true;
+                rusrSectionData.write(userRebusEntry);
+            }
+            rusrSectionData.write('\0');
+        }
+        if (shouldWrite) {
+            writeSection(RUSR_SECTION_NAME, rusrSectionData.toByteArray(), dataOutputStream);
+        }
+    }
+
+    private void writeTimerSection(
+            LittleEndianDataOutputStream dataOutputStream) throws IOException {
+        if (mTimerInfo == null) {
+            return;
+        }
+        String data = String.format(Locale.getDefault(), "%d,%s", mTimerInfo.elapsedTimeSecs,
+                                    mTimerInfo.isRunning ? "0" : "1");
+        writeSection(LTIM_SECTION_NAME, data.getBytes(StandardCharsets.US_ASCII), dataOutputStream);
+    }
+
+    private void writeSection(String name, byte[] data,
+                              LittleEndianDataOutputStream outputStream) throws IOException {
+        outputStream.write(name.getBytes());
+        outputStream.writeShort(data.length);
+        outputStream.writeShort(checksumRegion(data, 0));
+        outputStream.write(data);
+        outputStream.write('\0');
+    }
+
     public String getMagic() {
-        return new String(mMagic, StandardCharsets.ISO_8859_1);
+        return new String(mMagic, ISO_8859_1);
     }
 
     public String getVersionString() {
-        return new String(mVersionString, StandardCharsets.ISO_8859_1);
+        return new String(mVersionString, ISO_8859_1);
     }
 
     public int getHeaderChecksum() {
@@ -523,7 +644,7 @@ public class PuzFile extends AbstractPuzzleFile {
             cksum = checksumByte((byte) 0, cksum);
         }
         for (Clue clue : mClues) {
-            cksum = checksumRegion(clue.getText().getBytes(StandardCharsets.ISO_8859_1), cksum);
+            cksum = checksumRegion(clue.getText().getBytes(ISO_8859_1), cksum);
         }
 
         if (mIncludeNoteInTextChecksum && mNote.length > 0) {
@@ -567,7 +688,7 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public String getTitle() {
-        return new String(mTitle, StandardCharsets.ISO_8859_1);
+        return new String(mTitle, ISO_8859_1);
     }
 
     @Override
@@ -582,27 +703,37 @@ public class PuzFile extends AbstractPuzzleFile {
     @Override
     public String getCellSolution(int row, int col) {
         byte solution = mSolution[getOffset(row, col)];
-        return new String(new byte[]{solution}, StandardCharsets.ISO_8859_1);
+        return new String(new byte[]{solution}, ISO_8859_1);
     }
 
     @Override
     public String getCellContents(int row, int col) {
-        byte contents = mGrid[getOffset(row, col)];
+        int offset = getOffset(row, col);
+        if (mUserRebusEntries[offset] != null) {
+            return new String(mUserRebusEntries[offset], ISO_8859_1);
+        }
+        byte contents = mGrid[offset];
         if (contents == '-') {
             return "";
         }
-        return new String(new byte[]{contents}, StandardCharsets.ISO_8859_1);
+        return new String(new byte[]{contents}, ISO_8859_1);
     }
 
     @Override
     public void setCellContents(int row, int col, String value) {
-        byte representation;
+        byte shortEntry;
         if (value.isEmpty()) {
-            representation = '-';
+            shortEntry = '-';
         } else {
-            representation = value.toUpperCase().getBytes(StandardCharsets.ISO_8859_1)[0];
+            shortEntry = value.toUpperCase().getBytes(ISO_8859_1)[0];
         }
-        mGrid[getOffset(row, col)] = representation;
+        mGrid[getOffset(row, col)] = shortEntry;
+
+        if (value.length() > 1) {
+            mUserRebusEntries[getOffset(row, col)] = value.getBytes(ISO_8859_1);
+        } else {
+            mUserRebusEntries[getOffset(row, col)] = null;
+        }
     }
 
     @Override
@@ -618,6 +749,16 @@ public class PuzFile extends AbstractPuzzleFile {
     }
 
     @Override
+    public boolean isEmpty() {
+        for (byte b : mGrid) {
+            if (!(b == '.' || b == '-')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public boolean isCorrect(int row, int col) {
         switch (getScrambleState()) {
         case UNSCRAMBLED:
@@ -630,7 +771,17 @@ public class PuzFile extends AbstractPuzzleFile {
 
     @Override
     public String getSolution(int row, int col) {
-        return new String(new byte[]{mSolution[getOffset(row, col)]}, StandardCharsets.ISO_8859_1);
+        return new String(new byte[]{mSolution[getOffset(row, col)]}, ISO_8859_1);
+    }
+
+    @Override
+    public TimerInfo getTimerInfo() {
+        return mTimerInfo;
+    }
+
+    @Override
+    public void setTimerInfo(TimerInfo timerInfo) {
+        mTimerInfo = timerInfo;
     }
 
     private int getComputedScrambledChecksum() {
@@ -708,14 +859,17 @@ public class PuzFile extends AbstractPuzzleFile {
         return null;
     }
 
-    @Override
-    public boolean isCircled(int row, int col) {
+    public byte getGextMask(int row, int col) {
         Section gextSection = findSection(GEXT_SECTION_NAME);
         if (gextSection == null) {
-            return false;
+            return GEXT_MASK_NONE;
         }
-        byte mask = gextSection.data[getOffset(row, col)];
-        return (mask & GEXT_MASK_CIRCLED) != 0;
+        return gextSection.data[getOffset(row, col)];
+    }
+
+    @Override
+    public boolean isCircled(int row, int col) {
+        return (getGextMask(row, col) & GEXT_MASK_CIRCLED) != 0;
     }
 
     @Override
@@ -731,6 +885,28 @@ public class PuzFile extends AbstractPuzzleFile {
     @Override
     public int getDownClueIndex(int row, int col) {
         return mDownClueMapping[getOffset(row, col)] - 1;
+    }
+
+    @Override
+    public boolean[][] getClueReferences() {
+        return mClueReferences;
+    }
+
+    public ImmutableSet<String> getSectionNames() {
+        ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+        for (Section section : mExtraSections) {
+            builder.add(section.name);
+        }
+        return builder.build();
+    }
+
+    public String getSectionAsText(String name) {
+        for (Section section : mExtraSections) {
+            if (section.name.equals(name)) {
+                return new String(section.data, ISO_8859_1);
+            }
+        }
+        return "";
     }
 
     private static class Section implements Serializable {
@@ -764,14 +940,6 @@ public class PuzFile extends AbstractPuzzleFile {
             dataInputStream.readByte();  // null terminator
             Section section = new Section(sectionName, length, checksum, data);
             return section;
-        }
-
-        public void writeSection(LittleEndianDataOutputStream outputStream) throws IOException {
-            outputStream.write(name.getBytes());
-            outputStream.writeShort(length);
-            outputStream.writeShort(checksum);
-            outputStream.write(data);
-            outputStream.write('\0');
         }
     }
 }

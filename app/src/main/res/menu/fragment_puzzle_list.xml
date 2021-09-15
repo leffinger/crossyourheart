@@ -13,4 +13,26 @@
         android:icon="@drawable/folder"
         android:title="@string/open_file"
         app:showAsAction="ifRoom|withText" />
+
+    <item
+        android:id="@+id/delete_bad_files"
+        android:title="@string/delete_bad_files"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/reindex_files"
+        android:title="@string/reindex_puzzle_files"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/show_tutorial"
+        android:title="@string/show_tutorial"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/send_feedback"
+        android:title="@string/send_feedback"
+        app:showAsAction="never" />
 </menu>

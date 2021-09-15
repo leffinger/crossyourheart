@@ -3,11 +3,11 @@
     <string name="clue_format">%d. %s</string>
     <string name="save">Save</string>
     <string name="puzzle_info">Puzzle Info</string>
-    <string name="alert_solved">You did it!</string>
+    <string name="alert_solved">You did it! You solved the puzzle in %s!</string>
     <string name="delete_puzzle">Delete this puzzle?</string>
     <string name="open_file">Open Puzzle File…</string>
-    <string name="solved">Solved</string>
-    <string name="download_header">Cross Your Heart supports puzzle files that end in \".puz\". Here are some sites where you can download puzzles!</string>
+    <string name="puzzle_status">Puzzle status</string>
+    <string name="download_header">Cross Your Heart supports Across Lite files, meaning files that end in \".puz\".\n\nWe recommend the following blogs which do a great job of aggregating puzzle links:</string>
     <string name="download_file">Download Puzzles…</string>
     <string name="locked_message">Puzzle solution is not available</string>
     <string name="solved_message">Puzzle is solved</string>
@@ -17,8 +17,11 @@
     <string name="title_activity_settings">Settings</string>
     <string name="navigation_preferences">Navigation</string>
     <string name="tap_clue_behavior">Tapping clue text changes direction</string>
-    <string name="skip_filled_clues">Skip to next empty clue</string>
+    <string name="completed_clue_next">Move to next clue after completing current clue</string>
+    <string name="skip_filled_clues">Skip filled clues</string>
+    <string name="within_clue_preferences">Navigation within a clue</string>
     <string name="skip_filled_squares">Skip to next empty square</string>
+    <string name="skip_filled_squares_wrap">…wrapping around to beginning of clue if needed</string>
     <string name="enable_haptic_feedback">Enable haptic feedback</string>
     <string name="user_experience">User Experience</string>
     <string name="start_with_down_clues">Start with down clues</string>
@@ -33,4 +36,29 @@
     <string name="reveal_puzzle">Reveal Puzzle</string>
     <string name="reset_puzzle">Reset Puzzle</string>
     <string name="reset_puzzle_alert">Reset puzzle? This will erase all of your entries and clear the undo stack.</string>
+    <string name="previous_clue">Previous clue</string>
+    <string name="previous_cell">Previous cell</string>
+    <string name="next_cell">Next cell</string>
+    <string name="next_clue">Next clue</string>
+    <string name="sample_text">A</string>
+    <string name="delete_bad_files">Find and delete corrupted files...</string>
+    <string name="stop_timer">Pause Timer</string>
+    <string name="restart_timer">Resume Timer</string>
+    <string name="reindex_puzzle_files">Reindex puzzle files...</string>
+    <string name="reindex_alert">We found puzzle files that are not indexed. Reindex now?</string>
+    <string name="reindexed_files">Successfully indexed %d files</string>
+    <string name="pencil">Pencil</string>
+    <string name="multiple_uris_result">Loaded %d puzzle files: %d succeeded, %d duplicate, %d failed</string>
+    <string name="reindex_safe">This will not delete any of your data.</string>
+    <string name="show_tutorial">Show Tutorial...</string>
+    <string name="title_activity_tutorial">TutorialActivity</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="send_feedback">Send Feedback...</string>
 </resources>

@@ -6,7 +6,7 @@
     android:gravity="center_horizontal"
     android:horizontalGap="0dp"
     android:keyWidth="10%p"
-    android:keyHeight="70dp"
+    android:keyHeight="7.5%p"
     android:verticalGap="0dp">
 
     <Row>
