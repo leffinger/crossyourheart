@@ -8,4 +8,8 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="AppTheme.Starting" parent="AppTheme">
+        <item name="postSplashScreenTheme">@style/AppTheme</item>  # Required.
+    </style>
+
 </resources>

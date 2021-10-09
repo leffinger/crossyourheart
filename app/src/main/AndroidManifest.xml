@@ -8,7 +8,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/heart_outline_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme.Starting">
         <activity
             android:name=".activities.TutorialActivity"
             android:label="@string/title_activity_tutorial"

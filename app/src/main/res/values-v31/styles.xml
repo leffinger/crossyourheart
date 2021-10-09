@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.Starting" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/heart_outline_round</item>
+        <item name="android:windowSplashScreenAnimationDuration">5000</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>  # Required.
+    </style>
+</resources>

@@ -3,14 +3,14 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "io.github.leffinger.crossyourheart"
         minSdkVersion 21
         targetSdkVersion 30
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
@@ -80,4 +80,5 @@ dependencies {
     annotationProcessor 'androidx.room:room-compiler:2.4.0-alpha04'
     implementation 'androidx.room:room-migration:2.4.0-alpha04'
     androidTestImplementation 'androidx.room:room-testing:2.4.0-alpha04'
+    implementation 'androidx.core:core-splashscreen:1.0.0-alpha01'
 }

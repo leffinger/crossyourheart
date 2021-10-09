@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.splashscreen.SplashScreen;
 import androidx.databinding.DataBindingUtil;
 import androidx.preference.PreferenceManager;
 
@@ -105,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SplashScreen.installSplashScreen(this);
         setContentView(R.layout.activity_container);
 
         if (IOUtil.getPuzzleDir(this).mkdir()) {

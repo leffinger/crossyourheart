@@ -70,6 +70,8 @@ public class PuzzleViewModel extends ViewModel {
      */
     private CellViewModel[][] mGrid;
 
+    private float mAverageWordLength;
+
     public PuzzleViewModel() {
 
     }
@@ -210,6 +212,13 @@ public class PuzzleViewModel extends ViewModel {
 
                 // Link Clue objects in a doubly-linked circular list.
                 linkClues(clues);
+
+                // Compute average word length.
+                int totalLetters = 0;
+                for (ClueViewModel clue : clues) {
+                    totalLetters += clue.getCells().size();
+                }
+                mAverageWordLength = ((float) totalLetters) / clues.length;
 
                 // Adds clue references (e.g. "see 15-Across") to ClueViewModels.
                 boolean[][] clueReferences = mPuzzleFile.getClueReferences();
@@ -512,7 +521,9 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public PuzzleInfoViewModel getPuzzleInfoViewModel() {
-        return new PuzzleInfoViewModel(getTitle(), getAuthor(), getCopyright(), getNote());
+        return new PuzzleInfoViewModel(getTitle(), getAuthor(), getCopyright(), getNote(),
+                                       mPuzzleFile.getNumClues(), getNumColumns(), getNumRows(),
+                                       mAverageWordLength);
     }
 
     public File getFile() {
