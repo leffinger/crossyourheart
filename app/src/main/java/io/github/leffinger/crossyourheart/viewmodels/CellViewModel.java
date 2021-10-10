@@ -167,6 +167,9 @@ public class CellViewModel {
     }
 
     public void revealContents() {
+        if (!mPuzzleViewModel.isCorrect(mRow, mCol)) {
+            mMarkedIncorrect.setValue(true);
+        }
         String solution = mPuzzleViewModel.getSolution(mRow, mCol);
         mContents.setValue(solution);
         mRevealed.setValue(true);

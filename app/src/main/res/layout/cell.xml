@@ -77,5 +77,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:src="@drawable/cell_incorrect"
+            android:visibility="@{cellViewModel.isMarkedIncorrect() ? View.VISIBLE : View.INVISIBLE}"
+            app:layout_constraintBottom_toBottomOf="@id/cell"
+            app:layout_constraintEnd_toEndOf="@id/cell"
+            app:layout_constraintStart_toStartOf="@id/cell"
+            app:layout_constraintTop_toTopOf="@id/cell" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

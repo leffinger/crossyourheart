@@ -474,33 +474,32 @@ public class PuzzleViewModel extends ViewModel {
         // If current cell is empty, move to the previous cell and delete its contents.
         CellViewModel currentCell = mCurrentCell.getValue();
         if (currentCell.getContents().getValue().isEmpty()) {
-            int newRow, newCol;
-            if (mAcrossFocus.getValue()) {
-                newRow = currentCell.getRow();
-                newCol = currentCell.getCol() - 1;
+            ClueViewModel currentClue = mCurrentClue.getValue();
+            List<CellViewModel> cells = currentClue.getCells();
+            int i = cells.indexOf(currentCell);
+
+            CellViewModel newCell;
+            boolean across;
+            if (i == 0) {
+                // Move to the last cell of the previous clue.
+                ClueViewModel previousClue = currentClue.getPreviousClue();
+                newCell = previousClue.getCells().get(previousClue.getCells().size() - 1);
+                across = previousClue.isAcross();
             } else {
-                newRow = currentCell.getRow() - 1;
-                newCol = currentCell.getCol();
+                // Move to the previous cell.
+                newCell = cells.get(i - 1);
+                across = currentClue.isAcross();
             }
 
-            if (newRow < 0 || newCol < 0) {
-                // At the beginning of a row/column. Don't do anything.
-                return;
-            }
-
-            CellViewModel newCell = mGrid[newRow][newCol];
-            if (newCell == null) {
-                // Previous square is black. Don't do anything.
-                return;
-            }
-
-            // Delete previous cell contents and move to that cell.
+            // Delete the cell's contents and move to that cell.
             boolean pencil = newCell.getPencil().getValue();
             String oldContents = newCell.getContents().getValue();
             newCell.setContents("", false);
-            mUndoStack.push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                                       pencil));
+            mUndoStack
+                    .push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
+                                     pencil));
             mCurrentCell.setValue(newCell);
+            mAcrossFocus.setValue(across);
         } else {
             // Delete current cell's contents.
             boolean pencil = currentCell.getPencil().getValue();
