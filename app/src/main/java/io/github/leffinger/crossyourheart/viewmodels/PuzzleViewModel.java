@@ -36,6 +36,10 @@ public class PuzzleViewModel extends ViewModel {
      */
     private final MediatorLiveData<ClueViewModel> mCurrentClue = new MediatorLiveData<>();
     /**
+     * Currently active clue text.
+     */
+    private final MediatorLiveData<String> mCurrentClueText = new MediatorLiveData<>();
+    /**
      * Listens for changes to cell contents.
      */
     private final MediatorLiveData<Integer> mContentsChanged = new MediatorLiveData<>();
@@ -53,6 +57,8 @@ public class PuzzleViewModel extends ViewModel {
      */
     private final MutableLiveData<AbstractPuzzleFile.TimerInfo> mTimerInfo =
             new MutableLiveData<>();
+
+    private final MutableLiveData<Boolean> mDownsOnlyMode = new MutableLiveData<>();
 
     // TODO: Is this actually needed?
     private AtomicBoolean mInitialized = new AtomicBoolean(false);
@@ -80,7 +86,7 @@ public class PuzzleViewModel extends ViewModel {
     // LiveData objects.
     public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
                            @NonNull PuzzleObserver puzzleObserver) {
-        initialize(puzzleFile, file, startWithDownClues, puzzleObserver);
+        initialize(puzzleFile, file, startWithDownClues, puzzleObserver, false);
     }
 
     private static void linkClues(ClueViewModel[] clues) {
@@ -126,7 +132,7 @@ public class PuzzleViewModel extends ViewModel {
      */
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
-                           @NonNull PuzzleObserver puzzleObserver) {
+                           @NonNull PuzzleObserver puzzleObserver, boolean downsOnlyMode) {
         if (!mInitialized.compareAndSet(false, true)) {
             return;
         }
@@ -134,6 +140,7 @@ public class PuzzleViewModel extends ViewModel {
         mPuzzleFile = puzzleFile;
         mFile = file;
         mPuzzleObserver = puzzleObserver;
+        mDownsOnlyMode.setValue(downsOnlyMode);
 
         // Do as much as possible off the UI thread, but some tasks (e.g. addSource) must be done
         // on the UI thread.
@@ -173,6 +180,24 @@ public class PuzzleViewModel extends ViewModel {
                 };
                 mCurrentClue.addSource(mAcrossFocus, observer);
                 mCurrentClue.addSource(mCurrentCell, observer);
+
+                // Update the current clue's text based on the current clue and whether we are in
+                // downs-only mode.
+                Observer<Object> clueTextObserver = o -> {
+                    ClueViewModel clue = mCurrentClue.getValue();
+                    if (clue == null) {
+                        return;
+                    }
+                    boolean downsOnlyMode = mDownsOnlyMode.getValue();
+
+                    if (clue.isAcross() && downsOnlyMode) {
+                        mCurrentClueText.setValue("--");
+                    } else {
+                        mCurrentClueText.setValue(clue.getText());
+                    }
+                };
+                mCurrentClueText.addSource(mCurrentClue, clueTextObserver);
+                mCurrentClueText.addSource(mDownsOnlyMode, clueTextObserver);
             }
 
             @Override
@@ -233,6 +258,7 @@ public class PuzzleViewModel extends ViewModel {
                 mAcrossFocus.postValue(!startWithDownClues);
                 mIsSolved.postValue(puzzleFile.isSolved());
                 mTimerInfo.postValue(puzzleFile.getTimerInfo());
+                mDownsOnlyMode.postValue(downsOnlyMode);
 
                 selectFirstCell();
 
@@ -301,7 +327,7 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public LiveData<String> getCurrentClueText() {
-        return Transformations.map(mCurrentClue, clue -> clue == null ? null : clue.getText());
+        return mCurrentClueText;
     }
 
     public LiveData<Boolean> getAcrossFocus() {
@@ -312,13 +338,23 @@ public class PuzzleViewModel extends ViewModel {
         return mIsSolved;
     }
 
+    public boolean toggleDownsOnlyMode() {
+        boolean downsOnlyMode = !mDownsOnlyMode.getValue();
+        mDownsOnlyMode.setValue(downsOnlyMode);
+        return downsOnlyMode;
+    }
+
+    public MutableLiveData<Boolean> isDownsOnlyMode() {
+        return mDownsOnlyMode;
+    }
+
     public void toggleDirection() {
         mAcrossFocus.setValue(!mAcrossFocus.getValue());
     }
 
     private CellViewModel getNextCell(boolean wasFilled, boolean skipFilledClues,
-                                      boolean skipFilledSquares, boolean skipFilledSquaresWrap,
-                                      boolean completedClueNext) {
+                                      boolean skipFilledSquares, boolean unlessCurrentSquareFilled,
+                                      boolean skipFilledSquaresWrap, boolean completedClueNext) {
         // Find our location in the current clue.
         CellViewModel currentCell = mCurrentCell.getValue();
         List<CellViewModel> currentClueCells = mCurrentClue.getValue().getCells();
@@ -328,59 +364,54 @@ public class PuzzleViewModel extends ViewModel {
             return currentCell;
         }
 
-        if (!wasFilled) {
-            // Behavior after filling in an empty square.
-            if (skipFilledSquares) {
-                // Move to next empty square in the clue
-                if (i < currentClueCells.size() - 1) {
-                    for (int j = i + 1; j < currentClueCells.size(); j++) {
-                        if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
-                            return currentClueCells.get(j);
-                        }
-                    }
+        boolean clueWasFilled = wasFilled;
+        if (wasFilled) {
+            for (CellViewModel cell : currentClueCells) {
+                if (cell.getContents().getValue().isEmpty()) {
+                    clueWasFilled = false;
+                    break;
                 }
-                // Last (empty) square in the clue. Wrap around?
-                if (skipFilledSquaresWrap) {
-                    for (int j = 0; j < i; j++) {
-                        if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
-                            return currentClueCells.get(j);
-                        }
-                    }
-                }
-                // Move to next clue?
-                if (completedClueNext) {
-                    return getCellInNextClue(skipFilledClues, skipFilledSquares);
-                }
-                return currentCell;
             }
+        }
 
+        if (clueWasFilled || !skipFilledSquares || (wasFilled && unlessCurrentSquareFilled)) {
             // Move to next square in the clue, regardless of whether it is filled.
             if (i < currentClueCells.size() - 1) {
                 return currentClueCells.get(i + 1);
             }
-            // Last square in the clue. Wrap, next, or stop?
+            // Last square in the clue.
             if (completedClueNext) {
                 // Move to the next clue.
                 return getCellInNextClue(skipFilledClues, skipFilledSquares);
             }
             // Stop.
             return currentCell;
-
         }
 
-        // Behavior after editing a previously-filled square.
-        // Move to next square in the clue, regardless of whether it is filled.
+        // Move to next empty square in the clue
         if (i < currentClueCells.size() - 1) {
-            return currentClueCells.get(i + 1);
+            for (int j = i + 1; j < currentClueCells.size(); j++) {
+                if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
+                    return currentClueCells.get(j);
+                }
+            }
         }
-        // Last square in the clue.
-        if (completedClueNext) {
-            // Move to the next clue.
-            return getCellInNextClue(skipFilledClues, skipFilledSquares);
-        }
-        // Stop.
-        return currentCell;
 
+        // Last (empty) square in the clue. Wrap around?
+        if (skipFilledSquaresWrap) {
+            for (int j = 0; j < i; j++) {
+                if (currentClueCells.get(j).getContents().getValue().isEmpty()) {
+                    return currentClueCells.get(j);
+                }
+            }
+        }
+
+        // Move to next clue?
+        if (completedClueNext) {
+            return getCellInNextClue(skipFilledClues, true);
+        }
+
+        return currentCell;
     }
 
     public void moveToPreviousClue(boolean skipFilledClues, boolean skipFilledSquares) {
@@ -445,8 +476,9 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void setCurrentCellContents(String newContents, boolean skipFilledClues,
-                                       boolean skipFilledSquares, boolean skipFilledSquaresWrap,
-                                       boolean completedClueNext, boolean usePencil) {
+                                       boolean skipFilledSquares, boolean unlessCurrentSquareFilled,
+                                       boolean skipFilledSquaresWrap, boolean completedClueNext,
+                                       boolean usePencil) {
         CellViewModel currentCell = mCurrentCell.getValue();
         boolean pencil = currentCell.getPencil().getValue();
         String oldContents = currentCell.getContents().getValue();
@@ -454,7 +486,7 @@ public class PuzzleViewModel extends ViewModel {
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
                                    pencil));
         CellViewModel newCell =
-                getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares,
+                getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares, unlessCurrentSquareFilled,
                             skipFilledSquaresWrap, completedClueNext);
         mCurrentCell.setValue(newCell);
     }
@@ -495,9 +527,8 @@ public class PuzzleViewModel extends ViewModel {
             boolean pencil = newCell.getPencil().getValue();
             String oldContents = newCell.getContents().getValue();
             newCell.setContents("", false);
-            mUndoStack
-                    .push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                                     pencil));
+            mUndoStack.push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
+                                       pencil));
             mCurrentCell.setValue(newCell);
             mAcrossFocus.setValue(across);
         } else {

@@ -6,8 +6,11 @@
     <string name="preference_skip_filled_squares_wrap">skipFilledSquaresWrap</string>
     <string name="preference_enable_haptic_feedback">enableHapticFeedback</string>
     <string name="preference_start_with_down_clues">startWithDownClues</string>
+    <string name="preference_start_in_downs_only_mode_list">startInDownsOnlyModeList</string>
     <string name="preference_enable_hints">enableHints</string>
     <string name="preference_completed_clue_next">completedClueNext</string>
     <string name="preference_intro_puzzle_copied">introPuzzleCopied</string>
     <string name="preference_start_tutorial_on_open">startTutorialOnOpen</string>
+    <string name="preference_unless_current_square_is_filled">unlessCurrentSquareIsFilled</string>
+    <string name="preference_font_selection">fontSelection</string>
 </resources>

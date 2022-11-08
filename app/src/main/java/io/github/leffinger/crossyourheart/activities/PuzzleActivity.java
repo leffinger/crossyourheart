@@ -4,11 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.room.Room;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,6 +17,7 @@ import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.Puzzle;
+import io.github.leffinger.crossyourheart.room.PuzzleDao;
 
 public class PuzzleActivity extends AppCompatActivity {
     public static final String KEY_PUZZLE = "puzzle";
@@ -50,13 +49,10 @@ public class PuzzleActivity extends AppCompatActivity {
 
         if (!mPuzzle.opened) {
             // Mark puzzle as opened.
-            mPuzzle.opened = true;
             Database database = Database.getInstance(getApplicationContext());
             AsyncTask.execute(() -> {
-
-                database.puzzleDao().update(mPuzzle);
-                Puzzle puzzle = database.puzzleDao().getAll().get(0);
-                Log.i(TAG, "Title: " + puzzle.title + " opened? " + puzzle.opened);
+                database.puzzleDao()
+                        .updateOpened(new PuzzleDao.OpenedUpdate(mPuzzle.filename, true));
             });
         }
 
@@ -76,7 +72,8 @@ public class PuzzleActivity extends AppCompatActivity {
             File file = IOUtil.getPuzzleFile(PuzzleActivity.this, mPuzzle.filename);
             try (FileInputStream inputStream = new FileInputStream(file)) {
                 PuzFile puzFile = PuzFile.loadPuzFile(inputStream);
-                return PuzzleFragment.newInstance(mPuzzle.filename, puzFile, mPuzzle.usePencil);
+                return PuzzleFragment.newInstance(mPuzzle.filename, puzFile, mPuzzle.usePencil,
+                                                  mPuzzle.downsOnlyMode);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

@@ -27,6 +27,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/settings"
+        android:icon="@drawable/settings"
+        android:title="@string/title_activity_settings"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/show_tutorial"
         android:title="@string/show_tutorial"
         app:showAsAction="never" />

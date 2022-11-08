@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="start_in_downs_only_mode_entries">
+        <item>Always</item>
+        <item>Ask before opening</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="start_in_downs_only_mode_values">
+        <item>downsOnlyModeAlways</item>
+        <item>downsOnlyModeAsk</item>
+        <item>downsOnlyModeNever</item>
+    </string-array>
+</resources>

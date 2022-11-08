@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import static java.util.Objects.requireNonNull;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -35,8 +37,8 @@ import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.PuzFileMetadata;
 import io.github.leffinger.crossyourheart.room.Puzzle;
-
-import static java.util.Objects.requireNonNull;
+import io.github.leffinger.crossyourheart.room.PuzzleDao;
+import io.github.leffinger.crossyourheart.viewmodels.PuzzleInfoViewModel;
 
 /**
  * Base activity that handles implicit intents and displays the puzzle list if no intent is
@@ -90,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                 Puzzle puzzle =
                         new Puzzle(filename, puzzleLoader.getTitle(), puzzleLoader.getAuthor(),
                                    puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false,
-                                   !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState());
+                                   !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState(), false);
                 database.puzzleDao().insert(puzzle);
                 database.puzFileMetadataDao()
                         .insert(new PuzFileMetadata(filename, puzzleLoader.getHeaderChecksum()));
@@ -173,6 +175,46 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     @Override
     public void onPuzzleSelected(Puzzle puzzle) {
         mPuzzle = puzzle;
+
+        if (mPuzzle.opened) {
+            startActivity(PuzzleActivity.newIntent(MainActivity.this, mPuzzle));
+            return;
+        }
+
+        String openInDownsOnlyMode = PreferenceManager.getDefaultSharedPreferences(this)
+                .getString(getString(R.string.preference_start_in_downs_only_mode_list),
+                           "downsOnlyModeNever");
+
+        if (openInDownsOnlyMode.equals("downsOnlyModeAlways")) {
+            updatePuzzleAndStart(true);
+        } else if (openInDownsOnlyMode.equals("downsOnlyModeAsk")) {
+            AlertDialog dialog =
+                    new AlertDialog.Builder(this).setTitle("Open puzzle in downs-only mode?")
+                            .setPositiveButton(R.string.yes,
+                                               (dialogInterface, i) -> updatePuzzleAndStart(true))
+                            .setNegativeButton(R.string.no,
+                                               (dialogInterface, i) -> updatePuzzleAndStart(false))
+                            .setNeutralButton("Show Puzzle Info", null).setCancelable(true)
+                            .create();
+            // Don't dismiss the dialog when "Show Puzzle Info" is pressed.
+            dialog.setOnShowListener(dialogInterface -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                    .setOnClickListener(view -> {
+                        PuzzleInfoViewModel puzzleInfoViewModel =
+                                new PuzzleInfoViewModel(mPuzzle.title, mPuzzle.author,
+                                                        mPuzzle.copyright);
+                        PuzzleInfoFragment.newInstance(puzzleInfoViewModel)
+                                .show(getSupportFragmentManager(), "PuzzleInfo");
+                    }));
+            dialog.show();
+        } else {
+            updatePuzzleAndStart(false);
+        }
+    }
+
+    private void updatePuzzleAndStart(boolean downsOnlyMode) {
+        AsyncTask.execute(() -> mDatabase.puzzleDao().updateDownsOnlyMode(
+                new PuzzleDao.DownsOnlyModeUpdate(mPuzzle.filename, downsOnlyMode)));
+        mPuzzle.downsOnlyMode = downsOnlyMode;
         startActivity(PuzzleActivity.newIntent(MainActivity.this, mPuzzle));
     }
 

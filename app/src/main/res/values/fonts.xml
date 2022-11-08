@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_font_family">sans-serif</string>
+    <string-array name="font_names">
+        <item>Sans-serif</item>
+        <item>Casual</item>
+        <item>Cursive</item>
+    </string-array>
+    <string-array name="font_values">
+        <item>sans-serif</item>
+        <item>casual</item>
+        <item>cursive</item>
+    </string-array>
+</resources>

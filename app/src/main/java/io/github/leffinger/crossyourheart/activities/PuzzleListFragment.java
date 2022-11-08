@@ -1,5 +1,7 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import static android.app.Activity.RESULT_OK;
+
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Context;
@@ -45,8 +47,6 @@ import io.github.leffinger.crossyourheart.io.PuzFile;
 import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.PuzFileMetadata;
 import io.github.leffinger.crossyourheart.room.Puzzle;
-
-import static android.app.Activity.RESULT_OK;
 
 /**
  * A fragment representing a list of puzzle files.
@@ -103,8 +103,8 @@ public class PuzzleListFragment extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.open_file: {
+        int itemId = item.getItemId();
+        if (itemId == R.id.open_file) {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
@@ -112,25 +112,33 @@ public class PuzzleListFragment extends Fragment {
             startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
             return true;
         }
-        case R.id.download_file:
+        if (itemId == R.id.download_file) {
             ((Callbacks) getActivity()).onDownloadSelected();
             return true;
-        case R.id.delete_bad_files:
+        }
+        if (itemId == R.id.delete_bad_files) {
             deleteBadFiles();
             return true;
-        case R.id.reindex_files:
+        }
+        if (itemId == R.id.settings) {
+            startActivity(SettingsActivity.newIntent(getContext(), R.xml.root_preferences));
+            return true;
+        }
+        if (itemId == R.id.reindex_files) {
             reindexFiles();
             return true;
-        case R.id.show_tutorial:
+        }
+        if (itemId == R.id.show_tutorial) {
             startActivity(new Intent(getContext(), TutorialActivity.class));
             return true;
-        case R.id.send_feedback: {
+        }
+        if (itemId == R.id.send_feedback) {
             Intent intent = new Intent(Intent.ACTION_SENDTO);
             intent.setData(Uri.parse("mailto:"));
             intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"crossyourheartapp@gmail.com"});
             intent.putExtra(Intent.EXTRA_SUBJECT, "Feedback");
             startActivity(intent);
-        }
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -397,7 +405,7 @@ public class PuzzleListFragment extends Fragment {
                                                    puzzleLoader.getCopyright(),
                                                    puzzleLoader.isSolved(), false,
                                                    !puzzleLoader.isEmpty(),
-                                                   puzzleLoader.getScrambleState()));
+                                                   puzzleLoader.getScrambleState(), false));
                         database.puzFileMetadataDao().insert(new PuzFileMetadata(file.getName(),
                                                                                  puzzleLoader
                                                                                          .getHeaderChecksum()));

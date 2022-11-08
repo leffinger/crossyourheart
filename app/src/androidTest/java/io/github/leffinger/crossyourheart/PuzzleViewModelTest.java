@@ -129,7 +129,7 @@ public class PuzzleViewModelTest {
             protected Void doInBackground(Void... voids) {
                 puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
 
-                });
+                }, false);
                 puzzleViewModel.selectFirstCell();
                 return null;
             }

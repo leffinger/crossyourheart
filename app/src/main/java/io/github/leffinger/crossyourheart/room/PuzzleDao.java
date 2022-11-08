@@ -24,12 +24,61 @@ public interface PuzzleDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void insert(Puzzle puzzle);
 
-    @Update
-    void update(Puzzle puzzle);
+    @Update(entity = Puzzle.class)
+    void updateSolved(SolvedUpdate solvedUpdate);
+
+    @Update(entity = Puzzle.class)
+    void updateOpened(OpenedUpdate openedUpdate);
+
+    @Update(entity = Puzzle.class)
+    void updateUsePencil(UsePencilUpdate usePencilUpdate);
+
+    @Update(entity = Puzzle.class)
+    void updateDownsOnlyMode(DownsOnlyModeUpdate downsOnlyModeUpdate);
 
     @Delete
     void deletePuzzles(List<Puzzle> puzzles);
 
     @Delete
     void deletePuzzle(Puzzle puzzle);
+
+    class SolvedUpdate {
+        String filename;
+        boolean solved;
+
+        public SolvedUpdate(String filename, boolean solved) {
+            this.filename = filename;
+            this.solved = solved;
+        }
+    }
+
+    class OpenedUpdate {
+        String filename;
+        boolean opened;
+
+        public OpenedUpdate(String filename, boolean opened) {
+            this.filename = filename;
+            this.opened = opened;
+        }
+    }
+
+    class UsePencilUpdate {
+        String filename;
+        boolean usePencil;
+
+        public UsePencilUpdate(String filename, boolean usePencil) {
+            this.filename = filename;
+            this.usePencil = usePencil;
+        }
+    }
+
+    class DownsOnlyModeUpdate {
+        String filename;
+        boolean downsOnlyMode;
+
+        public DownsOnlyModeUpdate(String filename, boolean downsOnlyMode) {
+            this.filename = filename;
+            this.downsOnlyMode = downsOnlyMode;
+        }
+    }
 }

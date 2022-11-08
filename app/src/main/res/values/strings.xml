@@ -21,10 +21,12 @@
     <string name="skip_filled_clues">Skip filled clues</string>
     <string name="within_clue_preferences">Navigation within a clue</string>
     <string name="skip_filled_squares">Skip to next empty square</string>
+    <string name="unless_current_square_is_filled">…unless the current square is filled</string>
     <string name="skip_filled_squares_wrap">…wrapping around to beginning of clue if needed</string>
     <string name="enable_haptic_feedback">Enable haptic feedback</string>
     <string name="user_experience">User Experience</string>
     <string name="start_with_down_clues">Start with down clues</string>
+    <string name="start_in_downs_only_mode">Open new puzzles in downs-only mode</string>
     <string name="enable_hints">Enable hints</string>
     <string name="check_submenu">Check…</string>
     <string name="check_square">Check Square</string>
@@ -50,7 +52,7 @@
     <string name="pencil">Pencil</string>
     <string name="multiple_uris_result">Loaded %d puzzle files: %d succeeded, %d duplicate, %d failed</string>
     <string name="reindex_safe">This will not delete any of your data.</string>
-    <string name="show_tutorial">Show Tutorial...</string>
+    <string name="show_tutorial">Show Tutorial…</string>
     <string name="title_activity_tutorial">TutorialActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -65,4 +67,7 @@
     <string name="puzzle_size">Size: %dx%d</string>
     <string name="puzzle_word_count">Word count: %d</string>
     <string name="puzzle_average_word_length">Average word length: %.1f</string>
+    <string name="downs_only_mode">Downs-Only Mode</string>
+    <string name="yes">YES</string>
+    <string name="no">NO</string>
 </resources>

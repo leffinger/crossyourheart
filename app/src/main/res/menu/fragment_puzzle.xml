@@ -11,7 +11,7 @@
         android:id="@+id/pencil"
         android:icon="@drawable/pencil"
         android:title="@string/pencil"
-
+        android:checkable="true"
         app:showAsAction="ifRoom" />
 
     <item
@@ -59,6 +59,13 @@
             </menu>
         </item>
     </group>
+
+    <item
+        android:id="@+id/downs_only_mode"
+        android:icon="@drawable/downs_only"
+        android:title="@string/downs_only_mode"
+        android:checkable="true"
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/reset_puzzle"

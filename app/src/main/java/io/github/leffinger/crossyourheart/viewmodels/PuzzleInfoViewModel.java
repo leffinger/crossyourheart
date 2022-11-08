@@ -24,6 +24,10 @@ public class PuzzleInfoViewModel implements Serializable {
         mAverageWordLength = averageWordLength;
     }
 
+    public PuzzleInfoViewModel(String title, String author, String copyright) {
+        this(title, author, copyright, null, 0, 0, 0, 0f);
+    }
+
     public String getTitle() {
         return mTitle;
     }

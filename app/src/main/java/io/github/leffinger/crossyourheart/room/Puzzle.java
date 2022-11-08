@@ -30,6 +30,8 @@ public class Puzzle implements Serializable {
     public boolean opened;
     @ColumnInfo(defaultValue = "NULL")
     public ScrambleState scrambleState;
+    @ColumnInfo(defaultValue = "false")
+    public boolean downsOnlyMode;
 
     @Ignore
     public Puzzle(@NonNull String filename) {
@@ -37,7 +39,7 @@ public class Puzzle implements Serializable {
     }
 
     public Puzzle(@NonNull String filename, String title, String author, String copyright,
-                  boolean solved, boolean usePencil, boolean opened, ScrambleState scrambleState) {
+                  boolean solved, boolean usePencil, boolean opened, ScrambleState scrambleState, boolean downsOnlyMode) {
         this.filename = filename;
         this.title = title;
         this.author = author;
@@ -46,6 +48,7 @@ public class Puzzle implements Serializable {
         this.usePencil = usePencil;
         this.opened = opened;
         this.scrambleState = scrambleState;
+        this.downsOnlyMode = downsOnlyMode;
     }
 
     public int getPuzzleStatusResId() {

@@ -1,9 +1,15 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import static android.app.Activity.RESULT_OK;
+import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
+import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
+import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
+
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Typeface;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
@@ -29,6 +35,7 @@ import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
@@ -52,26 +59,22 @@ import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.TimerInfo;
 import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.room.Cell;
 import io.github.leffinger.crossyourheart.room.Database;
-import io.github.leffinger.crossyourheart.room.Puzzle;
+import io.github.leffinger.crossyourheart.room.PuzzleDao;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
-
-import static android.app.Activity.RESULT_OK;
-import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
-import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
-import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
 
 /**
  * Puzzle-solving activity.
  */
 public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleObserver {
-    public static final String ARG_FILENAME = "filename";
-    public static final String ARG_PUZZLE = "puzzle";
     private static final String TAG = "PuzzleFragment";
     // Activity request codes.
     private static final int REQUEST_CODE_REBUS_ENTRY = 0;
     // Instance state arguments.
+    public static final String ARG_FILENAME = "filename";
+    public static final String ARG_PUZZLE = "puzzle";
     private static final String ARG_USE_PENCIL = "usePencil";
+    private static final String ARG_DOWNS_ONLY_MODE = "downsOnlyMode";
     // Used to write puzzle file changes to disk in the background.
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
 
@@ -86,13 +89,15 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
     private TimerBinding mTimerBinding;
     private Database mDatabase;
     private boolean mUsePencil;
+    private Typeface mTypeface;
 
     public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile,
-                                             boolean usePencil) {
+                                             boolean usePencil, boolean downsOnlyMode) {
         Bundle args = new Bundle();
         args.putString(ARG_FILENAME, filename);
         args.putSerializable(ARG_PUZZLE, puzzleFile);
         args.putBoolean(ARG_USE_PENCIL, usePencil);
+        args.putBoolean(ARG_DOWNS_ONLY_MODE, downsOnlyMode);
         PuzzleFragment fragment = new PuzzleFragment();
         fragment.setArguments(args);
         return fragment;
@@ -113,17 +118,32 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         // Create or load database.
         mDatabase = Database.getInstance(getActivity().getApplicationContext());
 
-        mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
         mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable(ARG_PUZZLE);
         mCellAdapter = new CellAdapter(mPuzzleFile.getWidth(), mPuzzleFile.getHeight());
         mFilename = IOUtil.getPuzzleFile(getContext(), bundle.getString(ARG_FILENAME));
+        mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
+
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+        updateTypeface();
+        mPreferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
+            if (key.equals(getString(R.string.preference_font_selection))) {
+                updateTypeface();
+            }
+        });
         boolean startWithDownClues = mPreferences
                 .getBoolean(getString(R.string.preference_start_with_down_clues), false);
         mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
+        boolean downsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
 
         PuzzleViewModel viewModel = new ViewModelProvider(getActivity()).get(PuzzleViewModel.class);
-        viewModel.initialize(mPuzzleFile, mFilename, startWithDownClues,
-                             this);  // kicks off async task
+        viewModel.initialize(mPuzzleFile, mFilename, startWithDownClues, this,
+                             downsOnlyMode);  // kicks off async task
+    }
+
+    private void updateTypeface() {
+        mTypeface = Typeface.create(mPreferences.getString(
+                getString(R.string.preference_font_selection),
+                getString(R.string.default_font_family)), Typeface.NORMAL);
     }
 
     private PuzzleViewModel getViewModel() {
@@ -248,21 +268,16 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         inflater.inflate(R.menu.fragment_puzzle, menu);
         mMenu = menu;
 
-        configurePencilButton();
+        configureUsePencilMenuItem();
 
-        configureCheckMenuItems();
-        mPreferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
-            if (key.equals(getString(R.string.preference_enable_hints))) {
-                configureCheckMenuItems();
-            }
-        });
+        PuzzleViewModel viewModel = getViewModel();
+        configureDownsOnlyModeMenuItem(viewModel.isDownsOnlyMode().getValue());
 
-        // Show option to "resume" or "pause" timer, depending on timer state.
-        getViewModel().getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
-            if (timerInfo == null) {
-                return;
-            }
-        });
+        boolean visible =
+                mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
+        boolean enabled = getViewModel().isCheckable();
+        mMenu.setGroupVisible(R.id.check_items, visible);
+        mMenu.setGroupEnabled(R.id.check_items, enabled);
     }
 
     @Override
@@ -277,17 +292,20 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         }
         if (itemId == R.id.pencil) {
             mUsePencil = !mUsePencil;
-            AsyncTask.execute(() -> {
-                mDatabase.puzzleDao().update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
-                                                        mPuzzleFile.getAuthor(),
-                                                        mPuzzleFile.getCopyright(),
-                                                        mPuzzleFile.isSolved(), mUsePencil, true,
-                                                        mPuzzleFile.getScrambleState()));
-            });
-            configurePencilButton();
+            AsyncTask.execute(() -> mDatabase.puzzleDao().updateUsePencil(
+                    new PuzzleDao.UsePencilUpdate(mFilename.getName(), mUsePencil)));
+            configureUsePencilMenuItem();
+            return true;
+        }
+        if (itemId == R.id.downs_only_mode) {
+            final boolean downsOnlyModeNewValue = getViewModel().toggleDownsOnlyMode();
+            AsyncTask.execute(() -> mDatabase.puzzleDao().updateDownsOnlyMode(
+                    new PuzzleDao.DownsOnlyModeUpdate(mFilename.getName(), downsOnlyModeNewValue)));
+            configureDownsOnlyModeMenuItem(downsOnlyModeNewValue);
+            return true;
         }
         if (itemId == R.id.settings) {
-            startActivity(SettingsActivity.newIntent(getContext()));
+            startActivity(SettingsActivity.newIntent(getContext(), R.xml.puzzle_preferences));
             return true;
         }
         if (itemId == R.id.check_square) {
@@ -421,8 +439,9 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                     getViewModel().getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
 
                     // Show a congratulatory dialog.
-                    new AlertDialog.Builder(getActivity()).setTitle(getString(R.string.alert_solved, time)).setPositiveButton(
-                            android.R.string.ok, null).create().show();
+                    new AlertDialog.Builder(getActivity())
+                            .setTitle(getString(R.string.alert_solved, time))
+                            .setPositiveButton(android.R.string.ok, null).create().show();
                     shouldCongratulate = false;
                 } else if (!solved && !shouldCongratulate) {
                     shouldCongratulate = true;
@@ -431,10 +450,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         });
         viewModel.isSolved().observe(getViewLifecycleOwner(), solved -> AsyncTask.execute(
                 () -> mDatabase.puzzleDao()
-                        .update(new Puzzle(mFilename.getName(), mPuzzleFile.getTitle(),
-                                           mPuzzleFile.getAuthor(), mPuzzleFile.getCopyright(),
-                                           solved, mUsePencil, true,
-                                           mPuzzleFile.getScrambleState()))));
+                        .updateSolved(new PuzzleDao.SolvedUpdate(mFilename.getName(), solved))));
 
         // Restart the timer when the puzzle is reset.
         viewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
@@ -451,17 +467,20 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         });
     }
 
-    private void configureCheckMenuItems() {
-        boolean visible =
-                mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
-        boolean enabled = getViewModel().isCheckable();
-        mMenu.setGroupVisible(R.id.check_items, visible);
-        mMenu.setGroupEnabled(R.id.check_items, enabled);
+    private void configureUsePencilMenuItem() {
+        MenuItem item = mMenu.findItem(R.id.pencil);
+        item.setChecked(mUsePencil);
+        if (mUsePencil) {
+            item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
+        } else {
+            item.getIcon().clearColorFilter();
+        }
     }
 
-    private void configurePencilButton() {
-        MenuItem item = mMenu.findItem(R.id.pencil);
-        if (mUsePencil) {
+    private void configureDownsOnlyModeMenuItem(boolean downsOnlyMode) {
+        MenuItem item = mMenu.findItem(R.id.downs_only_mode);
+        item.setChecked(downsOnlyMode);
+        if (downsOnlyMode) {
             item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
         } else {
             item.getIcon().clearColorFilter();
@@ -482,6 +501,11 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         return mPreferences.getBoolean(getString(R.string.preference_skip_filled_squares), true);
     }
 
+    private boolean unlessCurrentSquareFilled() {
+        return mPreferences
+                .getBoolean(getString(R.string.preference_unless_current_square_is_filled), true);
+    }
+
     private boolean skipFilledSquaresWrap() {
         return mPreferences
                 .getBoolean(getString(R.string.preference_skip_filled_squares_wrap), false);
@@ -497,8 +521,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
             String newContents = RebusFragment.getContents(data);
             getViewModel()
                     .setCurrentCellContents(newContents, skipFilledClues(), skipFilledSquares(),
-                                            skipFilledSquaresWrap(), completedClueNext(),
-                                            mUsePencil);
+                                            unlessCurrentSquareFilled(), skipFilledSquaresWrap(),
+                                            completedClueNext(), mUsePencil);
         }
     }
 
@@ -507,12 +531,70 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         new AfterCellViewModelsReadyTask(this).execute();
     }
 
+    private static class AfterCellViewModelsReadyTask extends AsyncTask<Void, Void, Void> {
+        private final WeakReference<PuzzleFragment> mFragment;
+
+        public AfterCellViewModelsReadyTask(PuzzleFragment fragment) {
+            mFragment = new WeakReference<>(fragment);
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            PuzzleFragment fragment = mFragment.get();
+            if (fragment == null) {
+                return null;
+            }
+            PuzzleViewModel viewModel = fragment.getViewModel();
+            Database database = fragment.mDatabase;
+
+            // Populate pencil status for each cell.
+            List<Cell> allCells =
+                    database.cellDao().getCellsForPuzzle(viewModel.getFile().getName());
+            for (Cell cell : allCells) {
+                CellViewModel cellViewModel = viewModel.getCellViewModel(cell.row, cell.col);
+                cellViewModel.getPencil().postValue(cell.pencil);
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            PuzzleFragment fragment = mFragment.get();
+            if (fragment == null) {
+                return;
+            }
+            PuzzleViewModel viewModel = fragment.getViewModel();
+
+            // Persist pencil/pen state to the Cell table.
+            for (int row = 0; row < viewModel.getNumRows(); row++) {
+                for (int col = 0; col < viewModel.getNumColumns(); col++) {
+                    CellViewModel cellViewModel = viewModel.getCellViewModel(row, col);
+                    if (cellViewModel == null) {
+                        continue;
+                    }
+                    cellViewModel.getPencil().observe(fragment, pencil -> {
+                        AsyncTask.execute(() -> fragment.mDatabase.cellDao()
+                                .insert(new Cell(viewModel.getFile().getName(),
+                                                 cellViewModel.getRow(), cellViewModel.getCol(),
+                                                 pencil)));
+                    });
+                }
+            }
+
+            fragment.mCellAdapter.notifyDataSetChanged();
+            fragment.mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
+        }
+    }
+
     private class CellHolder extends RecyclerView.ViewHolder {
         private final CellBinding mBinding;
 
         private CellHolder(CellBinding binding) {
             super(binding.getRoot());
             mBinding = binding;
+
+            mBinding.entry.setTypeface(mTypeface);
 
             mBinding.getRoot().setOnClickListener(view -> {
                 getViewModel().selectCell(mBinding.getCellViewModel());
@@ -613,8 +695,10 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
             default:
                 char letter = (char) primaryCode;
                 getViewModel().setCurrentCellContents(String.valueOf(letter), skipFilledClues(),
-                                                      skipFilledSquares(), skipFilledSquaresWrap(),
-                                                      completedClueNext(), mUsePencil);
+                                                      skipFilledSquares(),
+                                                      unlessCurrentSquareFilled(),
+                                                      skipFilledSquaresWrap(), completedClueNext(),
+                                                      mUsePencil);
             }
         }
 
@@ -641,62 +725,6 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         @Override
         public void swipeUp() {
 
-        }
-    }
-
-    private static class AfterCellViewModelsReadyTask extends AsyncTask<Void, Void, Void> {
-        private final WeakReference<PuzzleFragment> mFragment;
-
-        public AfterCellViewModelsReadyTask(PuzzleFragment fragment) {
-            mFragment = new WeakReference<>(fragment);
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            PuzzleFragment fragment = mFragment.get();
-            if (fragment == null) {
-                return null;
-            }
-            PuzzleViewModel viewModel = fragment.getViewModel();
-            Database database = fragment.mDatabase;
-
-            // Populate pencil status for each cell.
-            List<Cell> allCells =
-                    database.cellDao().getCellsForPuzzle(viewModel.getFile().getName());
-            for (Cell cell : allCells) {
-                CellViewModel cellViewModel = viewModel.getCellViewModel(cell.row, cell.col);
-                cellViewModel.getPencil().postValue(cell.pencil);
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            PuzzleFragment fragment = mFragment.get();
-            if (fragment == null) {
-                return;
-            }
-            PuzzleViewModel viewModel = fragment.getViewModel();
-
-            // Persist pencil/pen state to the Cell table.
-            for (int row = 0; row < viewModel.getNumRows(); row++) {
-                for (int col = 0; col < viewModel.getNumColumns(); col++) {
-                    CellViewModel cellViewModel = viewModel.getCellViewModel(row, col);
-                    if (cellViewModel == null) {
-                        continue;
-                    }
-                    cellViewModel.getPencil().observe(fragment, pencil -> {
-                        AsyncTask.execute(() -> fragment.mDatabase.cellDao()
-                                .insert(new Cell(viewModel.getFile().getName(),
-                                                 cellViewModel.getRow(), cellViewModel.getCol(),
-                                                 pencil)));
-                    });
-                }
-            }
-
-            fragment.mCellAdapter.notifyDataSetChanged();
-            fragment.mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
         }
     }
 }
