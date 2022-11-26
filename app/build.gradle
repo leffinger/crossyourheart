@@ -3,12 +3,11 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 31
-    buildToolsVersion "29.0.2"
+    compileSdkVersion 33
     defaultConfig {
         applicationId "io.github.leffinger.crossyourheart"
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion 33
         versionCode 4
         versionName "1.0.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -42,6 +41,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    namespace 'io.github.leffinger.crossyourheart'
 }
 
 repositories {
@@ -56,29 +56,29 @@ dependencies {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.room:room-runtime:2.4.0-alpha04'
+    implementation 'androidx.preference:preference-ktx:1.2.0'
+    implementation 'androidx.room:room-runtime:2.5.0-beta02'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'com.google.android.material:material:1.4.0'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.3.5'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.3.5'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.5.3'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.5.3'
     testImplementation 'org.hamcrest:hamcrest:2.2'
-    androidTestImplementation 'androidx.test:runner:1.3.0'
-    androidTestImplementation 'androidx.test:rules:1.3.0'
-    testImplementation 'junit:junit:4.13'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-    implementation 'androidx.recyclerview:recyclerview:1.1.0'
+    androidTestImplementation 'androidx.test:runner:1.5.1'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'com.google.guava:guava:29.0-jre'
-    implementation 'com.google.firebase:firebase-analytics:18.0.0'
+    implementation 'com.google.firebase:firebase-analytics:21.2.0'
     testAnnotationProcessor 'com.google.auto.value:auto-value:1.4'
-    annotationProcessor 'androidx.room:room-compiler:2.4.0-alpha04'
-    implementation 'androidx.room:room-migration:2.4.0-alpha04'
-    androidTestImplementation 'androidx.room:room-testing:2.4.0-alpha04'
-    implementation 'androidx.core:core-splashscreen:1.0.0-alpha01'
+    annotationProcessor 'androidx.room:room-compiler:2.5.0-beta02'
+    implementation 'androidx.room:room-migration:2.5.0-beta02'
+    androidTestImplementation 'androidx.room:room-testing:2.5.0-beta02'
+    implementation 'androidx.core:core-splashscreen:1.0.0'
 }
