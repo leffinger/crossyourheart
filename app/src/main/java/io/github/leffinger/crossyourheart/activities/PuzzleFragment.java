@@ -78,6 +78,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
     // Used to write puzzle file changes to disk in the background.
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
 
+    private boolean mInitialDownsOnlyMode;
+
     // View and model state.
     private SharedPreferences mPreferences;
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
@@ -133,11 +135,11 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         boolean startWithDownClues = mPreferences
                 .getBoolean(getString(R.string.preference_start_with_down_clues), false);
         mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
-        boolean downsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
+        mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
 
         PuzzleViewModel viewModel = new ViewModelProvider(getActivity()).get(PuzzleViewModel.class);
         viewModel.initialize(mPuzzleFile, mFilename, startWithDownClues, this,
-                             downsOnlyMode);  // kicks off async task
+                             mInitialDownsOnlyMode);  // kicks off async task
     }
 
     private void updateTypeface() {
@@ -269,9 +271,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mMenu = menu;
 
         configureUsePencilMenuItem();
-
-        PuzzleViewModel viewModel = getViewModel();
-        configureDownsOnlyModeMenuItem(viewModel.isDownsOnlyMode().getValue());
+        configureDownsOnlyModeMenuItem(mInitialDownsOnlyMode);
 
         boolean visible =
                 mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
