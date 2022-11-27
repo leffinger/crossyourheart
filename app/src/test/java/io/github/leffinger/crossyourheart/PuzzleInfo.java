@@ -9,6 +9,8 @@ import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState;
 
 import static io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.ScrambleState.UNSCRAMBLED;
 
+import androidx.annotation.NonNull;
+
 @AutoValue
 abstract class PuzzleInfo {
     public static Builder builder() {
@@ -43,7 +45,8 @@ abstract class PuzzleInfo {
     abstract long elapsedTime();
 
     @Override
-    public String toString() {
+    public @NonNull
+    String toString() {
         return filename();
     }
 

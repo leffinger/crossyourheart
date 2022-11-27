@@ -2,8 +2,10 @@ package io.github.leffinger.crossyourheart;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.test.annotation.UiThreadTest;
@@ -38,24 +40,32 @@ import static org.junit.Assert.assertNull;
  */
 @RunWith(AndroidJUnit4.class)
 public class PuzzleViewModelTest {
+    private static final String TAG = "PuzzleViewModelTest";
+
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
 
-    private static <T> T getOrAwaitValue(final LiveData<T> liveData) throws InterruptedException {
+    @Rule
+    public InstantTaskExecutorRule mInstantTaskExecutorRule = new InstantTaskExecutorRule();
+
+    private static <T> T getOrAwaitValue(final LiveData<T> liveData, String message) throws InterruptedException {
         final Object[] data = new Object[1];
         final CountDownLatch latch = new CountDownLatch(1);
         Observer<T> observer = new Observer<T>() {
             @Override
             public void onChanged(@Nullable T o) {
+                Log.i(TAG, "getOrAwaitValue: onChanged o=" + o);
                 data[0] = o;
                 latch.countDown();
                 liveData.removeObserver(this);
             }
         };
+        Log.i(TAG, "getOrAwaitValue: Starting observeForever");
         liveData.observeForever(observer);
         // Don't wait indefinitely if the LiveData is not set.
+
         if (!latch.await(10, TimeUnit.SECONDS)) {
-            throw new RuntimeException("LiveData value was never set.");
+            throw new RuntimeException("LiveData value was never set: " + message);
         }
         //noinspection unchecked
         return (T) data[0];
@@ -70,13 +80,15 @@ public class PuzzleViewModelTest {
     }
 
     @Test
-    public void buildPuzzleModel() throws IOException {
+    public void buildPuzzleModel() throws IOException, InterruptedException {
         InputStream inputStream = PuzzleViewModelTest.class.getResourceAsStream("/3x3.puz");
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
         PuzzleViewModel puzzleViewModel =
                 new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false, () -> {
                 });
+        assertNotNull(getOrAwaitValue(puzzleViewModel.getCurrentClue(), "First clue"));
+
         assertEquals(3, puzzleViewModel.getNumRows());
         assertEquals(3, puzzleViewModel.getNumColumns());
         assertEquals("3x3", puzzleViewModel.getTitle());
@@ -115,7 +127,6 @@ public class PuzzleViewModelTest {
     }
 
     @Test
-    @UiThreadTest
     public void loadAllClues() throws IOException, InterruptedException {
         InputStream inputStream = PuzzleViewModelTest.class.getResourceAsStream("/mgwcc647.puz");
         assertNotNull(inputStream);
@@ -123,23 +134,18 @@ public class PuzzleViewModelTest {
         PuzzleViewModel puzzleViewModel = new PuzzleViewModel();
         final File outFile = mTemporaryFolder.newFile();
 
-        // Initialize the viewmodel off-thread.
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... voids) {
-                puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
+        // Initialize the view model.
+        puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
 
-                }, false);
-                puzzleViewModel.selectFirstCell();
-                return null;
-            }
-        }.execute();
+        }, false);
 
         LiveData<ClueViewModel> clueViewModelLiveData = puzzleViewModel.getCurrentClue();
         ClueViewModel clueViewModel;
+        String message = "First clue";
         do {
-            clueViewModel = getOrAwaitValue(clueViewModelLiveData);
+            clueViewModel = getOrAwaitValue(clueViewModelLiveData, message);
             assertNotNull(clueViewModel);
+            message = clueViewModel.toString();
             puzzleViewModel.moveToNextClue(true, true);
         } while (clueViewModel != puzzleViewModel.getCurrentClue().getValue());
     }

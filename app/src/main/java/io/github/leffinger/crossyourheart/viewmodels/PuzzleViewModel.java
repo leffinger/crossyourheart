@@ -127,9 +127,6 @@ public class PuzzleViewModel extends ViewModel {
         return mInitialized.get();
     }
 
-    /**
-     * Call from the UI thread.
-     */
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
                            @NonNull PuzzleObserver puzzleObserver, boolean downsOnlyMode) {
@@ -140,66 +137,10 @@ public class PuzzleViewModel extends ViewModel {
         mPuzzleFile = puzzleFile;
         mFile = file;
         mPuzzleObserver = puzzleObserver;
-        mDownsOnlyMode.setValue(downsOnlyMode);
 
         // Do as much as possible off the UI thread, but some tasks (e.g. addSource) must be done
         // on the UI thread.
         new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected void onPreExecute() {
-                // When across/down focus changes, or the current cell changes, update the currently
-                // selected clue.
-                Observer<Object> observer = o -> {
-                    ClueViewModel oldValue = mCurrentClue.getValue();
-                    CellViewModel currentCell = mCurrentCell.getValue();
-                    Boolean acrossFocus = mAcrossFocus.getValue();
-                    if (currentCell == null || acrossFocus == null) {
-                        return;
-                    }
-                    if (acrossFocus) {
-                        if (currentCell.getAcrossClue() != null) {
-                            mCurrentClue.setValue(currentCell.getAcrossClue());
-                        } else if (currentCell.getDownClue() != null) {
-                            // switch directions if this cell only has a down clue
-                            mAcrossFocus.setValue(false);  // should trigger another update
-                        }
-                    } else {
-                        if (currentCell.getDownClue() != null) {
-                            mCurrentClue.setValue(currentCell.getDownClue());
-                        } else if (currentCell.getAcrossClue() != null) {
-                            // switch directions if this cell only has an across clue
-                            mAcrossFocus.setValue(true);  // should trigger another update
-                        }
-                    }
-
-                    ClueViewModel newClue = mCurrentClue.getValue();
-                    if (oldValue != mCurrentClue.getValue()) {
-                        Log.i(TAG, String.format("Selecting clue %d-%s", newClue.getNumber(),
-                                                 newClue.isAcross() ? "A" : "D"));
-                    }
-                };
-                mCurrentClue.addSource(mAcrossFocus, observer);
-                mCurrentClue.addSource(mCurrentCell, observer);
-
-                // Update the current clue's text based on the current clue and whether we are in
-                // downs-only mode.
-                Observer<Object> clueTextObserver = o -> {
-                    ClueViewModel clue = mCurrentClue.getValue();
-                    if (clue == null) {
-                        return;
-                    }
-                    boolean downsOnlyMode = mDownsOnlyMode.getValue();
-
-                    if (clue.isAcross() && downsOnlyMode) {
-                        mCurrentClueText.setValue("--");
-                    } else {
-                        mCurrentClueText.setValue(clue.getText());
-                    }
-                };
-                mCurrentClueText.addSource(mCurrentClue, clueTextObserver);
-                mCurrentClueText.addSource(mDownsOnlyMode, clueTextObserver);
-            }
-
             @Override
             protected Void doInBackground(Void... voids) {
                 // Construct a structure of ClueViewModels linked to CellViewModels, and vice versa.
@@ -207,7 +148,7 @@ public class PuzzleViewModel extends ViewModel {
                 for (int i = 0; i < clues.length; i++) {
                     AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
                     clues[i] = new ClueViewModel(PuzzleViewModel.this, clue.isAcross(),
-                                                 clue.getNumber(), clue.getText());
+                            clue.getNumber(), clue.getText());
                 }
 
                 mGrid = new CellViewModel[getNumRows()][getNumColumns()];
@@ -218,8 +159,8 @@ public class PuzzleViewModel extends ViewModel {
                         }
 
                         mGrid[row][col] = new CellViewModel(PuzzleViewModel.this, row, col,
-                                                            mPuzzleFile.getCellContents(row, col),
-                                                            mPuzzleFile.isCircled(row, col));
+                                mPuzzleFile.getCellContents(row, col),
+                                mPuzzleFile.isCircled(row, col));
 
                         int acrossClueIndex = mPuzzleFile.getAcrossClueIndex(row, col);
                         if (acrossClueIndex >= 0) {
@@ -258,7 +199,6 @@ public class PuzzleViewModel extends ViewModel {
                 mAcrossFocus.postValue(!startWithDownClues);
                 mIsSolved.postValue(puzzleFile.isSolved());
                 mTimerInfo.postValue(puzzleFile.getTimerInfo());
-                mDownsOnlyMode.postValue(downsOnlyMode);
 
                 selectFirstCell();
 
@@ -268,6 +208,65 @@ public class PuzzleViewModel extends ViewModel {
             @SuppressLint("StaticFieldLeak")
             @Override
             protected void onPostExecute(Void aVoid) {
+                mDownsOnlyMode.setValue(downsOnlyMode);
+
+                // When across/down focus changes, or the current cell changes, update the currently
+                // selected clue.
+                Observer<Object> observer = o -> {
+                    ClueViewModel oldValue = mCurrentClue.getValue();
+                    CellViewModel currentCell = mCurrentCell.getValue();
+                    Boolean acrossFocus = mAcrossFocus.getValue();
+
+                    Log.i(TAG,
+                            "currentClue update: currentCell=" + currentCell
+                                    + " acrossFocus=" + acrossFocus);
+
+                    if (currentCell == null || acrossFocus == null) {
+                        return;
+                    }
+                    if (acrossFocus) {
+                        if (currentCell.getAcrossClue() != null) {
+                            mCurrentClue.setValue(currentCell.getAcrossClue());
+                        } else if (currentCell.getDownClue() != null) {
+                            // switch directions if this cell only has a down clue
+                            mAcrossFocus.setValue(false);  // should trigger another update
+                        }
+                    } else {
+                        if (currentCell.getDownClue() != null) {
+                            mCurrentClue.setValue(currentCell.getDownClue());
+                        } else if (currentCell.getAcrossClue() != null) {
+                            // switch directions if this cell only has an across clue
+                            mAcrossFocus.setValue(true);  // should trigger another update
+                        }
+                    }
+
+                    ClueViewModel newClue = mCurrentClue.getValue();
+                    if (oldValue != mCurrentClue.getValue()) {
+                        Log.i(TAG, String.format("Selecting clue %d-%s", newClue.getNumber(),
+                                newClue.isAcross() ? "A" : "D"));
+                    }
+                };
+                mCurrentClue.addSource(mAcrossFocus, observer);
+                mCurrentClue.addSource(mCurrentCell, observer);
+
+                // Update the current clue's text based on the current clue and whether we are in
+                // downs-only mode.
+                Observer<Object> clueTextObserver = o -> {
+                    ClueViewModel clue = mCurrentClue.getValue();
+                    if (clue == null) {
+                        return;
+                    }
+                    boolean downsOnlyMode = mDownsOnlyMode.getValue();
+
+                    if (clue.isAcross() && downsOnlyMode) {
+                        mCurrentClueText.setValue("--");
+                    } else {
+                        mCurrentClueText.setValue(clue.getText());
+                    }
+                };
+                mCurrentClueText.addSource(mCurrentClue, clueTextObserver);
+                mCurrentClueText.addSource(mDownsOnlyMode, clueTextObserver);
+
                 // When text changes, trigger updates.
                 for (int row = 0; row < getNumRows(); row++) {
                     for (int col = 0; col < getNumColumns(); col++) {
@@ -278,7 +277,7 @@ public class PuzzleViewModel extends ViewModel {
                         mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
                             mPuzzleFile
                                     .setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
-                                                     contents);
+                                            contents);
                             mIsSolved.setValue(mPuzzleFile.isSolved());
                             mContentsChanged.setValue(0);
                         });
@@ -484,10 +483,10 @@ public class PuzzleViewModel extends ViewModel {
         String oldContents = currentCell.getContents().getValue();
         currentCell.setContents(newContents, usePencil);
         mUndoStack.push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                                   pencil));
+                pencil));
         CellViewModel newCell =
                 getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares, unlessCurrentSquareFilled,
-                            skipFilledSquaresWrap, completedClueNext);
+                        skipFilledSquaresWrap, completedClueNext);
         mCurrentCell.setValue(newCell);
     }
 
@@ -528,7 +527,7 @@ public class PuzzleViewModel extends ViewModel {
             String oldContents = newCell.getContents().getValue();
             newCell.setContents("", false);
             mUndoStack.push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                                       pencil));
+                    pencil));
             mCurrentCell.setValue(newCell);
             mAcrossFocus.setValue(across);
         } else {
@@ -538,7 +537,7 @@ public class PuzzleViewModel extends ViewModel {
             currentCell.setContents("", false);
             mUndoStack
                     .push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                                     pencil));
+                            pencil));
         }
     }
 
@@ -552,8 +551,8 @@ public class PuzzleViewModel extends ViewModel {
 
     public PuzzleInfoViewModel getPuzzleInfoViewModel() {
         return new PuzzleInfoViewModel(getTitle(), getAuthor(), getCopyright(), getNote(),
-                                       mPuzzleFile.getNumClues(), getNumColumns(), getNumRows(),
-                                       mAverageWordLength);
+                mPuzzleFile.getNumClues(), getNumColumns(), getNumRows(),
+                mAverageWordLength);
     }
 
     public File getFile() {

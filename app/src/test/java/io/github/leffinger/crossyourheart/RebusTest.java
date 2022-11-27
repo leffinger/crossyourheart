@@ -17,43 +17,42 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Testing loading of PUZ files.
+ * Testing rebus squares.
  */
 public class RebusTest {
 
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
-    private PuzFile mPuzzleLoader;
 
     @Test
     public void rebusPuzzle() throws IOException {
         InputStream file = RebusTest.class.getResourceAsStream("/3x3_filled.puz");
-        mPuzzleLoader = PuzFile.loadPuzFile(file);
+        PuzFile puzFile = PuzFile.loadPuzFile(file);
 
-        assertEquals("3x3", mPuzzleLoader.getTitle());
-        assertThat(mPuzzleLoader.getSectionNames(), Matchers.containsInAnyOrder("LTIM", "RUSR"));
+        assertEquals("3x3", puzFile.getTitle());
+        assertThat(puzFile.getSectionNames(), Matchers.containsInAnyOrder("LTIM", "RUSR"));
 
-        assertEquals("AA\0BB\0CC\0\0\0\0\0\0\0", mPuzzleLoader.getSectionAsText("RUSR"));
+        assertEquals("AA\0BB\0CC\0\0\0\0\0\0\0", puzFile.getSectionAsText("RUSR"));
 
         // Reading a rebus.
-        assertEquals("AA", mPuzzleLoader.getCellContents(0, 0));
+        assertEquals("AA", puzFile.getCellContents(0, 0));
 
         // Writing a new rebus.
-        mPuzzleLoader.setCellContents(1, 0, "ABC");
-        assertEquals("ABC", mPuzzleLoader.getCellContents(1, 0));
+        puzFile.setCellContents(1, 0, "ABC");
+        assertEquals("ABC", puzFile.getCellContents(1, 0));
 
         // Overwriting a rebus.
-        mPuzzleLoader.setCellContents(0, 0, "");
-        assertEquals("", mPuzzleLoader.getCellContents(0, 0));
-        mPuzzleLoader.setCellContents(0, 1, "D");
-        assertEquals("D", mPuzzleLoader.getCellContents(0, 1));
-        mPuzzleLoader.setCellContents(0, 2, "XYZ");
-        assertEquals("XYZ", mPuzzleLoader.getCellContents(0, 2));
+        puzFile.setCellContents(0, 0, "");
+        assertEquals("", puzFile.getCellContents(0, 0));
+        puzFile.setCellContents(0, 1, "D");
+        assertEquals("D", puzFile.getCellContents(0, 1));
+        puzFile.setCellContents(0, 2, "XYZ");
+        assertEquals("XYZ", puzFile.getCellContents(0, 2));
 
         // Write out to a file.
         File savedFile = mTemporaryFolder.newFile();
         try (FileOutputStream outputStream = new FileOutputStream(savedFile)) {
-            mPuzzleLoader.savePuzzleFile(outputStream);
+            puzFile.savePuzzleFile(outputStream);
         }
         PuzFile savedPuzzle;
         try (FileInputStream inputStream = new FileInputStream(savedFile)) {
