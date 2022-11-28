@@ -18,6 +18,7 @@ import androidx.core.splashscreen.SplashScreen;
 import androidx.databinding.DataBindingUtil;
 import androidx.preference.PreferenceManager;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -86,9 +87,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
 
             String date = FORMAT.format(Calendar.getInstance().getTime());
             String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
-            try (FileOutputStream outputStream = new FileOutputStream(
-                    IOUtil.getPuzzleFile(context, filename))) {
-                puzzleLoader.savePuzzleFile(outputStream);
+            File puzzleFile = IOUtil.getPuzzleFile(context, filename);
+            try {
+                puzzleLoader.savePuzzleFile(puzzleFile);
                 Puzzle puzzle =
                         new Puzzle(filename, puzzleLoader.getTitle(), puzzleLoader.getAuthor(),
                                    puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false,

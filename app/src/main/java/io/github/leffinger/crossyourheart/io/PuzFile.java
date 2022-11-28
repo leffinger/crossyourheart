@@ -499,7 +499,7 @@ public class PuzFile extends AbstractPuzzleFile {
     }
 
     @Override
-    public void savePuzzleFile(OutputStream outputStream) throws IOException {
+    protected void savePuzzleFile(OutputStream outputStream) throws IOException {
         LittleEndianDataOutputStream dataOutputStream =
                 new LittleEndianDataOutputStream(outputStream);
 

@@ -51,9 +51,7 @@ public class RebusTest {
 
         // Write out to a file.
         File savedFile = mTemporaryFolder.newFile();
-        try (FileOutputStream outputStream = new FileOutputStream(savedFile)) {
-            puzFile.savePuzzleFile(outputStream);
-        }
+        puzFile.savePuzzleFile(savedFile);
         PuzFile savedPuzzle;
         try (FileInputStream inputStream = new FileInputStream(savedFile)) {
             savedPuzzle = PuzFile.verifyPuzFile(inputStream);

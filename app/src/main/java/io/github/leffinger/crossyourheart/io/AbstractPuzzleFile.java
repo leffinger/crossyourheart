@@ -1,5 +1,9 @@
 package io.github.leffinger.crossyourheart.io;
 
+import com.google.common.io.Files;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -28,7 +32,15 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract int getWidth();
 
-    public abstract void savePuzzleFile(OutputStream outputStream) throws IOException;
+    public void savePuzzleFile(File file) throws IOException {
+        File backupFile = new File(file.getAbsolutePath() + ".bk");
+        try (FileOutputStream outputStream = new FileOutputStream(backupFile)) {
+            savePuzzleFile(outputStream);
+        }
+        Files.move(backupFile, file);
+    }
+
+    protected abstract void savePuzzleFile(OutputStream outputStream) throws IOException;
 
     public abstract void setCellContents(int row, int col, String contents);
 

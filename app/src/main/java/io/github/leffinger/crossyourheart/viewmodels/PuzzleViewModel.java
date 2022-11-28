@@ -544,9 +544,7 @@ public class PuzzleViewModel extends ViewModel {
     public void saveToFile() throws IOException {
         assert mInitialized.get();
         mPuzzleFile.setTimerInfo(mTimerInfo.getValue());
-        try (FileOutputStream outputStream = new FileOutputStream(mFile)) {
-            mPuzzleFile.savePuzzleFile(outputStream);
-        }
+        mPuzzleFile.savePuzzleFile(mFile);
     }
 
     public PuzzleInfoViewModel getPuzzleInfoViewModel() {

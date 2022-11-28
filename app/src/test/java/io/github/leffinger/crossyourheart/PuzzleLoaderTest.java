@@ -122,9 +122,7 @@ public class PuzzleLoaderTest {
         mPuzzleLoader = PuzFile.loadPuzFile(file);
         if (mSerializeFirst) {
             File savedFile = mTemporaryFolder.newFile();
-            try (FileOutputStream outputStream = new FileOutputStream(savedFile)) {
-                mPuzzleLoader.savePuzzleFile(outputStream);
-            }
+            mPuzzleLoader.savePuzzleFile(savedFile);
             try (FileInputStream inputStream = new FileInputStream(savedFile)) {
                 mPuzzleLoader = PuzFile.verifyPuzFile(inputStream);
             }
@@ -224,9 +222,7 @@ public class PuzzleLoaderTest {
     @Test
     public void verifySavedFile() throws IOException {
         File savedFile = mTemporaryFolder.newFile();
-        try (FileOutputStream outputStream = new FileOutputStream(savedFile)) {
-            mPuzzleLoader.savePuzzleFile(outputStream);
-        }
+        mPuzzleLoader.savePuzzleFile(savedFile);
         PuzFile savedPuzzle;
         try (FileInputStream inputStream = new FileInputStream(savedFile)) {
             savedPuzzle = PuzFile.verifyPuzFile(inputStream);
