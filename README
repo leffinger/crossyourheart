@@ -1,0 +1,7 @@
+Welcome! This is the source code for Cross Your Heart, an Android app for solving crossword puzzles.
+
+If you are interested in contributing, the code is mostly written in Java. The issue tracker has some ideas for initial projects. Key files include PuzzleViewModel, PuzzleFragment, and PuzzleListFragment.
+
+The app makes heavy use of ViewModels and LiveData. For example, PuzzleViewModel has a MutableLiveData that tracks the currently selected cell, and acts as a source for the current clue text, which is stored in a MediatorLiveData object.
+
+We also use a simple Room database to index puzzle files and store information that can't be stored in PUZ format (e.g., pen/pencil).
