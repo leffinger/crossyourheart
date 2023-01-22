@@ -2,6 +2,7 @@ package io.github.leffinger.crossyourheart.activities;
 
 import static android.app.Activity.RESULT_OK;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Context;
@@ -9,6 +10,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
@@ -23,6 +26,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentResultListener;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,6 +42,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.AlertProgressBinding;
@@ -54,16 +60,24 @@ import io.github.leffinger.crossyourheart.room.Puzzle;
 public class PuzzleListFragment extends Fragment {
     private static final String TAG = "PuzzleListFragment";
     private static final int REQUEST_CODE_OPEN_FILE = 0;
+    static final String REQUEST_KEY_ADD_PUZZLES = "addPuzzles";
 
-    private List<Puzzle> mPuzzles;
+    private volatile List<Puzzle> mPuzzles;
     private PuzzleFileAdapter mAdapter;
     private Database mDatabase;
+    private RecyclerView.LayoutManager mLayoutManager;
 
     public static PuzzleListFragment newInstance() {
         PuzzleListFragment fragment = new PuzzleListFragment();
         Bundle args = new Bundle();
         fragment.setArguments(args);
         return fragment;
+    }
+
+    public static void setNewPuzzlesFragmentResult(FragmentManager fragmentManager, int numPuzzles) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("num_puzzles", numPuzzles);
+        fragmentManager.setFragmentResult(PuzzleListFragment.REQUEST_KEY_ADD_PUZZLES, bundle);
     }
 
     @Override
@@ -73,24 +87,80 @@ public class PuzzleListFragment extends Fragment {
 
         mPuzzles = new ArrayList<>();
         mAdapter = new PuzzleFileAdapter();
+        mLayoutManager = new LinearLayoutManager(getContext());
 
         // Create or load database.
         mDatabase = Database.getInstance(getActivity().getApplicationContext());
 
-        fetchPuzzleFiles();
-    }
-
-    private void fetchPuzzleFiles() {
-        // Fetch puzzles in a background task.
-        new FetchPuzzleFilesTask(new FragmentReference(this)).execute();
+        // Register a result listener for when new puzzles are added.
+        getParentFragmentManager().setFragmentResultListener(REQUEST_KEY_ADD_PUZZLES, this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
+                ArrayList<Puzzle> puzzles = (ArrayList<Puzzle>) result.getSerializable("puzzles");
+                fetchNewPuzzleFiles(result.getInt("num_puzzles"));
+            }
+        });
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        FragmentPuzzleListBinding binding = DataBindingUtil
-                .inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
-        binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
+    public void onResume() {
+        super.onResume();
+        fetchPuzzleFiles();
+        checkIndexAndOfferToReindex();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void fetchPuzzleFiles() {
+        // Fetch puzzles in a background task.
+        Handler handler = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            mPuzzles = mDatabase.puzzleDao().getAll();
+            handler.post(() -> {
+                mAdapter.notifyDataSetChanged();
+            });
+        });
+    }
+
+    private void fetchNewPuzzleFiles(int numPuzzles) {
+        Handler handler = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            mPuzzles.addAll(0, mDatabase.puzzleDao().getFirstN(numPuzzles));
+            handler.post(() -> {
+                mAdapter.notifyItemRangeInserted(0, numPuzzles);
+                mLayoutManager.scrollToPosition(0);
+            });
+        });
+    }
+
+    private void checkIndexAndOfferToReindex() {
+        Handler handler = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Context context = getContext();
+            if (context == null) {
+                Log.i(TAG, "Fragment detached; not checking index");
+            }
+
+            Set<String> dbFilenames = new HashSet<>(mDatabase.puzzleDao().getFiles());
+
+            File puzzleDir = IOUtil.getPuzzleDir(context);
+            String[] files = puzzleDir.list();
+            Set<String> dirFilenames = new HashSet<>(Arrays.asList(files));
+
+            if (!dbFilenames.equals(dirFilenames)) {
+                AlertDialog.Builder dialog = new AlertDialog.Builder(context).setTitle(R.string.reindex_alert).setMessage(R.string.reindex_safe).setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    reindexFiles();
+                }).setNegativeButton(android.R.string.cancel, null).setCancelable(true);
+                handler.post(() -> {
+                    dialog.create().show();
+                });
+            }
+        });
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        FragmentPuzzleListBinding binding = DataBindingUtil.inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
+        binding.list.setLayoutManager(mLayoutManager);
         binding.list.setAdapter(mAdapter);
         return binding.getRoot();
     }
@@ -116,10 +186,6 @@ public class PuzzleListFragment extends Fragment {
             ((Callbacks) getActivity()).onDownloadSelected();
             return true;
         }
-        if (itemId == R.id.delete_bad_files) {
-            deleteBadFiles();
-            return true;
-        }
         if (itemId == R.id.settings) {
             startActivity(SettingsActivity.newIntent(getContext(), R.xml.root_preferences));
             return true;
@@ -143,12 +209,101 @@ public class PuzzleListFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
-    private void reindexFiles() {
-        new ReindexFilesTask(new FragmentReference(this)).execute();
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "Closing database");
+        mDatabase.close();
     }
 
-    private void deleteBadFiles() {
-        new DeleteBadFilesTask(new FragmentReference(this)).execute();
+    private void reindexFiles() {
+        AlertProgressBinding progressBinding = DataBindingUtil.inflate(getLayoutInflater(), R.layout.alert_progress, null, false);
+        AlertDialog progressDialog = new AlertDialog.Builder(getContext()).setView(progressBinding.getRoot()).setCancelable(false).setTitle("Reindexing files...").show();
+        progressDialog.show();
+
+        Handler handler = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Context context = getContext();
+            if (context == null) {
+                Log.i(TAG, "Fragment detached, skipping reindexFiles()");
+                return;
+            }
+
+            // Current list of files (existing files will be updated; missing files will be
+            // deleted).
+            Set<String> currentFiles = new HashSet<>(mDatabase.puzzleDao().getFiles());
+            Set<String> foundFiles = new HashSet<>();
+
+            // Scan and update puzzle files.
+            File puzzleDir = IOUtil.getPuzzleDir(context);
+            File[] files = puzzleDir.listFiles();
+            progressBinding.progressBar.setMax(files.length);
+            List<File> corruptFiles = new ArrayList<>();
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                foundFiles.add(file.getName());
+                try (FileInputStream inputStream = new FileInputStream(file)) {
+                    PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
+                    mDatabase.puzzleDao().insert(new Puzzle(file.getName(), puzzleLoader.getTitle(), puzzleLoader.getAuthor(), puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false, !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState(), false));
+                    mDatabase.puzFileMetadataDao().insert(new PuzFileMetadata(file.getName(), puzzleLoader.getHeaderChecksum()));
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
+                    corruptFiles.add(file);
+                }
+                progressBinding.progressBar.setProgress(i + 1);
+            }
+
+            // Delete DB rows for puzzles that were in the DB but not on disk.
+            currentFiles.removeAll(foundFiles);
+            Log.i(TAG, "Removing " + currentFiles.size() + " files from DB");
+            List<Puzzle> toBeDeleted = new ArrayList<>();
+            for (String missingFile : currentFiles) {
+                toBeDeleted.add(new Puzzle(missingFile));
+            }
+            mDatabase.puzzleDao().deletePuzzles(toBeDeleted);
+            mPuzzles = mDatabase.puzzleDao().getAll();
+            AlertDialog.Builder alertDialogBuilder;
+            if (!corruptFiles.isEmpty()) {
+                alertDialogBuilder = new AlertDialog.Builder(context).setMessage(getString(R.string.delete_corrupted_files_prompt, corruptFiles.size())).setPositiveButton(android.R.string.yes, (dialog, which) -> {
+                    deleteCorruptedFiles(corruptFiles);
+                }).setNegativeButton(android.R.string.no, null);
+            } else {
+                alertDialogBuilder = new AlertDialog.Builder(context).setMessage(context.getString(R.string.reindexed_files, mPuzzles.size())).setPositiveButton(android.R.string.ok, null);
+            }
+            handler.post(() -> {
+                mAdapter.notifyDataSetChanged();
+                progressDialog.dismiss();
+                alertDialogBuilder.show();
+            });
+        });
+    }
+
+    private void deleteCorruptedFiles(List<File> corruptFiles) {
+        Handler handler = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Context context = getContext();
+            if (context == null) {
+                Log.w(TAG, "Context unavailable, bailing");
+            }
+            boolean success = true;
+            for (File file : corruptFiles) {
+                if (!file.delete()) {
+                    success = false;
+                }
+            }
+            if (success) {
+                handler.post(() -> {
+                    new AlertDialog.Builder(context).setMessage(getString(R.string.deleted_corrupted_files, corruptFiles.size())).setPositiveButton(android.R.string.ok, null).show();
+                });
+            } else {
+                handler.post(() -> {
+                    new AlertDialog.Builder(context)
+                            .setMessage("Something went wrong :(")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                });
+            }
+        });
     }
 
     @Override
@@ -204,22 +359,6 @@ public class PuzzleListFragment extends Fragment {
             return fragment.mDatabase;
         }
 
-        public void setPuzzleList(List<Puzzle> puzzleList) throws FragmentDetachedException {
-            PuzzleListFragment fragment = mFragment.get();
-            if (fragment == null) {
-                throw new FragmentDetachedException();
-            }
-            fragment.mPuzzles = puzzleList;
-        }
-
-        public void notifyPuzzleListChanged() throws FragmentDetachedException {
-            PuzzleListFragment fragment = mFragment.get();
-            if (fragment == null) {
-                throw new FragmentDetachedException();
-            }
-            fragment.mAdapter.notifyDataSetChanged();
-        }
-
         public @NonNull
         Context getContext() throws FragmentDetachedException {
             PuzzleListFragment fragment = mFragment.get();
@@ -243,214 +382,6 @@ public class PuzzleListFragment extends Fragment {
         }
     }
 
-    private static class FetchPuzzleFilesTask extends AsyncTask<Void, Void, Void> {
-        private final FragmentReference mFragmentReference;
-
-        private boolean fileMismatch = false;
-
-        private FetchPuzzleFilesTask(FragmentReference fragmentReference) {
-            mFragmentReference = fragmentReference;
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            try {
-                List<Puzzle> puzzles = mFragmentReference.getDatabase().puzzleDao().getAll();
-                mFragmentReference.setPuzzleList(puzzles);
-
-                Set<String> dbFiles = new HashSet<>();
-                for (Puzzle puzzle : puzzles) {
-                    dbFiles.add(puzzle.filename);
-                }
-
-                File puzzleDir = IOUtil.getPuzzleDir(mFragmentReference.getContext());
-                String[] files = puzzleDir.list();
-                Set<String> dirFiles = new HashSet<>();
-                dirFiles.addAll(Arrays.asList(files));
-
-                fileMismatch = !dbFiles.equals(dirFiles);
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached, unable to complete task", e);
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            try {
-                mFragmentReference.notifyPuzzleListChanged();
-                if (fileMismatch) {
-                    PuzzleListFragment fragment = mFragmentReference.getFragment();
-                    Context context = mFragmentReference.getContext();
-                    new AlertDialog.Builder(context).setTitle(R.string.reindex_alert)
-                            .setMessage(R.string.reindex_safe)
-                            .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
-                                fragment.reindexFiles();
-                            }).setNegativeButton(android.R.string.cancel, null).setCancelable(true)
-                            .create().show();
-                }
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached, unable to complete task", e);
-            }
-        }
-    }
-
-    private static class DeleteBadFilesTask extends AsyncTask<Void, Void, List<File>> {
-
-        private final FragmentReference mFragmentReference;
-
-        public DeleteBadFilesTask(FragmentReference fragmentReference) {
-            super();
-            mFragmentReference = fragmentReference;
-        }
-
-        @Override
-        protected List<File> doInBackground(Void... voids) {
-            try {
-                File puzzleDir = IOUtil.getPuzzleDir(mFragmentReference.getContext());
-                File[] files = puzzleDir.listFiles();
-                List<File> badFiles = new ArrayList<>();
-                for (File file : files) {
-                    try (FileInputStream inputStream = new FileInputStream(file)) {
-                        PuzFile.loadPuzFile(inputStream);
-                    } catch (IOException e) {
-                        badFiles.add(file);
-                    }
-                }
-                return badFiles;
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached, unable to complete task", e);
-                return ImmutableList.of();
-            }
-        }
-
-        @Override
-        protected void onPostExecute(List<File> files) {
-            try {
-                Context context = mFragmentReference.getContext();
-                if (files.isEmpty()) {
-                    new AlertDialog.Builder(context).setMessage("No corrupted files found")
-                            .setPositiveButton(android.R.string.ok, null).create().show();
-                } else {
-                    AlertDialog alertDialog = new AlertDialog.Builder(context)
-                            .setMessage("Delete " + files.size() + " files?")
-                            .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
-                                for (File file : files) {
-                                    file.delete();
-                                }
-                            }).setCancelable(true).create();
-                    alertDialog.show();
-                }
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached, unable to complete task", e);
-            }
-        }
-    }
-
-    private static class ReindexFilesTask extends AsyncTask<Void, Integer, Void> {
-        private final FragmentReference mFragmentReference;
-        private AlertDialog mAlertDialog;
-        private AlertProgressBinding mAlertProgressBinding;
-
-        public ReindexFilesTask(FragmentReference fragmentReference) {
-            mFragmentReference = fragmentReference;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            try {
-                mAlertProgressBinding = DataBindingUtil
-                        .inflate(mFragmentReference.getFragment().getLayoutInflater(),
-                                 R.layout.alert_progress, null, false);
-                mAlertDialog = new AlertDialog.Builder(mFragmentReference.getContext())
-                        .setView(mAlertProgressBinding.getRoot()).setCancelable(false)
-                        .setTitle("Reindexing files...").show();
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached", e);
-            }
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            mAlertProgressBinding.progressBar.setProgress(values[0]);
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            if (mAlertProgressBinding == null) {
-                return null;
-            }
-
-            try {
-                Database database = mFragmentReference.getDatabase();
-                Context context = mFragmentReference.getContext();
-
-                // Current list of files (existing files will be updated; missing files will be
-                // deleted).
-                Set<String> currentFiles = new HashSet<>(database.puzzleDao().getFiles());
-                Set<String> foundFiles = new HashSet<>();
-
-                // Scan and update puzzle files.
-                File puzzleDir = IOUtil.getPuzzleDir(context);
-                File[] files = puzzleDir.listFiles();
-                mAlertProgressBinding.progressBar.setMax(files.length);
-                for (int i = 0; i < files.length; i++) {
-                    File file = files[i];
-                    foundFiles.add(file.getName());
-                    try (FileInputStream inputStream = new FileInputStream(file)) {
-                        PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
-                        database.puzzleDao()
-                                .insert(new Puzzle(file.getName(), puzzleLoader.getTitle(),
-                                                   puzzleLoader.getAuthor(),
-                                                   puzzleLoader.getCopyright(),
-                                                   puzzleLoader.isSolved(), false,
-                                                   !puzzleLoader.isEmpty(),
-                                                   puzzleLoader.getScrambleState(), false));
-                        database.puzFileMetadataDao().insert(new PuzFileMetadata(file.getName(),
-                                                                                 puzzleLoader
-                                                                                         .getHeaderChecksum()));
-                    } catch (IOException e) {
-                        Log.e(TAG, "Failed to load puzzle file " + file.getName(), e);
-                        e.printStackTrace();
-                    }
-                    publishProgress(i + 1);
-                }
-
-                // Delete files that were in the DB but not on disk.
-                currentFiles.removeAll(foundFiles);
-                Log.i(TAG, "Removing " + foundFiles.size() + " files from DB");
-                List<Puzzle> toBeDeleted = new ArrayList<>();
-                for (String missingFile : currentFiles) {
-                    toBeDeleted.add(new Puzzle(missingFile));
-                }
-                database.puzzleDao().deletePuzzles(toBeDeleted);
-
-                mFragmentReference.setPuzzleList(database.puzzleDao().getAll());
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached", e);
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            try {
-                PuzzleListFragment fragment = mFragmentReference.getFragment();
-                mFragmentReference.notifyPuzzleListChanged();
-                Toast.makeText(mFragmentReference.getContext(), mFragmentReference.getContext()
-                                       .getString(R.string.reindexed_files,
-                                                  fragment.mPuzzles.size()),
-                               Toast.LENGTH_SHORT).show();
-            } catch (FragmentDetachedException e) {
-                Log.w(TAG, "Fragment detached", e);
-            }
-
-            if (mAlertDialog != null) {
-                mAlertDialog.dismiss();
-            }
-        }
-    }
-
     private class PuzzleFileHolder extends RecyclerView.ViewHolder {
         private final FragmentPuzzleFileBinding mBinding;
 
@@ -470,15 +401,12 @@ public class PuzzleListFragment extends Fragment {
 
             // Long-clicking the puzzle file brings up an option to delete the file.
             mBinding.getRoot().setOnLongClickListener(view -> {
-                AlertDialog alertDialog =
-                        new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle)
-                                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
-                                    int index = getAdapterPosition();
-                                    mPuzzles.remove(index);
-                                    mAdapter.notifyItemRemoved(index);
-                                    deletePuzzle(mBinding.getPuzzle().getFilename());
-                                }).setNegativeButton(android.R.string.cancel, null)
-                                .setCancelable(true).create();
+                AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setMessage(R.string.delete_puzzle).setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    int index = getAdapterPosition();
+                    mPuzzles.remove(index);
+                    mAdapter.notifyItemRemoved(index);
+                    deletePuzzle(mBinding.getPuzzle().getFilename());
+                }).setNegativeButton(android.R.string.cancel, null).setCancelable(true).create();
                 alertDialog.show();
                 return true;
             });
@@ -496,8 +424,7 @@ public class PuzzleListFragment extends Fragment {
         @Override
         public PuzzleFileHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
-            FragmentPuzzleFileBinding binding =
-                    DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle_file, parent, false);
+            FragmentPuzzleFileBinding binding = DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle_file, parent, false);
             return new PuzzleFileHolder(binding);
         }
 

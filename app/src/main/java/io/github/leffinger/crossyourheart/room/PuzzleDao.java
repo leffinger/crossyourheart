@@ -14,6 +14,9 @@ public interface PuzzleDao {
     @Query("SELECT * FROM puzzle ORDER BY filename DESC")
     List<Puzzle> getAll();
 
+    @Query("SELECT * FROM puzzle ORDER BY filename DESC LIMIT :n")
+    List<Puzzle> getFirstN(int n);
+
     @Query("SELECT filename FROM puzzle")
     List<String> getFiles();
 
