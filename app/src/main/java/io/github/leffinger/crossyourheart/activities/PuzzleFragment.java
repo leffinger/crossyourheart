@@ -148,13 +148,6 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mTypeface = Typeface.create(
                 mPreferences.getString(getString(R.string.preference_font_selection),
                         getString(R.string.default_font_family)), Typeface.NORMAL);
-        mPreferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
-            if (key.equals(getString(R.string.preference_font_selection))) {
-                mTypeface = Typeface.create(
-                        sharedPreferences.getString(getString(R.string.preference_font_selection),
-                                getString(R.string.default_font_family)), Typeface.NORMAL);
-            }
-        });
 
         boolean startWithDownClues =
                 mPreferences.getBoolean(getString(R.string.preference_start_with_down_clues),
@@ -391,8 +384,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                         mGridLayoutManager.findFirstCompletelyVisibleItemPosition();
                 int lastVisibleItemPosition =
                         mGridLayoutManager.findLastCompletelyVisibleItemPosition();
-                int position =
-                        cellViewModel.getRow() * mPuzzleViewModel.getNumColumns() + cellViewModel.getCol();
+                int position = cellViewModel.getRow() * mPuzzleViewModel.getNumColumns() +
+                        cellViewModel.getCol();
                 if (position < firstVisiblePosition || position > lastVisibleItemPosition) {
                     mGridLayoutManager.scrollToPositionWithOffset(position, 2);
                 }
@@ -427,15 +420,22 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mFragmentPuzzleBinding.keyboard.setOnKeyboardActionListener(new PuzzleKeyboardListener());
 
         // Persist changes in content to disk.
-        assert !mPuzzleViewModel.getContentsChanged().hasActiveObservers();
-        mPuzzleViewModel.getContentsChanged().observe(getActivity(), i -> mExecutorService.submit(() -> {
-            try {
-                mPuzzleViewModel.saveToFile();
-            } catch (IOException e) {
-                Log.e(TAG, String.format("Saving puzzle file %s failed",
-                        mPuzzleViewModel.getFile().getName()), e);
+        mPuzzleViewModel.getContentsChanged()
+                        .observe(getActivity(), unused -> mExecutorService.submit(() -> {
+                            try {
+                                mPuzzleViewModel.saveToFile();
+                            } catch (IOException e) {
+                                Log.e(TAG, String.format("Saving puzzle file %s failed",
+                                        mPuzzleViewModel.getFile().getName()), e);
+                            }
+                        }));
+
+        // Autocheck, if enabled.
+        mPuzzleViewModel.getContentsChanged().observe(PuzzleFragment.this, cellViewModel -> {
+            if (mPreferences.getBoolean(getString(R.string.preference_autocheck_mode), false)) {
+                cellViewModel.checkContents();
             }
-        }));
+        });
 
         // If the puzzle was not solved to begin with, display a message when it is solved.
         // This also handles situations where the puzzle goes from solved to unsolved, e.g. reset.
@@ -472,10 +472,9 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         });
         mPuzzleViewModel.isSolved()
                         .observe(getViewLifecycleOwner(), solved -> AsyncTask.execute(
-                         () -> mDatabase.puzzleDao()
-                                        .updateSolved(
-                                                new PuzzleDao.SolvedUpdate(mFilename.getName(),
-                                                        solved))));
+                                () -> mDatabase.puzzleDao()
+                                               .updateSolved(new PuzzleDao.SolvedUpdate(
+                                                       mFilename.getName(), solved))));
 
         // Restart the timer when the puzzle is reset.
         mPuzzleViewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {

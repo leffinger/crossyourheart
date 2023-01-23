@@ -79,10 +79,11 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
+            android:id="@+id/incorrect_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:src="@drawable/cell_incorrect"
-            android:visibility="@{cellViewModel.isMarkedIncorrect() ? View.VISIBLE : View.INVISIBLE}"
+            android:visibility="@{cellViewModel.markedIncorrect ? View.VISIBLE : View.INVISIBLE}"
             app:layout_constraintBottom_toBottomOf="@id/cell"
             app:layout_constraintEnd_toEndOf="@id/cell"
             app:layout_constraintStart_toStartOf="@id/cell"

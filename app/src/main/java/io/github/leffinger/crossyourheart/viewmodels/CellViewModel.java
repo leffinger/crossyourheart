@@ -1,13 +1,9 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
-import android.util.Log;
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
-import androidx.lifecycle.Transformations;
-
 
 public class CellViewModel {
     private static final String TAG = "CellViewModel";
@@ -131,11 +127,12 @@ public class CellViewModel {
         if (mMarkedCorrect.getValue() || mRevealed.getValue()) {
             return oldContents;
         }
-
-        mContents.setValue(newContents);
         mPencil.setValue(pencil);
         mMarkedIncorrect.setValue(false);
         mRevealed.setValue(false);
+
+        // this triggers updates, e.g. autocheck, so do it last
+        mContents.setValue(newContents);
         return oldContents;
     }
 

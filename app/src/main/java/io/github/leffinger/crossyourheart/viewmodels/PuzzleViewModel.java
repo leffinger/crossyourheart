@@ -13,7 +13,6 @@ import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
@@ -42,7 +41,7 @@ public class PuzzleViewModel extends ViewModel {
     /**
      * Listens for changes to cell contents.
      */
-    private final MediatorLiveData<Integer> mContentsChanged = new MediatorLiveData<>();
+    private final MediatorLiveData<CellViewModel> mContentsChanged = new MediatorLiveData<>();
     /**
      * History of actions. Enables "undo" functionality.
      */
@@ -279,7 +278,7 @@ public class PuzzleViewModel extends ViewModel {
                                     .setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
                                             contents);
                             mIsSolved.setValue(mPuzzleFile.isSolved());
-                            mContentsChanged.setValue(0);
+                            mContentsChanged.setValue(cellViewModel);
                         });
                     }
                 }
@@ -647,7 +646,7 @@ public class PuzzleViewModel extends ViewModel {
         return mCurrentCell;
     }
 
-    public LiveData<Integer> getContentsChanged() {
+    public LiveData<CellViewModel> getContentsChanged() {
         return mContentsChanged;
     }
 
