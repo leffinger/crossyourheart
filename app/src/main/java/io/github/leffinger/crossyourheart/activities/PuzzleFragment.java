@@ -215,6 +215,11 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
             return;
         }
 
+        // Autocheck the grid, if enabled.
+        if (mPreferences.getBoolean(getString(R.string.preference_autocheck_mode), false)) {
+            mPuzzleViewModel.checkPuzzle();
+        }
+
         // Wait for the puzzle file's TimerInfo to be initialized before starting the timer (else
         // we could overwrite the existing value).
         LiveData<TimerInfo> timerInfoLiveData = mPuzzleViewModel.getTimerInfo();
@@ -433,7 +438,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         // Autocheck, if enabled.
         mPuzzleViewModel.getContentsChanged().observe(PuzzleFragment.this, cellViewModel -> {
             if (mPreferences.getBoolean(getString(R.string.preference_autocheck_mode), false)) {
-                cellViewModel.checkContents();
+                mPuzzleViewModel.checkCell(cellViewModel.getRow(), cellViewModel.getCol());
             }
         });
 

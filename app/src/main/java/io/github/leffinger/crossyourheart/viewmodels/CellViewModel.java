@@ -124,11 +124,12 @@ public class CellViewModel {
 
     public String setContents(String newContents, boolean pencil) {
         String oldContents = mContents.getValue();
-        if (mMarkedCorrect.getValue() || mRevealed.getValue()) {
+        if (mRevealed.getValue()) {
             return oldContents;
         }
         mPencil.setValue(pencil);
         mMarkedIncorrect.setValue(false);
+        mMarkedCorrect.setValue(false);
         mRevealed.setValue(false);
 
         // this triggers updates, e.g. autocheck, so do it last

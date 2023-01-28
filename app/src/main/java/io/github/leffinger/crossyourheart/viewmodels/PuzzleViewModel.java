@@ -216,9 +216,8 @@ public class PuzzleViewModel extends ViewModel {
                     CellViewModel currentCell = mCurrentCell.getValue();
                     Boolean acrossFocus = mAcrossFocus.getValue();
 
-                    Log.i(TAG,
-                            "currentClue update: currentCell=" + currentCell
-                                    + " acrossFocus=" + acrossFocus);
+                    Log.i(TAG, "currentClue update: currentCell=" + currentCell + " acrossFocus=" +
+                            acrossFocus);
 
                     if (currentCell == null || acrossFocus == null) {
                         return;
@@ -274,9 +273,8 @@ public class PuzzleViewModel extends ViewModel {
                             continue;
                         }
                         mContentsChanged.addSource(cellViewModel.getContents(), contents -> {
-                            mPuzzleFile
-                                    .setCellContents(cellViewModel.getRow(), cellViewModel.getCol(),
-                                            contents);
+                            mPuzzleFile.setCellContents(cellViewModel.getRow(),
+                                    cellViewModel.getCol(), contents);
                             mIsSolved.setValue(mPuzzleFile.isSolved());
                             mContentsChanged.setValue(cellViewModel);
                         });
@@ -481,11 +479,11 @@ public class PuzzleViewModel extends ViewModel {
         boolean pencil = currentCell.getPencil().getValue();
         String oldContents = currentCell.getContents().getValue();
         currentCell.setContents(newContents, usePencil);
-        mUndoStack.push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                pencil));
+        mUndoStack.push(
+                new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(), pencil));
         CellViewModel newCell =
-                getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares, unlessCurrentSquareFilled,
-                        skipFilledSquaresWrap, completedClueNext);
+                getNextCell(!oldContents.isEmpty(), skipFilledClues, skipFilledSquares,
+                        unlessCurrentSquareFilled, skipFilledSquaresWrap, completedClueNext);
         mCurrentCell.setValue(newCell);
     }
 
@@ -525,8 +523,8 @@ public class PuzzleViewModel extends ViewModel {
             boolean pencil = newCell.getPencil().getValue();
             String oldContents = newCell.getContents().getValue();
             newCell.setContents("", false);
-            mUndoStack.push(new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(),
-                    pencil));
+            mUndoStack.push(
+                    new Action(newCell, currentCell, oldContents, mAcrossFocus.getValue(), pencil));
             mCurrentCell.setValue(newCell);
             mAcrossFocus.setValue(across);
         } else {
@@ -534,8 +532,8 @@ public class PuzzleViewModel extends ViewModel {
             boolean pencil = currentCell.getPencil().getValue();
             String oldContents = currentCell.getContents().getValue();
             currentCell.setContents("", false);
-            mUndoStack
-                    .push(new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
+            mUndoStack.push(
+                    new Action(currentCell, currentCell, oldContents, mAcrossFocus.getValue(),
                             pencil));
         }
     }
@@ -548,8 +546,7 @@ public class PuzzleViewModel extends ViewModel {
 
     public PuzzleInfoViewModel getPuzzleInfoViewModel() {
         return new PuzzleInfoViewModel(getTitle(), getAuthor(), getCopyright(), getNote(),
-                mPuzzleFile.getNumClues(), getNumColumns(), getNumRows(),
-                mAverageWordLength);
+                mPuzzleFile.getNumClues(), getNumColumns(), getNumRows(), mAverageWordLength);
     }
 
     public File getFile() {
@@ -581,10 +578,20 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void checkCurrentCell() {
+        checkCell(mCurrentCell.getValue());
+    }
+
+    public void checkCell(int row, int col) {
+        checkCell(mGrid[row][col]);
+    }
+
+    private void checkCell(CellViewModel cell) {
         if (!isCheckable()) {
             return;
         }
-        mCurrentCell.getValue().checkContents();
+        if (cell != null) {
+            cell.checkContents();
+        }
     }
 
     public void checkCurrentClue() {
