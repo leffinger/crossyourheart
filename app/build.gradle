@@ -9,8 +9,8 @@ android {
         applicationId "io.github.leffinger.crossyourheart"
         minSdkVersion 21
         targetSdkVersion 33
-        versionCode 7
-        versionName "1.0.5rc2"
+        versionCode 8
+        versionName "1.0.5rc3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
