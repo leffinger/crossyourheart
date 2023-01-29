@@ -23,6 +23,12 @@
     <group android:id="@+id/check_items">
 
         <item
+            android:id="@+id/autocheck_mode"
+            android:title="@string/autocheck_mode"
+            android:checkable="true"
+            app:showAsAction="ifRoom" />
+
+        <item
             android:id="@+id/check_submenu"
             android:title="@string/check_submenu">
             <menu>

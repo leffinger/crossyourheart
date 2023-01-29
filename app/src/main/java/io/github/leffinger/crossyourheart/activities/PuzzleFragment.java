@@ -68,18 +68,20 @@ import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
  * Puzzle-solving activity.
  */
 public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleObserver {
+    private static final String TAG = "PuzzleFragment";
     // Instance state arguments.
     public static final String ARG_FILENAME = "filename";
     public static final String ARG_PUZZLE = "puzzle";
-    private static final String TAG = "PuzzleFragment";
-    // Activity request codes.
-    private static final int REQUEST_CODE_REBUS_ENTRY = 0;
     private static final String ARG_USE_PENCIL = "usePencil";
     private static final String ARG_DOWNS_ONLY_MODE = "downsOnlyMode";
+    private static final String ARG_AUTOCHECK_MODE = "autocheckMode";
+    // Activity request codes.
+    private static final int REQUEST_CODE_REBUS_ENTRY = 0;
     // Used to write puzzle file changes to disk in the background.
     private final ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
 
     private boolean mInitialDownsOnlyMode;
+    private boolean mAutocheckMode;
 
     // View and model state.
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
@@ -154,6 +156,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                         false);
         mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
         mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
+        mAutocheckMode = bundle.getBoolean(ARG_AUTOCHECK_MODE, false);
 
         mPuzzleViewModel.initialize(mPuzzleFile, mFilename, startWithDownClues, this,
                 mInitialDownsOnlyMode);  // kicks off async task
@@ -197,6 +200,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         outState.putString(ARG_FILENAME, mPuzzleViewModel.getFile().getName());
         outState.putSerializable(ARG_PUZZLE, mPuzzleViewModel.getPuzzleFile());
         outState.putBoolean(ARG_USE_PENCIL, mUsePencil);
+        outState.putBoolean(ARG_AUTOCHECK_MODE, mAutocheckMode);
     }
 
     @Override
@@ -216,7 +220,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         }
 
         // Autocheck the grid, if enabled.
-        if (mPreferences.getBoolean(getString(R.string.preference_autocheck_mode), false)) {
+        if (mAutocheckMode) {
             mPuzzleViewModel.checkPuzzle();
         }
 
@@ -320,6 +324,13 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                                                      mFilename.getName(), downsOnlyModeNewValue)));
             configureDownsOnlyModeMenuItem(downsOnlyModeNewValue);
             return true;
+        }
+        if (itemId == R.id.autocheck_mode) {
+            mAutocheckMode = !mAutocheckMode;
+            item.setChecked(mAutocheckMode);
+            if (mAutocheckMode) {
+                mPuzzleViewModel.checkPuzzle();
+            }
         }
         if (itemId == R.id.settings) {
             startActivity(SettingsActivity.newIntent(getContext(), R.xml.puzzle_preferences));
@@ -437,7 +448,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
 
         // Autocheck, if enabled.
         mPuzzleViewModel.getContentsChanged().observe(PuzzleFragment.this, cellViewModel -> {
-            if (mPreferences.getBoolean(getString(R.string.preference_autocheck_mode), false)) {
+            if (mAutocheckMode) {
                 mPuzzleViewModel.checkCell(cellViewModel.getRow(), cellViewModel.getCol());
             }
         });
