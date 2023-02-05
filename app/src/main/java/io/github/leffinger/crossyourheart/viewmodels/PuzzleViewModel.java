@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -14,6 +13,7 @@ import androidx.lifecycle.ViewModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -59,6 +59,9 @@ public class PuzzleViewModel extends ViewModel {
 
     private final MutableLiveData<Boolean> mDownsOnlyMode = new MutableLiveData<>();
 
+    /** True once the grid is ready to be viewed. */
+    private final MutableLiveData<Boolean> mCellViewModelsReady = new MutableLiveData<>(false);
+
     // TODO: Is this actually needed?
     private AtomicBoolean mInitialized = new AtomicBoolean(false);
     /**
@@ -69,11 +72,13 @@ public class PuzzleViewModel extends ViewModel {
      * Name of the file where the puzzle should be saved.
      */
     private File mFile;
-    private PuzzleObserver mPuzzleObserver;
     /**
      * Grid of mutable CellViewModels. Black cells are null.
      */
     private CellViewModel[][] mGrid;
+
+    private List<ClueViewModel> mAcrossClues;
+    private List<ClueViewModel> mDownClues;
 
     private float mAverageWordLength;
 
@@ -83,9 +88,8 @@ public class PuzzleViewModel extends ViewModel {
 
     // This can be called from a background thread, so it should not call setValue() on any
     // LiveData objects.
-    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
-                           @NonNull PuzzleObserver puzzleObserver) {
-        initialize(puzzleFile, file, startWithDownClues, puzzleObserver, false);
+    public PuzzleViewModel(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues) {
+        initialize(puzzleFile, file, startWithDownClues, false);
     }
 
     private static void linkClues(ClueViewModel[] clues) {
@@ -128,14 +132,13 @@ public class PuzzleViewModel extends ViewModel {
 
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
-                           @NonNull PuzzleObserver puzzleObserver, boolean downsOnlyMode) {
+                           boolean downsOnlyMode) {
         if (!mInitialized.compareAndSet(false, true)) {
             return;
         }
 
         mPuzzleFile = puzzleFile;
         mFile = file;
-        mPuzzleObserver = puzzleObserver;
 
         // Do as much as possible off the UI thread, but some tasks (e.g. addSource) must be done
         // on the UI thread.
@@ -148,6 +151,17 @@ public class PuzzleViewModel extends ViewModel {
                     AbstractPuzzleFile.Clue clue = mPuzzleFile.getClue(i);
                     clues[i] = new ClueViewModel(PuzzleViewModel.this, clue.isAcross(),
                             clue.getNumber(), clue.getText());
+                }
+
+                // Save clues for later retrieval.
+                mAcrossClues = new ArrayList<>();
+                mDownClues = new ArrayList<>();
+                for (ClueViewModel clue : clues) {
+                    if (clue.isAcross()) {
+                        mAcrossClues.add(clue);
+                    } else {
+                        mDownClues.add(clue);
+                    }
                 }
 
                 mGrid = new CellViewModel[getNumRows()][getNumColumns()];
@@ -281,7 +295,7 @@ public class PuzzleViewModel extends ViewModel {
                     }
                 }
 
-                mPuzzleObserver.onCellViewModelsReady();
+                mCellViewModelsReady.setValue(true);
             }
         }.execute();
     }
@@ -669,6 +683,11 @@ public class PuzzleViewModel extends ViewModel {
         }
     }
 
+    public void selectClue(ClueViewModel clueViewModel, int position) {
+        mCurrentCell.setValue(clueViewModel.getCells().get(position));
+        mAcrossFocus.setValue(clueViewModel.isAcross());
+    }
+
     public void selectFirstCell() {
         assert mInitialized.get();
         for (CellViewModel cellViewModel : mGrid[0]) {
@@ -712,11 +731,19 @@ public class PuzzleViewModel extends ViewModel {
         return mTimerInfo;
     }
 
-    public interface PuzzleObserver {
-        /**
-         * Called from UI thread once CellViewModels are available.
-         */
-        void onCellViewModelsReady();
+    public ClueViewModel getClue(boolean isAcross, int i) {
+        if (isAcross) {
+            return mAcrossClues.get(i);
+        }
+        return mDownClues.get(i);
+    }
+
+    public int getNumAcrossClues() {
+        return mAcrossClues.size();
+    }
+
+    public int getNumDownClues() {
+        return mDownClues.size();
     }
 
     /**
@@ -769,6 +796,10 @@ public class PuzzleViewModel extends ViewModel {
             row = columnMajorPosition % height;
             col = columnMajorPosition / height;
         }
+    }
+
+    public LiveData<Boolean> cellViewModelsReady() {
+        return mCellViewModelsReady;
     }
 }
 

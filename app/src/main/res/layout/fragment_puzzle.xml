@@ -18,19 +18,12 @@
         android:layout_height="match_parent"
         tools:context=".activities.PuzzleFragment">
 
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="@id/puzzle"
-            app:layout_constraintBottom_toBottomOf="@id/puzzle"
-            app:layout_constraintStart_toStartOf="@id/puzzle"
-            app:layout_constraintEnd_toEndOf="@id/puzzle" />
-
         <io.github.leffinger.crossyourheart.views.PuzzleView
             android:id="@+id/puzzle"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:background="@color/colorBlackSquare"
+            android:visibility="@{viewModel.cellViewModelsReady() ? View.VISIBLE : View.INVISIBLE}"
             app:layout_constraintBottom_toTopOf="@id/clue"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

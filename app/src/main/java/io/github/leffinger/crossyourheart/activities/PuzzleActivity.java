@@ -19,7 +19,7 @@ import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.room.PuzzleDao;
 
-public class PuzzleActivity extends AppCompatActivity {
+public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.Callbacks {
     public static final String KEY_PUZZLE = "puzzle";
     private static final String TAG = "PuzzleActivity";
     private Puzzle mPuzzle;
@@ -35,7 +35,8 @@ public class PuzzleActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_container);
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.container, PuzzleLoadingFragment.newInstance()).commitNow();
+                                   .replace(R.id.container, PuzzleLoadingFragment.newInstance())
+                                   .commitNow();
 
         if (savedInstanceState != null) {
             mPuzzle = (Puzzle) savedInstanceState.getSerializable(KEY_PUZZLE);
@@ -65,6 +66,14 @@ public class PuzzleActivity extends AppCompatActivity {
         outState.putSerializable(KEY_PUZZLE, mPuzzle);
     }
 
+    @Override
+    public void onClueListViewSelected() {
+        getSupportFragmentManager().beginTransaction()
+                                   .replace(R.id.container, PuzzleClueListFragment.newInstance())
+                                   .addToBackStack(null)
+                                   .commit();
+    }
+
     private class LoadPuzzleFileTask extends AsyncTask<Void, Void, PuzzleFragment> {
 
         @Override
@@ -73,7 +82,7 @@ public class PuzzleActivity extends AppCompatActivity {
             try (FileInputStream inputStream = new FileInputStream(file)) {
                 PuzFile puzFile = PuzFile.loadPuzFile(inputStream);
                 return PuzzleFragment.newInstance(mPuzzle.filename, puzFile, mPuzzle.usePencil,
-                                                  mPuzzle.downsOnlyMode);
+                        mPuzzle.downsOnlyMode);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -81,8 +90,9 @@ public class PuzzleActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(PuzzleFragment fragment) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.container, fragment)
-                    .commitNow();
+            getSupportFragmentManager().beginTransaction()
+                                       .replace(R.id.container, fragment)
+                                       .commitNow();
         }
     }
 

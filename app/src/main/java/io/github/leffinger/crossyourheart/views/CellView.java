@@ -2,6 +2,7 @@ package io.github.leffinger.crossyourheart.views;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -71,9 +72,11 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
 
         // Get cell width from parent. This ensures that all cells have the same size.
         PuzzleView puzzleView = getRootView().findViewById(R.id.puzzle);
-        int cellWidth = puzzleView.getCellWidth();
-        if (cellWidth > 0) {
-            setMeasuredDimension(cellWidth, cellWidth);
+        if (puzzleView != null) {
+            int cellWidth = puzzleView.getCellWidth();
+            if (cellWidth > 0) {
+                setMeasuredDimension(cellWidth, cellWidth);
+            }
         }
     }
 

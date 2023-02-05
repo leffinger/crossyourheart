@@ -5,6 +5,7 @@ import static android.inputmethodservice.Keyboard.KEYCODE_CANCEL;
 import static android.inputmethodservice.Keyboard.KEYCODE_DELETE;
 import static android.inputmethodservice.Keyboard.KEYCODE_MODE_CHANGE;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -45,7 +46,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -67,11 +67,11 @@ import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 /**
  * Puzzle-solving activity.
  */
-public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleObserver {
-    private static final String TAG = "PuzzleFragment";
+public class PuzzleFragment extends Fragment {
     // Instance state arguments.
     public static final String ARG_FILENAME = "filename";
     public static final String ARG_PUZZLE = "puzzle";
+    private static final String TAG = "PuzzleFragment";
     private static final String ARG_USE_PENCIL = "usePencil";
     private static final String ARG_DOWNS_ONLY_MODE = "downsOnlyMode";
     private static final String ARG_AUTOCHECK_MODE = "autocheckMode";
@@ -133,6 +133,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.e(TAG, "onCreate");
         setHasOptionsMenu(true);
 
         Bundle bundle;
@@ -158,7 +159,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
         mAutocheckMode = bundle.getBoolean(ARG_AUTOCHECK_MODE, false);
 
-        mPuzzleViewModel.initialize(mPuzzleFile, mFilename, startWithDownClues, this,
+        mPuzzleViewModel.initialize(mPuzzleFile, mFilename, startWithDownClues,
                 mInitialDownsOnlyMode);  // kicks off async task
     }
 
@@ -166,6 +167,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        Log.e(TAG, "onCreateView");
         mFragmentPuzzleBinding =
                 DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
         mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
@@ -180,7 +182,7 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         actionBar.setCustomView(mTimerBinding.getRoot());
         mTimerBinding.solved.setVisibility(View.INVISIBLE);
 
-        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
+//        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
         mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
                 GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
@@ -393,6 +395,17 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
             }
         });
 
+        // Open clue list view when the clue is long-tapped.
+        mFragmentPuzzleBinding.clue.setOnLongClickListener(v -> {
+            doHapticFeedback(mFragmentPuzzleBinding.clue, HapticFeedbackConstants.LONG_PRESS);
+            Activity activity = getActivity();
+            if (activity == null) {
+                return false;
+            }
+            ((Callbacks) activity).onClueListViewSelected();
+            return true;
+        });
+
         // When a cell is selected, tell the grid manager to scroll so the cell is visible.
         mPuzzleViewModel.getCurrentCell().observe(getActivity(), cellViewModel -> {
             if (cellViewModel != null) {
@@ -505,6 +518,38 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
                 mTimerBinding.timer.start();
             }
         });
+
+        mPuzzleViewModel.cellViewModelsReady().observe(getViewLifecycleOwner(), ready -> {
+            if (!ready) return;
+            // Populate pencil status for each cell.
+            final PuzzleViewModel viewModel = mPuzzleViewModel;
+            final Database database = mDatabase;
+            Executors.newSingleThreadExecutor().execute(() -> {
+                List<Cell> allCells =
+                        database.cellDao().getCellsForPuzzle(viewModel.getFile().getName());
+                for (Cell cell : allCells) {
+                    CellViewModel cellViewModel = viewModel.getCellViewModel(cell.row, cell.col);
+                    cellViewModel.getPencil().postValue(cell.pencil);
+                }
+            });
+
+            // Persist pencil state to DB.
+            for (int row = 0; row < viewModel.getNumRows(); row++) {
+                for (int col = 0; col < viewModel.getNumColumns(); col++) {
+                    CellViewModel cellViewModel = viewModel.getCellViewModel(row, col);
+                    if (cellViewModel == null) {
+                        continue;
+                    }
+                    cellViewModel.getPencil().observe(getViewLifecycleOwner(), pencil -> {
+                        AsyncTask.execute(() -> mDatabase.cellDao()
+                                                         .insert(new Cell(
+                                                                 viewModel.getFile().getName(),
+                                                                 cellViewModel.getRow(),
+                                                                 cellViewModel.getCol(), pencil)));
+                    });
+                }
+            }
+        });
     }
 
     private void configureUsePencilMenuItem() {
@@ -565,68 +610,8 @@ public class PuzzleFragment extends Fragment implements PuzzleViewModel.PuzzleOb
         }
     }
 
-    @Override
-    public void onCellViewModelsReady() {
-        new AfterCellViewModelsReadyTask(this).execute();
-    }
-
-    private static class AfterCellViewModelsReadyTask extends AsyncTask<Void, Void, Void> {
-        private final WeakReference<PuzzleFragment> mFragment;
-
-        public AfterCellViewModelsReadyTask(PuzzleFragment fragment) {
-            mFragment = new WeakReference<>(fragment);
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            PuzzleFragment fragment = mFragment.get();
-            if (fragment == null) {
-                return null;
-            }
-            PuzzleViewModel viewModel = fragment.mPuzzleViewModel;
-            Database database = fragment.mDatabase;
-
-            // Populate pencil status for each cell.
-            List<Cell> allCells =
-                    database.cellDao().getCellsForPuzzle(viewModel.getFile().getName());
-            for (Cell cell : allCells) {
-                CellViewModel cellViewModel = viewModel.getCellViewModel(cell.row, cell.col);
-                cellViewModel.getPencil().postValue(cell.pencil);
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            PuzzleFragment fragment = mFragment.get();
-            if (fragment == null) {
-                return;
-            }
-            PuzzleViewModel viewModel = fragment.mPuzzleViewModel;
-
-            // Persist pencil/pen state to the Cell table.
-            for (int row = 0; row < viewModel.getNumRows(); row++) {
-                for (int col = 0; col < viewModel.getNumColumns(); col++) {
-                    CellViewModel cellViewModel = viewModel.getCellViewModel(row, col);
-                    if (cellViewModel == null) {
-                        continue;
-                    }
-                    cellViewModel.getPencil().observe(fragment, pencil -> {
-                        AsyncTask.execute(() -> fragment.mDatabase.cellDao()
-                                                                  .insert(new Cell(
-                                                                          viewModel.getFile()
-                                                                                   .getName(),
-                                                                          cellViewModel.getRow(),
-                                                                          cellViewModel.getCol(),
-                                                                          pencil)));
-                    });
-                }
-            }
-
-            fragment.mCellAdapter.notifyDataSetChanged();
-            fragment.mFragmentPuzzleBinding.puzzle.setVisibility(View.VISIBLE);
-        }
+    interface Callbacks {
+        void onClueListViewSelected();
     }
 
     private class CellHolder extends RecyclerView.ViewHolder {

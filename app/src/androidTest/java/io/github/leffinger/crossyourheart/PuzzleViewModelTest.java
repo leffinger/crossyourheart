@@ -1,14 +1,12 @@
 package io.github.leffinger.crossyourheart;
 
 import android.content.Context;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
-import androidx.test.annotation.UiThreadTest;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -85,8 +83,7 @@ public class PuzzleViewModelTest {
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
         PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false, () -> {
-                });
+                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
         assertNotNull(getOrAwaitValue(puzzleViewModel.getCurrentClue(), "First clue"));
 
         assertEquals(3, puzzleViewModel.getNumRows());
@@ -135,9 +132,7 @@ public class PuzzleViewModelTest {
         final File outFile = mTemporaryFolder.newFile();
 
         // Initialize the view model.
-        puzzleViewModel.initialize(puzzleFile, outFile, false, () -> {
-
-        }, false);
+        puzzleViewModel.initialize(puzzleFile, outFile, false, false);
 
         LiveData<ClueViewModel> clueViewModelLiveData = puzzleViewModel.getCurrentClue();
         ClueViewModel clueViewModel;
