@@ -198,12 +198,12 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         } else if (openInDownsOnlyMode.equals("downsOnlyModeAsk")) {
             AlertDialog dialog =
                     new AlertDialog.Builder(this).setTitle("Open puzzle in downs-only mode?")
-                                                 .setPositiveButton(R.string.yes,
-                                                         (dialogInterface, i) -> updatePuzzleAndStart(
-                                                                 true))
-                                                 .setNegativeButton(R.string.no,
+                                                 .setPositiveButton(R.string.no,
                                                          (dialogInterface, i) -> updatePuzzleAndStart(
                                                                  false))
+                                                 .setNegativeButton(R.string.yes,
+                                                         (dialogInterface, i) -> updatePuzzleAndStart(
+                                                                 true))
                                                  .setNeutralButton("Show Puzzle Info", null)
                                                  .setCancelable(true)
                                                  .create();
@@ -269,12 +269,12 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                             failCount);
             final boolean singlePuzzle = uris.size() == 1 && successCount == 1;
             handler.post(() -> {
+                PuzzleListFragment.setNewPuzzlesFragmentResult(getSupportFragmentManager(),
+                        puzzles.size());
                 if (singlePuzzle) {
                     onPuzzleSelected(puzzles.get(0));
                 } else {
                     Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
-                    PuzzleListFragment.setNewPuzzlesFragmentResult(getSupportFragmentManager(),
-                            puzzles.size());
                 }
             });
         });

@@ -17,7 +17,6 @@ import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
@@ -30,21 +29,16 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -54,12 +48,9 @@ import java.util.concurrent.TimeUnit;
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleBinding;
-import io.github.leffinger.crossyourheart.databinding.TimerBinding;
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
-import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile.TimerInfo;
-import io.github.leffinger.crossyourheart.io.IOUtil;
 import io.github.leffinger.crossyourheart.room.Cell;
 import io.github.leffinger.crossyourheart.room.Database;
+import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.room.PuzzleDao;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
@@ -87,10 +78,7 @@ public class PuzzleFragment extends Fragment {
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
     private GridLayoutManager mGridLayoutManager;
     private CellAdapter mCellAdapter;
-    private AbstractPuzzleFile mPuzzleFile;
-    private File mFilename;
     private Menu mMenu;
-    private TimerBinding mTimerBinding;
     private boolean mUsePencil;
     private Typeface mTypeface;
 
@@ -99,13 +87,10 @@ public class PuzzleFragment extends Fragment {
     private PuzzleViewModel mPuzzleViewModel;
     private SharedPreferences mPreferences;
 
-    public static PuzzleFragment newInstance(String filename, AbstractPuzzleFile puzzleFile,
-                                             boolean usePencil, boolean downsOnlyMode) {
+    public static PuzzleFragment newInstance(Puzzle puzzle) {
         Bundle args = new Bundle();
-        args.putString(ARG_FILENAME, filename);
-        args.putSerializable(ARG_PUZZLE, puzzleFile);
-        args.putBoolean(ARG_USE_PENCIL, usePencil);
-        args.putBoolean(ARG_DOWNS_ONLY_MODE, downsOnlyMode);
+        args.putBoolean(ARG_USE_PENCIL, puzzle.usePencil);
+        args.putBoolean(ARG_DOWNS_ONLY_MODE, puzzle.downsOnlyMode);
         PuzzleFragment fragment = new PuzzleFragment();
         fragment.setArguments(args);
         return fragment;
@@ -125,6 +110,8 @@ public class PuzzleFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
+        Log.i(TAG, "Closing database");
+        mDatabase.close();
         mDatabase = null;
         mPuzzleViewModel = null;
         mPreferences = null;
@@ -143,24 +130,15 @@ public class PuzzleFragment extends Fragment {
             bundle = requireArguments();
         }
 
-        mPuzzleFile = (AbstractPuzzleFile) bundle.getSerializable(ARG_PUZZLE);
-        mCellAdapter = new CellAdapter(mPuzzleFile.getWidth(), mPuzzleFile.getHeight());
-        mFilename = IOUtil.getPuzzleFile(getContext(), bundle.getString(ARG_FILENAME));
-        mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
-
+        mCellAdapter =
+                new CellAdapter(mPuzzleViewModel.getNumColumns(), mPuzzleViewModel.getNumRows());
         mTypeface = Typeface.create(
                 mPreferences.getString(getString(R.string.preference_font_selection),
                         getString(R.string.default_font_family)), Typeface.NORMAL);
-
-        boolean startWithDownClues =
-                mPreferences.getBoolean(getString(R.string.preference_start_with_down_clues),
-                        false);
         mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
-        mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE, false);
+        mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE,
+                mPuzzleViewModel.isDownsOnlyMode().getValue());
         mAutocheckMode = bundle.getBoolean(ARG_AUTOCHECK_MODE, false);
-
-        mPuzzleViewModel.initialize(mPuzzleFile, mFilename, startWithDownClues,
-                mInitialDownsOnlyMode);  // kicks off async task
     }
 
     @Nullable
@@ -172,26 +150,17 @@ public class PuzzleFragment extends Fragment {
                 DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
         mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
 
-        mTimerBinding = DataBindingUtil.inflate(inflater, R.layout.timer, container, false);
-        mTimerBinding.setLifecycleOwner(this);
-
-        // Display timer in the action bar.
-        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
-        actionBar.setDisplayShowCustomEnabled(true);
-        actionBar.setDisplayShowTitleEnabled(false);
-        actionBar.setCustomView(mTimerBinding.getRoot());
-        mTimerBinding.solved.setVisibility(View.INVISIBLE);
-
-//        mFragmentPuzzleBinding.puzzle.setVisibility(View.INVISIBLE);
-        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleFile.getWidth(),
+        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleViewModel.getNumColumns(),
                 GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
-        mFragmentPuzzleBinding.puzzle.setPuzzleWidth(mPuzzleFile.getWidth());
+        mFragmentPuzzleBinding.puzzle.setPuzzleWidth(mPuzzleViewModel.getNumColumns());
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
         mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
         mFragmentPuzzleBinding.keyboard.setPreviewEnabled(false);
+
+        setUpViewModelListeners();
 
         return mFragmentPuzzleBinding.getRoot();
     }
@@ -206,15 +175,6 @@ public class PuzzleFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-
-        // should be safe to set up listeners since the View is initialized, even if the
-        // ViewModel is not fully there
-        setUpViewModelListeners();
-    }
-
-    @Override
     public void onResume() {
         super.onResume();
         if (isDetached()) {
@@ -224,41 +184,6 @@ public class PuzzleFragment extends Fragment {
         // Autocheck the grid, if enabled.
         if (mAutocheckMode) {
             mPuzzleViewModel.checkPuzzle();
-        }
-
-        // Wait for the puzzle file's TimerInfo to be initialized before starting the timer (else
-        // we could overwrite the existing value).
-        LiveData<TimerInfo> timerInfoLiveData = mPuzzleViewModel.getTimerInfo();
-        timerInfoLiveData.observe(getViewLifecycleOwner(), new Observer<TimerInfo>() {
-            @Override
-            public void onChanged(TimerInfo timerInfo) {
-                if (timerInfo == null) {
-                    return;
-                }
-
-                Log.i(TAG, "STARTING TIMER AT " + timerInfo.elapsedTimeSecs + " SECONDS");
-                mTimerBinding.timer.setBase(
-                        SystemClock.elapsedRealtime() - (timerInfo.elapsedTimeSecs * 1000));
-                if (timerInfo.isRunning) {
-                    mTimerBinding.timer.start();
-                }
-
-                timerInfoLiveData.removeObserver(this);
-            }
-        });
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        TimerInfo timerInfo = mPuzzleViewModel.getTimerInfo().getValue();
-        if (timerInfo != null && timerInfo.isRunning) {
-            long elapsedTime =
-                    (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
-            Log.i(TAG, "PAUSING TIMER AT " + elapsedTime + " SECONDS");
-            mPuzzleViewModel.getTimerInfo().setValue(new TimerInfo(elapsedTime, true));
-            mTimerBinding.timer.stop();
         }
     }
 
@@ -276,13 +201,6 @@ public class PuzzleFragment extends Fragment {
             Log.e(TAG, String.format("Saving puzzle file %s failed",
                     mPuzzleViewModel.getFile().getName()), e);
         }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        Log.i(TAG, "Closing database");
-        mDatabase.close();
     }
 
     @Override
@@ -315,7 +233,8 @@ public class PuzzleFragment extends Fragment {
             mUsePencil = !mUsePencil;
             AsyncTask.execute(() -> mDatabase.puzzleDao()
                                              .updateUsePencil(new PuzzleDao.UsePencilUpdate(
-                                                     mFilename.getName(), mUsePencil)));
+                                                     mPuzzleViewModel.getFile().getName(),
+                                                     mUsePencil)));
             configureUsePencilMenuItem();
             return true;
         }
@@ -323,7 +242,8 @@ public class PuzzleFragment extends Fragment {
             final boolean downsOnlyModeNewValue = mPuzzleViewModel.toggleDownsOnlyMode();
             AsyncTask.execute(() -> mDatabase.puzzleDao()
                                              .updateDownsOnlyMode(new PuzzleDao.DownsOnlyModeUpdate(
-                                                     mFilename.getName(), downsOnlyModeNewValue)));
+                                                     mPuzzleViewModel.getFile().getName(),
+                                                     downsOnlyModeNewValue)));
             configureDownsOnlyModeMenuItem(downsOnlyModeNewValue);
             return true;
         }
@@ -332,6 +252,12 @@ public class PuzzleFragment extends Fragment {
             item.setChecked(mAutocheckMode);
             if (mAutocheckMode) {
                 mPuzzleViewModel.checkPuzzle();
+            }
+            return true;
+        }
+        if (itemId == R.id.clue_list) {
+            if (openClueListView()) {
+                return true;
             }
         }
         if (itemId == R.id.settings) {
@@ -398,12 +324,7 @@ public class PuzzleFragment extends Fragment {
         // Open clue list view when the clue is long-tapped.
         mFragmentPuzzleBinding.clue.setOnLongClickListener(v -> {
             doHapticFeedback(mFragmentPuzzleBinding.clue, HapticFeedbackConstants.LONG_PRESS);
-            Activity activity = getActivity();
-            if (activity == null) {
-                return false;
-            }
-            ((Callbacks) activity).onClueListViewSelected();
-            return true;
+            return openClueListView();
         });
 
         // When a cell is selected, tell the grid manager to scroll so the cell is visible.
@@ -460,64 +381,19 @@ public class PuzzleFragment extends Fragment {
                         }));
 
         // Autocheck, if enabled.
-        mPuzzleViewModel.getContentsChanged().observe(PuzzleFragment.this, cellViewModel -> {
+        mPuzzleViewModel.getContentsChanged().observe(getViewLifecycleOwner(), cellViewModel -> {
             if (mAutocheckMode) {
                 mPuzzleViewModel.checkCell(cellViewModel.getRow(), cellViewModel.getCol());
             }
         });
 
-        // If the puzzle was not solved to begin with, display a message when it is solved.
-        // This also handles situations where the puzzle goes from solved to unsolved, e.g. reset.
-        mPuzzleViewModel.isSolved().removeObservers(getViewLifecycleOwner());
-        mPuzzleViewModel.isSolved().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
-            private boolean shouldCongratulate = false;
 
-            @Override
-            public void onChanged(Boolean solved) {
-                mTimerBinding.solved.setVisibility(solved ? View.VISIBLE : View.INVISIBLE);
-
-                if (solved && shouldCongratulate) {
-                    // Stop the timer and save the final time in the viewModel.
-                    mTimerBinding.timer.stop();
-                    String time = mTimerBinding.timer.getText().toString();
-                    long elapsedTime = Math.round(
-                            (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) /
-                                    1000.0);
-                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
-                    mPuzzleViewModel.getTimerInfo().setValue(new TimerInfo(elapsedTime, false));
-
-                    // Show a congratulatory dialog.
-                    new AlertDialog.Builder(getActivity()).setTitle(
-                                                                  getString(R.string.alert_solved, time))
-                                                          .setPositiveButton(android.R.string.ok,
-                                                                  null)
-                                                          .create()
-                                                          .show();
-                    shouldCongratulate = false;
-                } else if (!solved && !shouldCongratulate) {
-                    shouldCongratulate = true;
-                }
-            }
-        });
         mPuzzleViewModel.isSolved()
                         .observe(getViewLifecycleOwner(), solved -> AsyncTask.execute(
                                 () -> mDatabase.puzzleDao()
                                                .updateSolved(new PuzzleDao.SolvedUpdate(
-                                                       mFilename.getName(), solved))));
-
-        // Restart the timer when the puzzle is reset.
-        mPuzzleViewModel.getTimerInfo().observe(getViewLifecycleOwner(), timerInfo -> {
-            if (timerInfo == null) {
-                return;
-            }
-
-            if (timerInfo.elapsedTimeSecs == 0L && timerInfo.isRunning) {
-                // Puzzle was reset; restart timer from beginning.
-                Log.i(TAG, "RESTARTING TIMER AT 0");
-                mTimerBinding.timer.setBase(SystemClock.elapsedRealtime());
-                mTimerBinding.timer.start();
-            }
-        });
+                                                       mPuzzleViewModel.getFile().getName(),
+                                                       solved))));
 
         mPuzzleViewModel.cellViewModelsReady().observe(getViewLifecycleOwner(), ready -> {
             if (!ready) return;
@@ -550,6 +426,15 @@ public class PuzzleFragment extends Fragment {
                 }
             }
         });
+    }
+
+    private boolean openClueListView() {
+        Activity activity = getActivity();
+        if (activity == null) {
+            return false;
+        }
+        ((Callbacks) activity).onClueListViewSelected();
+        return true;
     }
 
     private void configureUsePencilMenuItem() {

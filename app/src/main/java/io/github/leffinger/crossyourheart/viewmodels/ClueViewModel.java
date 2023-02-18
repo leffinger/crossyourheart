@@ -12,8 +12,9 @@ import java.util.List;
 public class ClueViewModel {
     private static final String TAG = "ClueViewModel";
     private final boolean mAcross;
-    private final int mNumber;
+    private final int mNumber;  // actual clue number
     private final String mText;
+    private int mIndex;  // index within across or down clues
     private final List<CellViewModel> mCells = new ArrayList<>();
     private final List<ClueViewModel> mReferences = new ArrayList<>();
     private final MediatorLiveData<Boolean> mIsReferenced;
@@ -40,6 +41,14 @@ public class ClueViewModel {
 
     public String getText() {
         return mText;
+    }
+
+    public void setIndex(int index) {
+        mIndex = index;
+    }
+
+    public int getIndex() {
+        return mIndex;
     }
 
     public ClueViewModel getNextClue() {

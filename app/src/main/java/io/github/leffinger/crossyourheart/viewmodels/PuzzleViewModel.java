@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 
@@ -57,13 +56,16 @@ public class PuzzleViewModel extends ViewModel {
     private final MutableLiveData<AbstractPuzzleFile.TimerInfo> mTimerInfo =
             new MutableLiveData<>();
 
+    /**
+     * Whether to hide across clues.
+     */
     private final MutableLiveData<Boolean> mDownsOnlyMode = new MutableLiveData<>();
 
-    /** True once the grid is ready to be viewed. */
+    /**
+     * True once the grid is ready to be viewed.
+     */
     private final MutableLiveData<Boolean> mCellViewModelsReady = new MutableLiveData<>(false);
 
-    // TODO: Is this actually needed?
-    private AtomicBoolean mInitialized = new AtomicBoolean(false);
     /**
      * Representation of on-disk puzzle file.
      */
@@ -126,17 +128,9 @@ public class PuzzleViewModel extends ViewModel {
         return previousClue;
     }
 
-    public boolean initialized() {
-        return mInitialized.get();
-    }
-
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
                            boolean downsOnlyMode) {
-        if (!mInitialized.compareAndSet(false, true)) {
-            return;
-        }
-
         mPuzzleFile = puzzleFile;
         mFile = file;
 
@@ -158,8 +152,10 @@ public class PuzzleViewModel extends ViewModel {
                 mDownClues = new ArrayList<>();
                 for (ClueViewModel clue : clues) {
                     if (clue.isAcross()) {
+                        clue.setIndex(mAcrossClues.size());
                         mAcrossClues.add(clue);
                     } else {
+                        clue.setIndex(mDownClues.size());
                         mDownClues.add(clue);
                     }
                 }
@@ -553,7 +549,6 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void saveToFile() throws IOException {
-        assert mInitialized.get();
         mPuzzleFile.setTimerInfo(mTimerInfo.getValue());
         mPuzzleFile.savePuzzleFile(mFile);
     }
@@ -689,7 +684,6 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void selectFirstCell() {
-        assert mInitialized.get();
         for (CellViewModel cellViewModel : mGrid[0]) {
             if (cellViewModel != null) {
                 mCurrentCell.postValue(cellViewModel);
@@ -699,7 +693,6 @@ public class PuzzleViewModel extends ViewModel {
     }
 
     public void moveToNextCell() {
-        assert mInitialized.get();
         CellViewModel currentCell = mCurrentCell.getValue();
         Position position = new Position(currentCell.getRow(), currentCell.getCol());
         boolean isAcross = mAcrossFocus.getValue();
@@ -744,6 +737,10 @@ public class PuzzleViewModel extends ViewModel {
 
     public int getNumDownClues() {
         return mDownClues.size();
+    }
+
+    public LiveData<Boolean> cellViewModelsReady() {
+        return mCellViewModelsReady;
     }
 
     /**
@@ -796,10 +793,6 @@ public class PuzzleViewModel extends ViewModel {
             row = columnMajorPosition % height;
             col = columnMajorPosition / height;
         }
-    }
-
-    public LiveData<Boolean> cellViewModelsReady() {
-        return mCellViewModelsReady;
     }
 }
 

@@ -2,6 +2,7 @@ package io.github.leffinger.crossyourheart.activities;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,19 +18,24 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Objects;
+
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.ClueListHeaderBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentClueBinding;
-import io.github.leffinger.crossyourheart.databinding.FragmentClueListBinding;
 import io.github.leffinger.crossyourheart.viewmodels.ClueViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
-/** Displays a list of clues and entries. */
+/**
+ * Displays a list of clues and entries.
+ */
 public class PuzzleClueListFragment extends Fragment {
+    private static final String TAG = "PuzzleClueListFragment";
 
     private Context mContext;
     private PuzzleViewModel mPuzzleViewModel;
+    private io.github.leffinger.crossyourheart.databinding.FragmentClueListBinding mClueListBinding;
 
     private PuzzleClueListFragment() {
     }
@@ -44,35 +50,49 @@ public class PuzzleClueListFragment extends Fragment {
         mContext = context;
         mPuzzleViewModel =
                 new ViewModelProvider((ViewModelStoreOwner) context).get(PuzzleViewModel.class);
+        Log.i(TAG, "Current clue: " + mPuzzleViewModel.getCurrentClue().getValue());
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        FragmentClueListBinding binding =
-                DataBindingUtil.inflate(inflater, R.layout.fragment_clue_list, container, false);
+        mClueListBinding = DataBindingUtil.inflate(inflater, R.layout.fragment_clue_list, container, false);
 
-        ConcatAdapter concatAdapter =
-                new ConcatAdapter(
-                        new ClueListHeaderAdapter("ACROSS"),
-                        new ClueListAdapter(true, mPuzzleViewModel.getNumAcrossClues()),
-                        new ClueListHeaderAdapter("DOWN"),
-                        new ClueListAdapter(false, mPuzzleViewModel.getNumDownClues()));
+        ConcatAdapter concatAdapter = new ConcatAdapter(new ClueListHeaderAdapter("ACROSS"),
+                new ClueListAdapter(true, mPuzzleViewModel.getNumAcrossClues()),
+                new ClueListHeaderAdapter("DOWN"),
+                new ClueListAdapter(false, mPuzzleViewModel.getNumDownClues()));
 
-        binding.list.setLayoutManager(new LinearLayoutManager(mContext));
-        binding.list.setAdapter(concatAdapter);
+        mClueListBinding.list.setLayoutManager(new LinearLayoutManager(mContext));
+        mClueListBinding.list.setAdapter(concatAdapter);
 
-        return binding.getRoot();
+        ClueViewModel currentClue = mPuzzleViewModel.getCurrentClue().getValue();
+        if (currentClue != null) {
+            int position = getAbsolutePosition(currentClue);
+            Log.i(TAG, "Scrolling to position: " + position);
+            mClueListBinding.list.scrollToPosition(position);
+        }
+
+        return mClueListBinding.getRoot();
     }
 
-    private class ClueListHeader extends RecyclerView.ViewHolder {
+    private int getAbsolutePosition(ClueViewModel clueViewModel) {
+        if (clueViewModel.isAcross()) {
+            return clueViewModel.getIndex() + 1;
+        }
+        return clueViewModel.getIndex() + mPuzzleViewModel.getNumAcrossClues() + 2;
+    }
+
+    private static class ClueListHeader extends RecyclerView.ViewHolder {
         public ClueListHeader(ClueListHeaderBinding binding) {
             super(binding.getRoot());
         }
     }
 
-    /** Single-element adapter for list headers ("ACROSS" and "DOWN"). */
+    /**
+     * Single-element adapter for list headers ("ACROSS" and "DOWN").
+     */
     private class ClueListHeaderAdapter extends RecyclerView.Adapter<ClueListHeader> {
         private final String headerText;
 
@@ -99,7 +119,9 @@ public class PuzzleClueListFragment extends Fragment {
         }
     }
 
-    /** Holds a clue and entry pair. */
+    /**
+     * Holds a clue and entry pair.
+     */
     private class ClueHolder extends RecyclerView.ViewHolder {
         private final FragmentClueBinding mBinding;
 
@@ -149,7 +171,9 @@ public class PuzzleClueListFragment extends Fragment {
         }
     }
 
-    /** Holds a single cell of an entry. */
+    /**
+     * Holds a single cell of an entry.
+     */
     private class CellHolder extends RecyclerView.ViewHolder {
         private final CellBinding mBinding;
 

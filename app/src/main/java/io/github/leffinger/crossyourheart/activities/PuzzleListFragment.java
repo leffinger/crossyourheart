@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.DragEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -339,47 +340,6 @@ public class PuzzleListFragment extends Fragment {
         void onMultipleUrisSelected(List<Uri> uris);
 
         void onDownloadSelected();
-    }
-
-    private static class FragmentDetachedException extends Exception {
-    }
-
-    private static class FragmentReference {
-        private final WeakReference<PuzzleListFragment> mFragment;
-
-        public FragmentReference(PuzzleListFragment fragment) {
-            mFragment = new WeakReference<>(fragment);
-        }
-
-        public Database getDatabase() throws FragmentDetachedException {
-            PuzzleListFragment fragment = mFragment.get();
-            if (fragment == null) {
-                throw new FragmentDetachedException();
-            }
-            return fragment.mDatabase;
-        }
-
-        public @NonNull
-        Context getContext() throws FragmentDetachedException {
-            PuzzleListFragment fragment = mFragment.get();
-            if (fragment == null) {
-                throw new FragmentDetachedException();
-            }
-            Context context = fragment.getContext();
-            if (context == null) {
-                throw new FragmentDetachedException();
-            }
-            return context;
-        }
-
-        public @NonNull
-        PuzzleListFragment getFragment() throws FragmentDetachedException {
-            PuzzleListFragment fragment = mFragment.get();
-            if (fragment == null) {
-                throw new FragmentDetachedException();
-            }
-            return fragment;
-        }
     }
 
     private class PuzzleFileHolder extends RecyclerView.ViewHolder {

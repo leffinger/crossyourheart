@@ -15,9 +15,9 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/settings"
-        android:icon="@drawable/settings"
-        android:title="@string/title_activity_settings"
+        android:id="@+id/clue_list"
+        android:icon="@drawable/clue_list"
+        android:title="@string/clue_list"
         app:showAsAction="ifRoom" />
 
     <group android:id="@+id/check_items">
@@ -25,6 +25,13 @@
         <item
             android:id="@+id/autocheck_mode"
             android:title="@string/autocheck_mode"
+            android:checkable="true"
+            app:showAsAction="ifRoom" />
+
+        <item
+            android:id="@+id/downs_only_mode"
+            android:icon="@drawable/downs_only"
+            android:title="@string/downs_only_mode"
             android:checkable="true"
             app:showAsAction="ifRoom" />
 
@@ -67,10 +74,9 @@
     </group>
 
     <item
-        android:id="@+id/downs_only_mode"
-        android:icon="@drawable/downs_only"
-        android:title="@string/downs_only_mode"
-        android:checkable="true"
+        android:id="@+id/settings"
+        android:icon="@drawable/settings"
+        android:title="@string/title_activity_settings"
         app:showAsAction="ifRoom" />
 
     <item

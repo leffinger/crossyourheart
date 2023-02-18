@@ -10,11 +10,9 @@
         android:theme="@style/AppTheme.Starting">
         <activity
             android:name=".activities.TutorialActivity"
-            android:label="@string/title_activity_tutorial"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".activities.SettingsActivity"
-            android:label="@string/title_activity_settings" />
+            android:name=".activities.SettingsActivity" />
         <activity
             android:name=".activities.MainActivity"
             android:exported="true">
