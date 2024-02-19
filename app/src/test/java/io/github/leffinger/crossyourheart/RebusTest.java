@@ -15,6 +15,8 @@ import io.github.leffinger.crossyourheart.io.PuzFile;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Testing rebus squares.
@@ -25,9 +27,9 @@ public class RebusTest {
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
 
     @Test
-    public void rebusPuzzle() throws IOException {
+    public void rebusPuzzle_userEntries() throws IOException {
         InputStream file = RebusTest.class.getResourceAsStream("/3x3_filled.puz");
-        PuzFile puzFile = PuzFile.loadPuzFile(file);
+        PuzFile puzFile = new PuzFile(file);
 
         assertEquals("3x3", puzFile.getTitle());
         assertThat(puzFile.getSectionNames(), Matchers.containsInAnyOrder("LTIM", "RUSR"));
@@ -57,5 +59,24 @@ public class RebusTest {
             savedPuzzle = PuzFile.verifyPuzFile(inputStream);
         }
         assertEquals("\0\0XYZ\0ABC\0\0\0\0\0\0", savedPuzzle.getSectionAsText("RUSR"));
+    }
+
+    @Test
+    public void rebusEntries_solution() throws IOException {
+        InputStream file = RebusTest.class.getResourceAsStream("/wsj200827.puz");
+        PuzFile puzFile = new PuzFile(file);
+
+        // Top left corner should be STOCK.
+        assertEquals("STOCK", puzFile.getSolution(0,0));
+
+        // Either "STOCK" or "S" should be acceptable as an answer.
+        puzFile.setCellContents(0, 0, "STOCK");
+        assertTrue((puzFile.isCorrect(0, 0)));
+        puzFile.setCellContents(0, 0, "S");
+        assertTrue((puzFile.isCorrect(0, 0)));
+
+        // But not "STK".
+        puzFile.setCellContents(0, 0, "STK");
+        assertFalse((puzFile.isCorrect(0, 0)));
     }
 }

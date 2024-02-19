@@ -244,7 +244,7 @@ public class PuzzleListFragment extends Fragment {
                 File file = files[i];
                 foundFiles.add(file.getName());
                 try (FileInputStream inputStream = new FileInputStream(file)) {
-                    PuzFile puzzleLoader = PuzFile.loadPuzFile(inputStream);
+                    PuzFile puzzleLoader = new PuzFile(inputStream);
                     mDatabase.puzzleDao().insert(new Puzzle(file.getName(), puzzleLoader.getTitle(), puzzleLoader.getAuthor(), puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false, !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState(), false));
                     mDatabase.puzFileMetadataDao().insert(new PuzFileMetadata(file.getName(), puzzleLoader.getHeaderChecksum()));
                 } catch (IOException e) {

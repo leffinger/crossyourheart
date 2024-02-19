@@ -12,7 +12,6 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -88,7 +87,7 @@ public class PuzzleLoaderTest {
     @Rule
     public TemporaryFolder mTemporaryFolder = new TemporaryFolder();
     private PuzzleInfo mPuzzleInfo;
-    private PuzFile mPuzzleLoader;
+    private PuzFile mPuzFile;
 
     public PuzzleLoaderTest(PuzzleInfo puzzleInfo, boolean serializeFirst) {
         mPuzzleInfo = puzzleInfo;
@@ -119,12 +118,12 @@ public class PuzzleLoaderTest {
     @Before
     public void loadPuzzle() throws IOException {
         InputStream file = PuzzleLoaderTest.class.getResourceAsStream(mPuzzleInfo.filename());
-        mPuzzleLoader = PuzFile.loadPuzFile(file);
+        mPuzFile = new PuzFile(file);
         if (mSerializeFirst) {
             File savedFile = mTemporaryFolder.newFile();
-            mPuzzleLoader.savePuzzleFile(savedFile);
+            mPuzFile.savePuzzleFile(savedFile);
             try (FileInputStream inputStream = new FileInputStream(savedFile)) {
-                mPuzzleLoader = PuzFile.verifyPuzFile(inputStream);
+                mPuzFile = PuzFile.verifyPuzFile(inputStream);
             }
 
             if (!mPuzzleInfo.sectionNames().contains("LTIM")) {
@@ -140,129 +139,124 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyTitle() {
-        assertEquals(mPuzzleInfo.title(), mPuzzleLoader.getTitle());
-    }
-
-    @Test
-    public void verifyMagic() {
-        assertEquals("ACROSS&DOWN", mPuzzleLoader.getMagic());
+        assertEquals(mPuzzleInfo.title(), mPuzFile.getTitle());
     }
 
     @Test
     public void verifyVersionString() {
-        assertEquals(mPuzzleInfo.versionString(), mPuzzleLoader.getVersionString());
+        assertEquals(mPuzzleInfo.versionString(), mPuzFile.getVersionString());
     }
 
     @Test
     public void verifyHeaderChecksum() {
-        assertHexEquals(mPuzzleLoader.getHeaderChecksum(), mPuzzleLoader.computeHeaderChecksum());
+        assertHexEquals(mPuzFile.getHeaderChecksum(), mPuzFile.computeHeaderChecksum());
     }
 
     @Test
     public void verifyMaskedChecksumBit0() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[0], computedMaskedChecksums[0]);
     }
 
     @Test
     public void verifyMaskedChecksumBit1() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[1], computedMaskedChecksums[1]);
     }
 
     @Test
     public void verifyMaskedChecksumBit2() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[2], computedMaskedChecksums[2]);
     }
 
     @Test
     public void verifyMaskedChecksumBit3() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[3], computedMaskedChecksums[3]);
     }
 
     @Test
     public void verifyMaskedChecksumBit4() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[4], computedMaskedChecksums[4]);
     }
 
     @Test
     public void verifyMaskedChecksumBit5() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[5], computedMaskedChecksums[5]);
     }
 
     @Test
     public void verifyMaskedChecksumBit6() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[6], computedMaskedChecksums[6]);
     }
 
     @Test
     public void verifyMaskedChecksumBit7() {
-        byte[] maskedChecksums = mPuzzleLoader.getMaskedChecksums();
-        byte[] computedMaskedChecksums = mPuzzleLoader.computeMaskedChecksums();
+        byte[] maskedChecksums = mPuzFile.getMaskedChecksums();
+        byte[] computedMaskedChecksums = mPuzFile.computeMaskedChecksums();
         assertHexEquals(maskedChecksums[7], computedMaskedChecksums[7]);
     }
 
     @Test
     public void verifyFileChecksum() {
-        assertHexEquals(mPuzzleLoader.getFileChecksum(), mPuzzleLoader.computeFileChecksum());
+        assertHexEquals(mPuzFile.getFileChecksum(), mPuzFile.computeFileChecksum());
     }
 
     @Test
     public void verifySavedFile() throws IOException {
         File savedFile = mTemporaryFolder.newFile();
-        mPuzzleLoader.savePuzzleFile(savedFile);
+        mPuzFile.savePuzzleFile(savedFile);
         PuzFile savedPuzzle;
         try (FileInputStream inputStream = new FileInputStream(savedFile)) {
             savedPuzzle = PuzFile.verifyPuzFile(inputStream);
         }
-        assertEquals(mPuzzleLoader.getWidth(), savedPuzzle.getWidth());
-        assertEquals(mPuzzleLoader.getHeight(), savedPuzzle.getHeight());
-        assertHexEquals(mPuzzleLoader.getNumClues(), savedPuzzle.getNumClues());
-        assertHexEquals(mPuzzleLoader.getUnknownBitmask(), savedPuzzle.getUnknownBitmask());
-        assertHexEquals(mPuzzleLoader.getScrambledTag(), savedPuzzle.getScrambledTag());
-        assertHexEquals(mPuzzleLoader.getHeaderChecksum(), savedPuzzle.getHeaderChecksum());
-        assertEquals(mPuzzleLoader.getTitle(), savedPuzzle.getTitle());
-        assertEquals(mPuzzleLoader.getAuthor(), savedPuzzle.getAuthor());
-        assertTrue(mPuzzleLoader.checkDuplicate(savedPuzzle));
-        assertTrue(savedPuzzle.checkDuplicate(mPuzzleLoader));
+        assertEquals(mPuzFile.getWidth(), savedPuzzle.getWidth());
+        assertEquals(mPuzFile.getHeight(), savedPuzzle.getHeight());
+        assertHexEquals(mPuzFile.getNumClues(), savedPuzzle.getNumClues());
+        assertHexEquals(mPuzFile.getUnknownBitmask(), savedPuzzle.getUnknownBitmask());
+        assertHexEquals(mPuzFile.getScrambledTag(), savedPuzzle.getScrambledTag());
+        assertHexEquals(mPuzFile.getHeaderChecksum(), savedPuzzle.getHeaderChecksum());
+        assertEquals(mPuzFile.getTitle(), savedPuzzle.getTitle());
+        assertEquals(mPuzFile.getAuthor(), savedPuzzle.getAuthor());
+        assertTrue(mPuzFile.checkDuplicate(savedPuzzle));
+        assertTrue(savedPuzzle.checkDuplicate(mPuzFile));
     }
 
     @Test
     public void verifyScrambledState() {
-        assertEquals(mPuzzleInfo.scrambled(), mPuzzleLoader.getScrambleState());
+        assertEquals(mPuzzleInfo.scrambled(), mPuzFile.getScrambleState());
     }
 
     @Test
     public void verifyRebusSquares() {
-        assertNotNull(mPuzzleLoader.getSectionAsText("GRBS"));
-        assertEquals(mPuzzleInfo.numRebusSquares(), mPuzzleLoader.getNumRebusSquares());
+        assertNotNull(mPuzFile.getSectionAsText("GRBS"));
+        assertEquals(mPuzzleInfo.numRebusSquares(), mPuzFile.getNumRebusSquares());
         for (int i = 0; i < mPuzzleInfo.numRebusSquares(); i++) {
-            assertEquals(mPuzzleInfo.rebuses().get(i), mPuzzleLoader.getRebus(i));
+            assertEquals(mPuzzleInfo.rebuses().get(i), mPuzFile.getRebus(i));
         }
     }
 
     @Test
     public void verifyCircles() {
-        for (int row = 0; row < mPuzzleLoader.getHeight(); row++) {
-            for (int col = 0; col < mPuzzleLoader.getWidth(); col++) {
+        for (int row = 0; row < mPuzFile.getHeight(); row++) {
+            for (int col = 0; col < mPuzFile.getWidth(); col++) {
                 if (mPuzzleInfo.circledSquares().containsEntry(row, col)) {
                     assertTrue("not circled: row=" + row + ",col=" + col,
-                               mPuzzleLoader.isCircled(row, col));
+                               mPuzFile.isCircled(row, col));
                 } else {
                     assertFalse("circled: row=" + row + ",col=" + col,
-                                mPuzzleLoader.isCircled(row, col));
+                                mPuzFile.isCircled(row, col));
                 }
             }
         }
@@ -270,12 +264,12 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyGextValues() {
-        for (int row = 0; row < mPuzzleLoader.getHeight(); row++) {
-            for (int col = 0; col < mPuzzleLoader.getWidth(); col++) {
+        for (int row = 0; row < mPuzFile.getHeight(); row++) {
+            for (int col = 0; col < mPuzFile.getWidth(); col++) {
                 if (mPuzzleInfo.circledSquares().containsEntry(row, col)) {
-                    assertHexEquals(PuzFile.GEXT_MASK_CIRCLED, mPuzzleLoader.getGextMask(row, col));
+                    assertHexEquals(PuzFile.GEXT_MASK_CIRCLED, mPuzFile.getGextMask(row, col));
                 } else {
-                    assertHexEquals(PuzFile.GEXT_MASK_NONE, mPuzzleLoader.getGextMask(row, col));
+                    assertHexEquals(PuzFile.GEXT_MASK_NONE, mPuzFile.getGextMask(row, col));
                 }
             }
         }
@@ -283,6 +277,6 @@ public class PuzzleLoaderTest {
 
     @Test
     public void verifyExtraSectionNames() {
-        assertEquals(mPuzzleInfo.sectionNames(), mPuzzleLoader.getSectionNames());
+        assertEquals(mPuzzleInfo.sectionNames(), mPuzFile.getSectionNames());
     }
 }

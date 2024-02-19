@@ -100,7 +100,7 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
             File file = IOUtil.getPuzzleFile(PuzzleActivity.this, mPuzzle.filename);
             PuzFile puzFile;
             try (FileInputStream inputStream = new FileInputStream(file)) {
-                puzFile = PuzFile.loadPuzFile(inputStream);
+                puzFile = new PuzFile(inputStream);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
