@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -90,7 +89,7 @@ public class PuzFile extends AbstractPuzzleFile {
             throw new EOFException();
         }
 
-        mIncludeNoteInTextChecksum = includeNoteInTextChecksum(mVersionString);
+        mIncludeNoteInTextChecksum = includeNoteInTextChecksum();
         if (dataInputStream.skipBytes(2) != 2) {  // skip junk
             throw new EOFException();
         }
@@ -141,19 +140,20 @@ public class PuzFile extends AbstractPuzzleFile {
         mTimerInfo = parseTimerInfo();
         mSolutionWithRebuses = getSolutionWithRebuses();
 
-        // Clue assignment. This part is not persisted, but we do it here so that (1) we don't
-        // have to redo this math whenever we create a ViewModel and (2) we can fail loading if
-        // there is an issue assigning clues.
+        // Clue assignment. This is not part of the file format, but we do it here so that
+        // (1) we don't have to redo this math whenever we create a ViewModel and (2) we can fail
+        // loading if there is an issue assigning clues.
         mClues = new Clue[mNumClues];
         for (int i = 0; i < mNumClues; i++) {
             mClues[i] = new Clue(new String(clueTexts[i], ISO_8859_1));
         }
+        // acrossClueMapping[offset] is 0 if no across clue is associated with that offset, and
+        // clueIndex+1 otherwise. Same for downClueMapping.
         mAcrossClueMapping = new int[puzzleSize];
         mDownClueMapping = new int[puzzleSize];
         assignClues();
 
-        // Identify clues that reference each other and persist this information so it can be
-        // displayed.
+        // Identify clues that reference each other. Again, this isn't in the file format.
         mClueReferences = findClueReferences();
     }
 
@@ -270,12 +270,11 @@ public class PuzFile extends AbstractPuzzleFile {
     /**
      * Whether to include the note when checksumming the puzzle text (true for versions >= 1.3).
      *
-     * @param versionStringBytes 4-byte version string
      * @return true if version >= 1.3
      * @throws IOException if version string cannot be parsed
      */
-    private static boolean includeNoteInTextChecksum(byte[] versionStringBytes) throws IOException {
-        final String versionString = new String(versionStringBytes, ISO_8859_1);
+    private boolean includeNoteInTextChecksum() throws IOException {
+        final String versionString = new String(mVersionString, ISO_8859_1);
         String[] versionParts = versionString.split("\\.", 2);
         if (versionParts.length < 2) {
             throw new IOException(String.format("Bad version string: \"%s\"", versionString));
@@ -284,6 +283,15 @@ public class PuzFile extends AbstractPuzzleFile {
                 (versionParts[0].compareTo("1") == 0 && versionParts[1].compareTo("3") >= 0);
     }
 
+    /**
+     * Match clue texts with blank cells in the grid.
+     *
+     * <p>This method assumes that mWidth, mHeight, mClues, mNumClues, mAcrossClueMapping, and
+     * mDownClueMapping have been initialized. It updates mClues, mAcrossClueMapping, and
+     * mDownClueMapping.
+     *
+     * @throws IOException if unable to match
+     */
     private void assignClues() throws IOException {
         ArrayList<CandidateClue> candidateClues = new ArrayList<>(mNumClues);
 
@@ -321,8 +329,7 @@ public class PuzFile extends AbstractPuzzleFile {
                     // Black cell or end of column.
                     if (start != -1) {
                         // end of the clue was at row-1
-                        candidateClues.add(
-                                new CandidateClue(getOffset(start, col), row - start, false));
+                        candidateClues.add(new CandidateClue(getOffset(start, col), row - start, false));
                         start = -1;
                     }
                 }

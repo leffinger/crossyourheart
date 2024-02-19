@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     private Puzzle mPuzzle;
     private Database mDatabase;
 
-    private static String findDuplicate(Database database, PuzFile puzzleLoader) {
+    private static Puzzle findDuplicate(Database database, PuzFile puzzleLoader) {
         List<Puzzle> matchingPuzzles = database.puzzleDao()
                                                .getMatchingPuzFiles(puzzleLoader.getTitle(),
                                                        puzzleLoader.getAuthor(),
@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         if (matchingPuzzles.isEmpty()) {
             return null;
         }
-        return matchingPuzzles.get(0).filename;
+        return matchingPuzzles.get(0);
     }
 
     private static Puzzle loadUri(Context context, Database database, Uri uri)
@@ -79,9 +79,9 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             PuzFile puzzleLoader = PuzFile.verifyPuzFile(inputStream);
 
             // Check to see if we have already loaded this file.
-            String duplicateFilename = findDuplicate(database, puzzleLoader);
-            if (duplicateFilename != null) {
-                throw new DuplicateFileException(duplicateFilename);
+            Puzzle duplicatePuzzle = findDuplicate(database, puzzleLoader);
+            if (duplicatePuzzle != null) {
+                throw new DuplicateFileException(duplicatePuzzle);
             }
 
             String date = FORMAT.format(Calendar.getInstance().getTime());
@@ -249,30 +249,42 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             int successCount = 0;
             int dupeCount = 0;
             int failCount = 0;
-            ArrayList<Puzzle> puzzles = new ArrayList<>();
+            ArrayList<Puzzle> newPuzzles = new ArrayList<>();
+            Puzzle dupePuzzle = null;
             for (int i = 0; i < uris.size(); i++) {
                 try {
                     Puzzle puzzle = loadUri(MainActivity.this, mDatabase, uris.get(i));
                     Log.i(TAG, "Successfully loaded " + puzzle.filename);
                     successCount++;
-                    puzzles.add(puzzle);
+                    newPuzzles.add(puzzle);
                 } catch (DuplicateFileException e) {
-                    Log.i(TAG, "Duplicate file");
+                    Log.i(TAG, "Duplicate file " + e.getDuplicatePuzzle().filename);
                     dupeCount++;
+                    dupePuzzle = e.getDuplicatePuzzle();
                 } catch (IOException e) {
                     Log.e(TAG, "Failed to load puzzle file", e);
                     failCount++;
                 }
             }
+
+            // If the user tried to open exactly one file, go directly to that file.
+            final Puzzle singlePuzzle;
+            if (uris.size() == 1 && successCount == 1) {
+                singlePuzzle = newPuzzles.get(0);
+            } else if (uris.size() == 1 && dupeCount == 1) {
+                singlePuzzle = dupePuzzle;
+            } else {
+                singlePuzzle = null;
+            }
+
             final String message =
                     getString(R.string.multiple_uris_result, uris.size(), successCount, dupeCount,
                             failCount);
-            final boolean singlePuzzle = uris.size() == 1 && successCount == 1;
             handler.post(() -> {
                 PuzzleListFragment.setNewPuzzlesFragmentResult(getSupportFragmentManager(),
-                        puzzles.size());
-                if (singlePuzzle) {
-                    onPuzzleSelected(puzzles.get(0));
+                        newPuzzles.size());
+                if (singlePuzzle != null) {
+                    onPuzzleSelected(singlePuzzle);
                 } else {
                     Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
                 }
