@@ -17,6 +17,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
+import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -223,6 +224,17 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
             mPuzzleViewModel.getTimerInfo()
                             .setValue(new AbstractPuzzleFile.TimerInfo(elapsedTime, true));
             mTimerBinding.timer.stop();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.i("LAURA", "PuzzleActivity.onBackPressed");
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        if (fragmentManager.getBackStackEntryCount() > 1) {
+            fragmentManager.popBackStackImmediate();
+        } else {
+            super.onBackPressed();
         }
     }
 }
