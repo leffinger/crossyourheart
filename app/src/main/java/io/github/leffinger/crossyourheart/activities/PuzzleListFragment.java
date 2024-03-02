@@ -13,7 +13,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.DragEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -21,10 +20,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuProvider;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -32,12 +31,9 @@ import androidx.fragment.app.FragmentResultListener;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.common.collect.ImmutableList;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -56,7 +52,7 @@ import io.github.leffinger.crossyourheart.room.PuzFileMetadata;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 
 /**
- * A fragment representing a list of puzzle files.
+ * Displays a list of puzzle files.
  */
 public class PuzzleListFragment extends Fragment {
     private static final String TAG = "PuzzleListFragment";
@@ -84,30 +80,29 @@ public class PuzzleListFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
 
         mPuzzles = new ArrayList<>();
         mAdapter = new PuzzleFileAdapter();
         mLayoutManager = new LinearLayoutManager(getContext());
 
         // Create or load database.
-        mDatabase = Database.getInstance(getActivity().getApplicationContext());
+        mDatabase = Database.getInstance(requireActivity().getApplicationContext());
 
         // Register a result listener for when new puzzles are added.
         getParentFragmentManager().setFragmentResultListener(REQUEST_KEY_ADD_PUZZLES, this, new FragmentResultListener() {
             @Override
             public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
-                ArrayList<Puzzle> puzzles = (ArrayList<Puzzle>) result.getSerializable("puzzles");
                 fetchNewPuzzleFiles(result.getInt("num_puzzles"));
             }
         });
     }
 
+
+
     @Override
     public void onResume() {
         super.onResume();
         fetchPuzzleFiles();
-        checkIndexAndOfferToReindex();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -118,6 +113,7 @@ public class PuzzleListFragment extends Fragment {
             mPuzzles = mDatabase.puzzleDao().getAll();
             handler.post(() -> {
                 mAdapter.notifyDataSetChanged();
+                checkIndexAndOfferToReindex();
             });
         });
     }
@@ -159,55 +155,63 @@ public class PuzzleListFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        FragmentPuzzleListBinding binding = DataBindingUtil.inflate(getLayoutInflater(), R.layout.fragment_puzzle_list, container, false);
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        FragmentPuzzleListBinding binding =
+                DataBindingUtil.inflate(getLayoutInflater(), R.layout.fragment_puzzle_list,
+                        container, false);
         binding.list.setLayoutManager(mLayoutManager);
         binding.list.setAdapter(mAdapter);
         return binding.getRoot();
     }
 
     @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.fragment_puzzle_list, menu);
-    }
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int itemId = item.getItemId();
-        if (itemId == R.id.open_file) {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
-            return true;
-        }
-        if (itemId == R.id.download_file) {
-            ((Callbacks) getActivity()).onDownloadSelected();
-            return true;
-        }
-        if (itemId == R.id.settings) {
-            startActivity(SettingsActivity.newIntent(getContext(), R.xml.root_preferences));
-            return true;
-        }
-        if (itemId == R.id.reindex_files) {
-            reindexFiles();
-            return true;
-        }
-        if (itemId == R.id.show_tutorial) {
-            startActivity(new Intent(getContext(), TutorialActivity.class));
-            return true;
-        }
-        if (itemId == R.id.send_feedback) {
-            Intent intent = new Intent(Intent.ACTION_SENDTO);
-            intent.setData(Uri.parse("mailto:"));
-            intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"crossyourheartapp@gmail.com"});
-            intent.putExtra(Intent.EXTRA_SUBJECT, "Feedback");
-            startActivity(intent);
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                menuInflater.inflate(R.menu.fragment_puzzle_list, menu);
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem item) {
+                int itemId = item.getItemId();
+                if (itemId == R.id.open_file) {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("*/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    startActivityForResult(intent, REQUEST_CODE_OPEN_FILE);
+                    return true;
+                }
+                if (itemId == R.id.download_file) {
+                    ((Callbacks) requireActivity()).onDownloadSelected();
+                    return true;
+                }
+                if (itemId == R.id.settings) {
+                    startActivity(SettingsActivity.newIntent(getContext(), R.xml.root_preferences));
+                    return true;
+                }
+                if (itemId == R.id.reindex_files) {
+                    reindexFiles();
+                    return true;
+                }
+                if (itemId == R.id.show_tutorial) {
+                    startActivity(new Intent(getContext(), TutorialActivity.class));
+                    return true;
+                }
+                if (itemId == R.id.send_feedback) {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"crossyourheartapp@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "Feedback");
+                    startActivity(intent);
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner());
     }
 
     @Override
