@@ -36,7 +36,6 @@ public class PuzzleClueListFragment extends Fragment {
 
     private Context mContext;
     private PuzzleViewModel mPuzzleViewModel;
-    private io.github.leffinger.crossyourheart.databinding.FragmentClueListBinding mClueListBinding;
 
     private PuzzleClueListFragment() {
     }
@@ -54,11 +53,18 @@ public class PuzzleClueListFragment extends Fragment {
         Log.i(TAG, "Current clue: " + mPuzzleViewModel.getCurrentClue().getValue());
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        mClueListBinding = DataBindingUtil.inflate(inflater, R.layout.fragment_clue_list, container, false);
+        io.github.leffinger.crossyourheart.databinding.FragmentClueListBinding mClueListBinding =
+                DataBindingUtil.inflate(inflater, R.layout.fragment_clue_list, container, false);
 
         ConcatAdapter concatAdapter = new ConcatAdapter(new ClueListHeaderAdapter("ACROSS"),
                 new ClueListAdapter(true, mPuzzleViewModel.getNumAcrossClues()),
@@ -79,20 +85,12 @@ public class PuzzleClueListFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
-    }
-
-    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                getActivity().onBackPressed();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == android.R.id.home) {
+            getActivity().onBackPressed();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 
     private int getAbsolutePosition(ClueViewModel clueViewModel) {

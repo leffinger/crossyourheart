@@ -16,8 +16,6 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract boolean isBlack(int row, int col);
 
-    public abstract String getCellSolution(int row, int col);
-
     public abstract String getCellContents(int row, int col);
 
     public abstract String getTitle();

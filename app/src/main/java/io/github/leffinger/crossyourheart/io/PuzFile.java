@@ -590,11 +590,6 @@ public class PuzFile extends AbstractPuzzleFile {
         }
     }
 
-    @Override
-    public String getCellSolution(int row, int col) {
-        return mSolutionWithRebuses[getOffset(row, col)];
-    }
-
     private void writeSection(String name, byte[] data,
                               LittleEndianDataOutputStream outputStream) throws IOException {
         outputStream.write(name.getBytes());
