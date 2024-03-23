@@ -13,28 +13,24 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import io.github.leffinger.crossyourheart.R;
+import io.github.leffinger.crossyourheart.io.DuplicateFileException;
 import io.github.leffinger.crossyourheart.io.IOUtil;
-import io.github.leffinger.crossyourheart.io.PuzFile;
+import io.github.leffinger.crossyourheart.io.PuzzleDirectory;
 import io.github.leffinger.crossyourheart.room.Database;
-import io.github.leffinger.crossyourheart.room.PuzFileMetadata;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.room.PuzzleDao;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleInfoViewModel;
@@ -46,62 +42,16 @@ import io.github.leffinger.crossyourheart.viewmodels.PuzzleInfoViewModel;
 public class MainActivity extends AppCompatActivity implements PuzzleListFragment.Callbacks {
     public static final String TAG = "MainActivity";
     public static final String ARG_PUZZLE = "puzzle";
-    private static final SimpleDateFormat FORMAT =
-            new SimpleDateFormat("yyMMddHHmmss", Locale.getDefault());
     private Puzzle mPuzzle;
     private Database mDatabase;
 
-    private static Puzzle findDuplicate(Database database, PuzFile puzzleLoader) {
-        List<Puzzle> matchingPuzzles = database.puzzleDao()
-                                               .getMatchingPuzFiles(puzzleLoader.getTitle(),
-                                                       puzzleLoader.getAuthor(),
-                                                       puzzleLoader.getHeaderChecksum());
-        if (matchingPuzzles.isEmpty()) {
-            return null;
-        }
-        return matchingPuzzles.get(0);
-    }
-
-    private static Puzzle loadUri(Context context, Database database, Uri uri)
+    private static Puzzle loadUri(Context context, Uri uri)
             throws DuplicateFileException, IOException {
         try (InputStream inputStream = requireNonNull(
                 context.getContentResolver().openInputStream(uri))) {
-            return loadInputStream(context, database, inputStream);
+            return PuzzleDirectory.getInstance().loadInputStream(context, inputStream);
         } catch (IOException e) {
             throw new IOException("Failed to open puzzle file", e);
-        }
-    }
-
-    private static Puzzle loadInputStream(Context context, Database database,
-                                          InputStream inputStream)
-            throws DuplicateFileException, IOException {
-        try {
-            PuzFile puzzleLoader = PuzFile.verifyPuzFile(inputStream);
-
-            // Check to see if we have already loaded this file.
-            Puzzle duplicatePuzzle = findDuplicate(database, puzzleLoader);
-            if (duplicatePuzzle != null) {
-                throw new DuplicateFileException(duplicatePuzzle);
-            }
-
-            String date = FORMAT.format(Calendar.getInstance().getTime());
-            String filename = String.format("%s-%s.puz", date, UUID.randomUUID());
-            File puzzleFile = IOUtil.getPuzzleFile(context, filename);
-            try {
-                puzzleLoader.savePuzzleFile(puzzleFile);
-                Puzzle puzzle =
-                        new Puzzle(filename, puzzleLoader.getTitle(), puzzleLoader.getAuthor(),
-                                puzzleLoader.getCopyright(), puzzleLoader.isSolved(), false,
-                                !puzzleLoader.isEmpty(), puzzleLoader.getScrambleState(), false);
-                database.puzzleDao().insert(puzzle);
-                database.puzFileMetadataDao()
-                        .insert(new PuzFileMetadata(filename, puzzleLoader.getHeaderChecksum()));
-                return puzzle;
-            } catch (IOException e) {
-                throw new IOException("Failed to save puzzle file", e);
-            }
-        } catch (IOException e) {
-            throw new IOException("Failed to parse puzzle file", e);
         }
     }
 
@@ -123,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         if (!preferences.getBoolean(getString(R.string.preference_intro_puzzle_copied), false)) {
             Executors.newSingleThreadExecutor().execute(() -> {
                 try {
-                    loadInputStream(MainActivity.this, mDatabase,
+                    PuzzleDirectory.getInstance().loadInputStream(MainActivity.this,
                             getAssets().open("intro_puzzle.puz"));
                 } catch (Exception e) {
                     Log.w(TAG, "Failed to load intro puzzle", e);
@@ -156,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         if (mPuzzle != null) {
             outState.putSerializable(ARG_PUZZLE, mPuzzle);
         }
@@ -253,7 +203,7 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             Puzzle dupePuzzle = null;
             for (int i = 0; i < uris.size(); i++) {
                 try {
-                    Puzzle puzzle = loadUri(MainActivity.this, mDatabase, uris.get(i));
+                    Puzzle puzzle = loadUri(MainActivity.this, uris.get(i));
                     Log.i(TAG, "Successfully loaded " + puzzle.filename);
                     successCount++;
                     newPuzzles.add(puzzle);

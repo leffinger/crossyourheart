@@ -1,8 +1,8 @@
-package io.github.leffinger.crossyourheart.activities;
+package io.github.leffinger.crossyourheart.io;
 
 import io.github.leffinger.crossyourheart.room.Puzzle;
 
-class DuplicateFileException extends Exception {
+public class DuplicateFileException extends Exception {
     private final Puzzle mDuplicatePuzzle;
     public DuplicateFileException(Puzzle duplicatePuzzle) {
         super();

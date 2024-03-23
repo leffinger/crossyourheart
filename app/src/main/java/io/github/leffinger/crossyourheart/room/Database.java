@@ -11,8 +11,13 @@ import androidx.room.RoomDatabase;
 public abstract class Database extends RoomDatabase {
     public final static String DB_NAME = "puzzles2";
 
+    private static Database mInstance = null;
+
     public static Database getInstance(Context applicationContext) {
-        return Room.databaseBuilder(applicationContext, Database.class, DB_NAME).build();
+        if (mInstance == null) {
+            mInstance = Room.databaseBuilder(applicationContext, Database.class, DB_NAME).build();
+        }
+        return mInstance;
     }
 
     public abstract PuzzleDao puzzleDao();
