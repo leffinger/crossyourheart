@@ -1,8 +1,9 @@
 package io.github.leffinger.crossyourheart.views;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -11,8 +12,14 @@ import androidx.databinding.BindingAdapter;
 import java.util.Arrays;
 
 import io.github.leffinger.crossyourheart.R;
+import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 
 public class CellView extends androidx.appcompat.widget.AppCompatTextView {
+    private int mCellNumber = 0;
+    private final Paint mNumberPaint = new Paint();
+    private final Paint mCirclePaint = new Paint();
+    private final Paint mIncorrectPaint = new Paint();
+
     private boolean mIsSelected;
     private boolean mIsCircled;
     private boolean mIsHighlighted;
@@ -24,6 +31,19 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
 
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
+
+        mNumberPaint.setColor(getResources().getColor(R.color.colorEntryText, null));
+        mNumberPaint.setStyle(Paint.Style.FILL);
+
+        mCirclePaint.setColor(getResources().getColor(R.color.colorBlackSquare, null));
+        mCirclePaint.setStyle(Paint.Style.STROKE);
+
+        mIncorrectPaint.setColor(getResources().getColor(R.color.colorIncorrectSlash, null));
+        mIncorrectPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+    }
+
+    public void setCellNumber(int cellNumber) {
+        mCellNumber = cellNumber;
     }
 
     @BindingAdapter("isSelected")
@@ -68,16 +88,8 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
-        // Get cell width from parent. This ensures that all cells have the same size.
-        PuzzleView puzzleView = getRootView().findViewById(R.id.puzzle);
-        if (puzzleView != null) {
-            int cellWidth = puzzleView.getCellWidth();
-            if (cellWidth > 0) {
-                setMeasuredDimension(cellWidth, cellWidth);
-            }
-        }
+        //noinspection SuspiciousNameCombination
+        super.onMeasure(widthMeasureSpec, widthMeasureSpec);
     }
 
     @Override
@@ -105,7 +117,9 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     public void setMarkedIncorrect(boolean markedIncorrect) {
         if (mIsMarkedIncorrect != markedIncorrect) {
             mIsMarkedIncorrect = markedIncorrect;
-            refreshDrawableState();
+            // Need to call invalidate() here (vs refreshDrawableState())
+            // to ensure that onDraw() is called later.
+            invalidate();
         }
     }
 
@@ -172,5 +186,30 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
             return drawableState;
         }
         return super.onCreateDrawableState(extraSpace);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        int width = getWidth();
+
+        if (mCellNumber > 0) {
+            float padding = width * 0.05f;
+            float height = width * 0.3f;
+            mNumberPaint.setTextSize(height);
+            canvas.drawText(String.valueOf(mCellNumber), padding, height, mNumberPaint);
+        }
+
+        if (mIsCircled) {
+            float radius = width / 2f;
+            mCirclePaint.setStrokeWidth(width * 0.02f);
+            canvas.drawCircle(radius, radius, radius, mCirclePaint);
+        }
+
+        if (mIsMarkedIncorrect) {
+            mIncorrectPaint.setStrokeWidth(width * 0.05f);
+            canvas.drawLine(width, 0, 0, width, mIncorrectPaint);
+        }
     }
 }

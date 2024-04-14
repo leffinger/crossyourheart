@@ -13,9 +13,9 @@ class TutorialActivity : AppIntro() {
         super.onCreate(savedInstanceState)
 
         // Call addSlide passing your Fragments.
-        var primaryColor = resources.getColor(R.color.colorPrimary)
-        var puzzleListScreenColor = resources.getColor(R.color.colorRichTeal);
-        var puzzleSolvingScreenColor = resources.getColor(R.color.colorRichGreen);
+        var primaryColor = resources.getColor(R.color.colorPrimary, null)
+        var puzzleListScreenColor = resources.getColor(R.color.colorRichTeal, null);
+        var puzzleSolvingScreenColor = resources.getColor(R.color.colorRichGreen, null);
         addSlide(AppIntroFragment.newInstance(
                 title = "Welcome to Cross Your Heart!",
                 description = "Let's take a quick tour of the app...",

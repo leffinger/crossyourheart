@@ -320,8 +320,10 @@ public class PuzzleViewModel extends ViewModel {
         return mPuzzleFile.getHeight();
     }
 
-    public int getNumColumns() {
-        return mPuzzleFile.getWidth();
+    public int getNumColumns() { return mPuzzleFile.getWidth(); }
+
+    public int getOffset(int row, int col) {
+        return mPuzzleFile.getOffset(row, col);
     }
 
     public LiveData<ClueViewModel> getCurrentClue() {
@@ -623,6 +625,10 @@ public class PuzzleViewModel extends ViewModel {
                 }
             }
         }
+    }
+
+    public String getCellContents(int row, int col) {
+        return mPuzzleFile.getCellContents(row, col);
     }
 
     public String getSolution(int row, int col) {

@@ -30,6 +30,10 @@ public abstract class AbstractPuzzleFile implements Serializable {
 
     public abstract int getWidth();
 
+    public int getOffset(int row, int col) {
+        return row * getWidth() + col;
+    }
+
     public void savePuzzleFile(File file) throws IOException {
         File backupFile = new File(file.getAbsolutePath() + ".bk");
         try (FileOutputStream outputStream = new FileOutputStream(backupFile)) {

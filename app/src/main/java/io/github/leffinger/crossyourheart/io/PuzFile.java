@@ -712,10 +712,6 @@ public class PuzFile extends AbstractPuzzleFile {
         return mSolution[getOffset(row, col)] == '.';
     }
 
-    private int getOffset(int row, int col) {
-        return row * mWidth + col;
-    }
-
     @Override
     public boolean isCorrect(int row, int col) {
         if (getScrambleState() != ScrambleState.UNSCRAMBLED) {

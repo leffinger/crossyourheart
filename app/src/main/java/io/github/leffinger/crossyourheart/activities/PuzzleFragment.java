@@ -47,13 +47,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.github.leffinger.crossyourheart.R;
-import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentPuzzleBinding;
+import io.github.leffinger.crossyourheart.databinding.SimpleCellBinding;
 import io.github.leffinger.crossyourheart.room.Cell;
 import io.github.leffinger.crossyourheart.room.Database;
 import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.room.PuzzleDao;
 import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
+import io.github.leffinger.crossyourheart.viewmodels.ClueViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
 /**
@@ -99,6 +100,7 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onAttach(@NonNull Context context) {
+        Log.i(TAG, "onAttach");
         super.onAttach(context);
 
         // Attach activity- and application-dependent state.
@@ -120,8 +122,8 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         Log.e(TAG, "onCreate");
+        super.onCreate(savedInstanceState);
 
         Bundle bundle;
         if (savedInstanceState != null) {
@@ -149,12 +151,12 @@ public class PuzzleFragment extends Fragment {
         mFragmentPuzzleBinding =
                 DataBindingUtil.inflate(inflater, R.layout.fragment_puzzle, container, false);
         mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
+        mFragmentPuzzleBinding.puzzle.setPuzzleSize(mPuzzleViewModel.getNumRows(), mPuzzleViewModel.getNumColumns());
 
         mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleViewModel.getNumColumns(),
                 GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
-        mFragmentPuzzleBinding.puzzle.setPuzzleWidth(mPuzzleViewModel.getNumColumns());
 
         Keyboard keyboard = new Keyboard(getActivity(), R.xml.keys_layout);
         mFragmentPuzzleBinding.keyboard.setKeyboard(keyboard);
@@ -176,6 +178,7 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onResume() {
+        Log.i(TAG, "onResume");
         super.onResume();
         if (isDetached()) {
             return;
@@ -185,6 +188,12 @@ public class PuzzleFragment extends Fragment {
         if (mAutocheckMode) {
             mPuzzleViewModel.checkPuzzle();
         }
+    }
+
+    @Override
+    public void onStart() {
+        Log.i(TAG, "onStart");
+        super.onStart();
     }
 
     @Override
@@ -205,110 +214,8 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        requireActivity().addMenuProvider(new MenuProvider() {
-            @Override
-            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
-                menuInflater.inflate(R.menu.fragment_puzzle, menu);
-                mMenu = menu;
-
-                configureUsePencilMenuItem();
-                configureDownsOnlyModeMenuItem(mInitialDownsOnlyMode);
-
-                boolean visible =
-                        mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
-                boolean enabled = mPuzzleViewModel.isCheckable();
-                mMenu.setGroupVisible(R.id.check_items, visible);
-                mMenu.setGroupEnabled(R.id.check_items, enabled);
-
-            }
-
-            @Override
-            public boolean onMenuItemSelected(@NonNull MenuItem item) {
-                int itemId = item.getItemId();
-                if (itemId == R.id.puzzle_info) {
-                    FragmentManager fragmentManager = getParentFragmentManager();
-                    PuzzleInfoFragment infoFragment =
-                            PuzzleInfoFragment.newInstance(mPuzzleViewModel.getPuzzleInfoViewModel());
-                    infoFragment.show(fragmentManager, "PuzzleInfo");
-                    return true;
-                }
-                if (itemId == R.id.pencil) {
-                    mUsePencil = !mUsePencil;
-                    AsyncTask.execute(() -> mDatabase.puzzleDao()
-                                                     .updateUsePencil(new PuzzleDao.UsePencilUpdate(
-                                                             mPuzzleViewModel.getFile().getName(),
-                                                             mUsePencil)));
-                    configureUsePencilMenuItem();
-                    return true;
-                }
-                if (itemId == R.id.downs_only_mode) {
-                    final boolean downsOnlyModeNewValue = mPuzzleViewModel.toggleDownsOnlyMode();
-                    AsyncTask.execute(() -> mDatabase.puzzleDao()
-                                                     .updateDownsOnlyMode(new PuzzleDao.DownsOnlyModeUpdate(
-                                                             mPuzzleViewModel.getFile().getName(),
-                                                             downsOnlyModeNewValue)));
-                    configureDownsOnlyModeMenuItem(downsOnlyModeNewValue);
-                    return true;
-                }
-                if (itemId == R.id.autocheck_mode) {
-                    mAutocheckMode = !mAutocheckMode;
-                    item.setChecked(mAutocheckMode);
-                    if (mAutocheckMode) {
-                        mPuzzleViewModel.checkPuzzle();
-                    }
-                    return true;
-                }
-                if (itemId == R.id.clue_list) {
-                    if (openClueListView()) {
-                        return true;
-                    }
-                }
-                if (itemId == R.id.settings) {
-                    startActivity(SettingsActivity.newIntent(getContext(), R.xml.puzzle_preferences));
-                    return true;
-                }
-                if (itemId == R.id.check_square) {
-                    mPuzzleViewModel.checkCurrentCell();
-                    return true;
-                }
-                if (itemId == R.id.check_clue) {
-                    mPuzzleViewModel.checkCurrentClue();
-                    return true;
-                }
-                if (itemId == R.id.check_puzzle) {
-                    mPuzzleViewModel.checkPuzzle();
-                    return true;
-                }
-                if (itemId == R.id.reveal_square) {
-                    mPuzzleViewModel.revealCurrentCell();
-                    return true;
-                }
-                if (itemId == R.id.reveal_clue) {
-                    mPuzzleViewModel.revealCurrentClue();
-                    return true;
-                }
-                if (itemId == R.id.reveal_puzzle) {
-                    mPuzzleViewModel.revealPuzzle();
-                    return true;
-                }
-                if (itemId == R.id.reset_puzzle) {
-                    AlertDialog alertDialog =
-                            new AlertDialog.Builder(getContext()).setTitle(R.string.reset_puzzle)
-                                                                 .setMessage(R.string.reset_puzzle_alert)
-                                                                 .setPositiveButton(R.string.reset_puzzle,
-                                                                         (dialogInterface, i) -> {
-                                                                             mPuzzleViewModel.resetPuzzle();
-                                                                         })
-                                                                 .setNegativeButton(android.R.string.cancel,
-                                                                         null)
-                                                                 .setCancelable(true)
-                                                                 .create();
-                    alertDialog.show();
-                    return true;
-                }
-                return false;
-            }
-        }, getViewLifecycleOwner());
+        Log.i(TAG, "onViewCreated");
+        requireActivity().addMenuProvider(new PuzzleMenuProvider(), getViewLifecycleOwner());
     }
 
     private void setUpViewModelListeners() {
@@ -332,43 +239,32 @@ public class PuzzleFragment extends Fragment {
             return openClueListView();
         });
 
-        // When a cell is selected, tell the grid manager to scroll so the cell is visible.
-        mPuzzleViewModel.getCurrentCell().observe(getActivity(), cellViewModel -> {
-            if (cellViewModel != null) {
-                int firstVisiblePosition =
-                        mGridLayoutManager.findFirstCompletelyVisibleItemPosition();
-                int lastVisibleItemPosition =
-                        mGridLayoutManager.findLastCompletelyVisibleItemPosition();
-                int position = cellViewModel.getRow() * mPuzzleViewModel.getNumColumns() +
-                        cellViewModel.getCol();
-                if (position < firstVisiblePosition || position > lastVisibleItemPosition) {
-                    mGridLayoutManager.scrollToPositionWithOffset(position, 2);
-                }
-            }
-        });
-
         // Move to previous clue when button is pressed.
         mFragmentPuzzleBinding.prev.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.prev, HapticFeedbackConstants.KEYBOARD_TAP);
             mPuzzleViewModel.moveToPreviousClue(skipFilledClues(), skipFilledSquares());
+            adjustViewport();
         });
 
         // Move to next clue when button is pressed.
         mFragmentPuzzleBinding.next.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.next, HapticFeedbackConstants.KEYBOARD_TAP);
             mPuzzleViewModel.moveToNextClue(skipFilledClues(), skipFilledSquares());
+            adjustViewport();
         });
 
         // Move to next cell when button is pressed.
         mFragmentPuzzleBinding.nextCell.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.nextCell, HapticFeedbackConstants.KEYBOARD_TAP);
             mPuzzleViewModel.moveToNextCell();
+            adjustViewport();
         });
 
         // Move to previous cell when button is pressed.
         mFragmentPuzzleBinding.prevCell.setOnClickListener(view -> {
             doHapticFeedback(mFragmentPuzzleBinding.prevCell, HapticFeedbackConstants.KEYBOARD_TAP);
             mPuzzleViewModel.moveToPreviousCell();
+            adjustViewport();
         });
 
         // Set up keyboard listener.
@@ -431,6 +327,20 @@ public class PuzzleFragment extends Fragment {
                 }
             }
         });
+    }
+
+    private void adjustViewport() {
+        ClueViewModel clueViewModel = mPuzzleViewModel.getCurrentClue().getValue();
+        CellViewModel cellViewModel = mPuzzleViewModel.getCurrentCell().getValue();
+        if (clueViewModel == null || cellViewModel == null) {
+            Log.w(TAG, "Unable to adjust because at least one ViewModel is null");
+            return;
+        }
+        int selectedCell = cellViewModel.getOffset();
+        List<CellViewModel> clueCells = clueViewModel.getCells();
+        int firstCellInClue = clueCells.get(0).getOffset();
+        int lastCellInClue = clueCells.get(clueCells.size() - 1).getOffset();
+        mFragmentPuzzleBinding.puzzle.adjustViewport(firstCellInClue, selectedCell, lastCellInClue);
     }
 
     private boolean openClueListView() {
@@ -497,6 +407,7 @@ public class PuzzleFragment extends Fragment {
             mPuzzleViewModel.setCurrentCellContents(newContents, skipFilledClues(),
                     skipFilledSquares(), unlessCurrentSquareFilled(), skipFilledSquaresWrap(),
                     completedClueNext(), mUsePencil);
+            adjustViewport();
         }
     }
 
@@ -505,15 +416,16 @@ public class PuzzleFragment extends Fragment {
     }
 
     private class CellHolder extends RecyclerView.ViewHolder {
-        private final CellBinding mBinding;
+        private final SimpleCellBinding mBinding;
 
-        private CellHolder(CellBinding binding) {
+        private CellHolder(SimpleCellBinding binding) {
             super(binding.getRoot());
             mBinding = binding;
 
-            mBinding.entry.setTypeface(mTypeface);
+//            mBinding.entry.setTypeface(mTypeface);
 
             mBinding.getRoot().setOnClickListener(view -> {
+                Log.i("LAURA", "Received click for cell: " + mBinding.getCellViewModel());
                 mPuzzleViewModel.selectCell(mBinding.getCellViewModel());
             });
         }
@@ -533,6 +445,7 @@ public class PuzzleFragment extends Fragment {
 
             mBinding.setCellViewModel(viewModel);
             mBinding.setLifecycleOwner(getActivity());
+            mBinding.cell.setCellNumber(viewModel.getClueNumber());
         }
     }
 
@@ -550,7 +463,7 @@ public class PuzzleFragment extends Fragment {
         @Override
         public CellHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
-            CellBinding binding = DataBindingUtil.inflate(inflater, R.layout.cell, parent, false);
+            SimpleCellBinding binding = DataBindingUtil.inflate(inflater, R.layout.simple_cell, parent, false);
             return new CellHolder(binding);
         }
 
@@ -614,6 +527,7 @@ public class PuzzleFragment extends Fragment {
                     mPuzzleViewModel.setCurrentCellContents(String.valueOf(letter),
                             skipFilledClues(), skipFilledSquares(), unlessCurrentSquareFilled(),
                             skipFilledSquaresWrap(), completedClueNext(), mUsePencil);
+                    adjustViewport();
             }
         }
 
@@ -640,6 +554,116 @@ public class PuzzleFragment extends Fragment {
         @Override
         public void swipeUp() {
 
+        }
+    }
+
+    private class PuzzleMenuProvider implements MenuProvider {
+        @Override
+        public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+            menuInflater.inflate(R.menu.fragment_puzzle, menu);
+            mMenu = menu;
+
+            configureUsePencilMenuItem();
+            configureDownsOnlyModeMenuItem(mInitialDownsOnlyMode);
+
+            boolean visible =
+                    mPreferences.getBoolean(getString(R.string.preference_enable_hints), true);
+            boolean enabled = mPuzzleViewModel.isCheckable();
+            mMenu.setGroupVisible(R.id.check_items, visible);
+            mMenu.setGroupEnabled(R.id.check_items, enabled);
+        }
+
+        @Override
+        public boolean onMenuItemSelected(@NonNull MenuItem item) {
+            int itemId = item.getItemId();
+            if (itemId == R.id.puzzle_info) {
+                FragmentManager fragmentManager = getParentFragmentManager();
+                PuzzleInfoFragment infoFragment = PuzzleInfoFragment.newInstance(
+                        mPuzzleViewModel.getPuzzleInfoViewModel());
+                infoFragment.show(fragmentManager, "PuzzleInfo");
+                return true;
+            }
+            if (itemId == R.id.pencil) {
+                mUsePencil = !mUsePencil;
+                AsyncTask.execute(() -> mDatabase.puzzleDao()
+                                                 .updateUsePencil(new PuzzleDao.UsePencilUpdate(
+                                                         mPuzzleViewModel.getFile().getName(),
+                                                         mUsePencil)));
+                configureUsePencilMenuItem();
+                return true;
+            }
+            if (itemId == R.id.downs_only_mode) {
+                final boolean downsOnlyModeNewValue = mPuzzleViewModel.toggleDownsOnlyMode();
+                AsyncTask.execute(() -> mDatabase.puzzleDao()
+                                                 .updateDownsOnlyMode(
+                                                         new PuzzleDao.DownsOnlyModeUpdate(
+                                                                 mPuzzleViewModel.getFile()
+                                                                                 .getName(),
+                                                                 downsOnlyModeNewValue)));
+                configureDownsOnlyModeMenuItem(downsOnlyModeNewValue);
+                return true;
+            }
+            if (itemId == R.id.autocheck_mode) {
+                mAutocheckMode = !mAutocheckMode;
+                item.setChecked(mAutocheckMode);
+                if (mAutocheckMode) {
+                    mPuzzleViewModel.checkPuzzle();
+                }
+                return true;
+            }
+            if (itemId == R.id.clue_list) {
+                if (openClueListView()) {
+                    return true;
+                }
+            }
+            if (itemId == R.id.settings) {
+                startActivity(
+                        SettingsActivity.newIntent(getContext(), R.xml.puzzle_preferences));
+                return true;
+            }
+            if (itemId == R.id.check_square) {
+                mPuzzleViewModel.checkCurrentCell();
+                return true;
+            }
+            if (itemId == R.id.check_clue) {
+                mPuzzleViewModel.checkCurrentClue();
+                return true;
+            }
+            if (itemId == R.id.check_puzzle) {
+                mPuzzleViewModel.checkPuzzle();
+                return true;
+            }
+            if (itemId == R.id.reveal_square) {
+                mPuzzleViewModel.revealCurrentCell();
+                return true;
+            }
+            if (itemId == R.id.reveal_clue) {
+                mPuzzleViewModel.revealCurrentClue();
+                return true;
+            }
+            if (itemId == R.id.reveal_puzzle) {
+                mPuzzleViewModel.revealPuzzle();
+                return true;
+            }
+            if (itemId == R.id.reset_puzzle) {
+                AlertDialog alertDialog =
+                        new AlertDialog.Builder(getContext()).setTitle(R.string.reset_puzzle)
+                                                             .setMessage(
+                                                                     R.string.reset_puzzle_alert)
+                                                             .setPositiveButton(
+                                                                     R.string.reset_puzzle,
+                                                                     (dialogInterface, i) -> {
+                                                                         mPuzzleViewModel.resetPuzzle();
+                                                                     })
+                                                             .setNegativeButton(
+                                                                     android.R.string.cancel,
+                                                                     null)
+                                                             .setCancelable(true)
+                                                             .create();
+                alertDialog.show();
+                return true;
+            }
+            return false;
         }
     }
 }

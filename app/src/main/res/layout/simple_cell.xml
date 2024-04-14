@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:custom="http://schemas.android.com/apk/res-auto">
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="cellViewModel"
+            type="io.github.leffinger.crossyourheart.viewmodels.CellViewModel" />
+    </data>
+
+        <io.github.leffinger.crossyourheart.views.CellView
+            android:id="@+id/cell"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="@color/cell_background"
+            android:gravity="center"
+            android:text="@{cellViewModel.contents}"
+            android:textColor="@color/entry_text"
+            android:typeface="sans"
+            android:fontFamily="@string/default_font_family"
+            app:autoSizeMaxTextSize="100sp"
+            app:autoSizeMinTextSize="4sp"
+            app:autoSizeStepGranularity="1sp"
+            app:autoSizeTextType="uniform"
+            android:enabled="@{cellViewModel != null}"
+            custom:isCircled="@{cellViewModel.circled}"
+            custom:isHighlighted="@{cellViewModel.highlighted}"
+            custom:isMarkedCorrect="@{cellViewModel.markedCorrect}"
+            custom:isMarkedIncorrect="@{cellViewModel.markedIncorrect}"
+            custom:isPencil="@{cellViewModel.pencil}"
+            custom:isReferenced="@{cellViewModel.referenced}"
+            custom:isRevealed="@{cellViewModel.revealed}"
+            custom:isSelected="@{cellViewModel.selected}" />
+
+        <!--            android:text="@{cellViewModel.clueNumber == 0 ? null : String.valueOf(cellViewModel.clueNumber)}"-->
+<!--        <TextView-->
+<!--            android:id="@+id/clue_number"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent"-->
+<!--            android:text="@{cellViewModel.clueNumber == 0 ? null : String.valueOf(cellViewModel.clueNumber) + `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}"-->
+<!--            android:maxLines="1"-->
+<!--            app:autoSizeMaxTextSize="16sp"-->
+<!--            app:autoSizeMinTextSize="2sp"-->
+<!--            app:autoSizeStepGranularity="1sp"-->
+<!--            app:autoSizeTextType="uniform"-->
+<!--            android:gravity="start|top"-->
+<!--            android:paddingStart="1dp"-->
+<!--            android:paddingEnd="0dp"-->
+<!--            />-->
+
+<!--        <ImageView-->
+<!--            android:id="@+id/incorrect_overlay"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent"-->
+<!--            android:src="@drawable/cell_incorrect"-->
+<!--            android:visibility="@{cellViewModel.markedIncorrect ? View.VISIBLE : View.INVISIBLE}" />-->
+
+</layout>

@@ -1,6 +1,10 @@
 package io.github.leffinger.crossyourheart.activities;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +16,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.core.view.MenuProvider;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
@@ -22,10 +27,12 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Objects;
+
 import io.github.leffinger.crossyourheart.R;
-import io.github.leffinger.crossyourheart.databinding.CellBinding;
 import io.github.leffinger.crossyourheart.databinding.ClueListHeaderBinding;
 import io.github.leffinger.crossyourheart.databinding.FragmentClueBinding;
+import io.github.leffinger.crossyourheart.databinding.SimpleCellBinding;
 import io.github.leffinger.crossyourheart.viewmodels.ClueViewModel;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
@@ -61,13 +68,15 @@ public class PuzzleClueListFragment extends Fragment {
         io.github.leffinger.crossyourheart.databinding.FragmentClueListBinding mClueListBinding =
                 DataBindingUtil.inflate(inflater, R.layout.fragment_clue_list, container, false);
 
-        ConcatAdapter concatAdapter = new ConcatAdapter(new ClueListHeaderAdapter("ACROSS"),
+        ConcatAdapter concatAdapter = new ConcatAdapter(new ConcatAdapter.Config.Builder().build(),
+                new ClueListHeaderAdapter("ACROSS"),
                 new ClueListAdapter(true, mPuzzleViewModel.getNumAcrossClues()),
                 new ClueListHeaderAdapter("DOWN"),
                 new ClueListAdapter(false, mPuzzleViewModel.getNumDownClues()));
 
         mClueListBinding.list.setLayoutManager(new LinearLayoutManager(mContext));
         mClueListBinding.list.setAdapter(concatAdapter);
+        mClueListBinding.list.setHasFixedSize(true);
 
         ClueViewModel currentClue = mPuzzleViewModel.getCurrentClue().getValue();
         if (currentClue != null) {
@@ -96,15 +105,6 @@ public class PuzzleClueListFragment extends Fragment {
                 return false;
             }
         });
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            getActivity().onBackPressed();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     private int getAbsolutePosition(ClueViewModel clueViewModel) {
@@ -166,9 +166,50 @@ public class PuzzleClueListFragment extends Fragment {
             mBinding.clueCells.setLayoutManager(
                     new GridLayoutManager(mContext, Math.max(viewModel.getCells().size(), 10)));
             mBinding.clueCells.setAdapter(new CellAdapter(viewModel));
+            mBinding.clueCells.setHasFixedSize(true);
+
+            mBinding.clueCells.addItemDecoration(new CellBorderDecoration(getResources().getDimensionPixelSize(R.dimen.cell_border_size)));
             mBinding.getRoot()
                     .setOnClickListener(
                             unused -> mPuzzleViewModel.selectClue(mBinding.getViewModel(), 0));
+        }
+
+        /* Handles drawing evenly sized and spaced borders around each cell. */
+        private class CellBorderDecoration extends RecyclerView.ItemDecoration {
+            private final Rect mBounds = new Rect();
+            private final Paint mPaint = new Paint();
+            private final int mCellBorderSize;
+
+            public CellBorderDecoration(int cellBorderSize) {
+                mCellBorderSize = cellBorderSize;
+                mPaint.setStyle(Paint.Style.STROKE);
+            }
+
+            @Override
+            public void onDrawOver(@NonNull Canvas canvas, @NonNull RecyclerView parent,
+                                   @NonNull RecyclerView.State state) {
+                final int top = 0;
+                final int left = 0;
+                final int bottom = parent.getHeight();
+
+                // Draw vertical lines at the right of each child.
+                mPaint.setStrokeWidth(mCellBorderSize);
+                RecyclerView.LayoutManager layoutManager =
+                        Objects.requireNonNull(parent.getLayoutManager());
+                int right = 0;
+                for (int i = 0; i < parent.getChildCount(); i++) {
+                    final View child = parent.getChildAt(i);
+                    layoutManager.getDecoratedBoundsWithMargins(child, mBounds);
+                    right = mBounds.right;
+                    canvas.drawLine(right, top, right, bottom, mPaint);
+                }
+
+                // Draw lines around the border (top/left/bottom).
+                mPaint.setStrokeWidth(mCellBorderSize * 2);
+                canvas.drawLine(left, top, right, top, mPaint);
+                canvas.drawLine(left, top, left, bottom, mPaint);
+                canvas.drawLine(left, bottom, right, bottom, mPaint);
+            }
         }
     }
 
@@ -205,12 +246,11 @@ public class PuzzleClueListFragment extends Fragment {
      * Holds a single cell of an entry.
      */
     private class CellHolder extends RecyclerView.ViewHolder {
-        private final CellBinding mBinding;
+        private final SimpleCellBinding mBinding;
 
-        private CellHolder(CellBinding binding) {
+        private CellHolder(SimpleCellBinding binding) {
             super(binding.getRoot());
             mBinding = binding;
-            mBinding.clueNumber.setVisibility(View.INVISIBLE);
         }
 
         private void bind(ClueViewModel clueViewModel, int position) {
@@ -234,7 +274,8 @@ public class PuzzleClueListFragment extends Fragment {
         @Override
         public CellHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
-            CellBinding binding = DataBindingUtil.inflate(inflater, R.layout.cell, parent, false);
+            SimpleCellBinding binding =
+                    DataBindingUtil.inflate(inflater, R.layout.simple_cell, parent, false);
             return new CellHolder(binding);
         }
 

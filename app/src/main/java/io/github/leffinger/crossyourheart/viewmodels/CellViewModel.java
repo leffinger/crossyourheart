@@ -92,6 +92,8 @@ public class CellViewModel {
         return mCol;
     }
 
+    public int getOffset() { return mPuzzleViewModel.getOffset(mRow, mCol); }
+
     public int getClueNumber() {
         return mClueNumber;
     }

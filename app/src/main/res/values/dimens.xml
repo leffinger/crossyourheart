@@ -2,4 +2,5 @@
 <resources>
     <dimen name="text_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
+    <dimen name="cell_border_size">1dp</dimen>
 </resources>
