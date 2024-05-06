@@ -527,8 +527,8 @@ public class PuzzleFragment extends Fragment {
                     mPuzzleViewModel.setCurrentCellContents(String.valueOf(letter),
                             skipFilledClues(), skipFilledSquares(), unlessCurrentSquareFilled(),
                             skipFilledSquaresWrap(), completedClueNext(), mUsePencil);
-                    adjustViewport();
             }
+            adjustViewport();
         }
 
         @Override

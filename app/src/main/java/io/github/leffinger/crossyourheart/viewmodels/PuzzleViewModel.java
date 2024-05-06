@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.leffinger.crossyourheart.io.AbstractPuzzleFile;
 
@@ -65,6 +66,9 @@ public class PuzzleViewModel extends ViewModel {
      * True once the grid is ready to be viewed.
      */
     private final MutableLiveData<Boolean> mCellViewModelsReady = new MutableLiveData<>(false);
+
+    /** Ensures that initialize() is only called once. */
+    private final AtomicBoolean mInitialized = new AtomicBoolean(false);
 
     /**
      * Representation of on-disk puzzle file.
@@ -131,6 +135,11 @@ public class PuzzleViewModel extends ViewModel {
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
                            boolean downsOnlyMode) {
+        if (!mInitialized.compareAndSet(false, true)) {
+            // already initialized
+            return;
+        }
+
         mPuzzleFile = puzzleFile;
         mFile = file;
 

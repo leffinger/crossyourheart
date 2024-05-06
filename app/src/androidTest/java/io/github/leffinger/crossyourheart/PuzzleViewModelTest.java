@@ -82,8 +82,8 @@ public class PuzzleViewModelTest {
         InputStream inputStream = PuzzleViewModelTest.class.getResourceAsStream("/3x3.puz");
         assertNotNull(inputStream);
         AbstractPuzzleFile puzzleFile = PuzFile.verifyPuzFile(inputStream);
-        PuzzleViewModel puzzleViewModel =
-                new PuzzleViewModel(puzzleFile, mTemporaryFolder.newFile(), false);
+        PuzzleViewModel puzzleViewModel = new PuzzleViewModel();
+        puzzleViewModel.initialize(puzzleFile, mTemporaryFolder.newFile(), false, false);
         assertNotNull(getOrAwaitValue(puzzleViewModel.getCurrentClue(), "First clue"));
 
         assertEquals(3, puzzleViewModel.getNumRows());
