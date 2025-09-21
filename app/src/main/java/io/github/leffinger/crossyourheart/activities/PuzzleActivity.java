@@ -16,6 +16,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
@@ -55,6 +58,15 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_container);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.outer_container), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, systemBars.top, 0, systemBars.bottom);
+            return insets;
+        });
+
+        setSupportActionBar(findViewById(R.id.toolbar));
+
         getSupportFragmentManager().beginTransaction()
                                    .replace(R.id.container, PuzzleLoadingFragment.newInstance())
                                    .commitNow();

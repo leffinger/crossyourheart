@@ -15,7 +15,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 
@@ -60,6 +63,15 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         super.onCreate(savedInstanceState);
         SplashScreen.installSplashScreen(this);
         setContentView(R.layout.activity_container);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.outer_container),
+                (v, insets) -> {
+                    Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                    v.setPadding(0, systemBars.top, 0, systemBars.bottom);
+                    return insets;
+                });
+
+        setSupportActionBar(findViewById(R.id.toolbar));
 
         if (IOUtil.getPuzzleDir(this).mkdir()) {
             Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));
