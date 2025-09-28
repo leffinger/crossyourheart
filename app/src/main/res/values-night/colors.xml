@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorBlackSquare">#000000</color>
+    <color name="colorWhiteSquare">?attr/colorSurfaceBright</color>
+    <color name="colorEntryText">?attr/colorOnSurface</color>
+    <color name="colorSelectedSquare">?attr/colorPrimary</color>
+    <color name="colorOnSelectedSquare">?attr/colorOnPrimary</color>
+    <color name="colorHighlightedSquare">?attr/colorSecondary</color>
+    <color name="colorOnHighlightedSquare">?attr/colorOnSecondary</color>
+    <color name="colorReferenced">?attr/colorTertiary</color>
+    <color name="colorOnReferenced">?attr/colorOnTertiary</color>
+</resources>

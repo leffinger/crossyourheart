@@ -355,11 +355,11 @@ public class PuzzleFragment extends Fragment {
     private void configureUsePencilMenuItem() {
         MenuItem item = mMenu.findItem(R.id.pencil);
         item.setChecked(mUsePencil);
-        if (mUsePencil) {
-            item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
-        } else {
-            item.getIcon().clearColorFilter();
-        }
+//        if (mUsePencil) {
+//            item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
+//        } else {
+//            item.getIcon().clearColorFilter();
+//        }
     }
 
     private void configureDownsOnlyModeMenuItem(boolean downsOnlyMode) {

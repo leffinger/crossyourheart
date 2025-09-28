@@ -10,4 +10,6 @@
         <attr name="isPencil" format="boolean" />
         <attr name="isReferenced" format="boolean" />
     </declare-styleable>
+
+    <attr name="colorEntryText" format="color" />
 </resources>

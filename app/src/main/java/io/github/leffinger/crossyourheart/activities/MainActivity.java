@@ -64,14 +64,12 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
         SplashScreen.installSplashScreen(this);
         setContentView(R.layout.activity_container);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.outer_container),
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container),
                 (v, insets) -> {
                     Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
                     v.setPadding(0, systemBars.top, 0, systemBars.bottom);
                     return insets;
                 });
-
-        setSupportActionBar(findViewById(R.id.toolbar));
 
         if (IOUtil.getPuzzleDir(this).mkdir()) {
             Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));

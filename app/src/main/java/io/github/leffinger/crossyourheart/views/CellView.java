@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.databinding.BindingAdapter;
 
+import com.google.android.material.color.MaterialColors;
+
 import java.util.Arrays;
 
 import io.github.leffinger.crossyourheart.R;
@@ -32,7 +34,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
 
-        mNumberPaint.setColor(getResources().getColor(R.color.colorEntryText, null));
+        mNumberPaint.setColor(MaterialColors.getColor(this, R.attr.colorEntryText));
         mNumberPaint.setStyle(Paint.Style.FILL);
 
         mCirclePaint.setColor(getResources().getColor(R.color.colorBlackSquare, null));
@@ -140,6 +142,8 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     public void setPencil(boolean isPencil) {
         if (mIsPencil != isPencil) {
             mIsPencil = isPencil;
+            // Adjust opacity to indicate pencil/pen.
+            this.setTextColor(getTextColors().withAlpha(isPencil ? 150 : 255));
             refreshDrawableState();
         }
     }
@@ -197,6 +201,7 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         if (mCellNumber > 0) {
             float padding = width * 0.05f;
             float height = width * 0.3f;
+            mNumberPaint.setColor(getCurrentTextColor());
             mNumberPaint.setTextSize(height);
             canvas.drawText(String.valueOf(mCellNumber), padding, height, mNumberPaint);
         }

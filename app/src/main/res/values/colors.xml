@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#EC407A</color>
-    <color name="colorPrimaryDark">#AD1457</color>
-    <color name="colorPrimaryLight">#F48FB1</color>
-    <color name="colorAccent">#26A69A</color>
     <color name="colorBlackSquare">#000000</color>
     <color name="colorWhiteSquare">#ffffff</color>
     <color name="colorSelectedSquare">#FFEBAD</color>
+    <color name="colorOnSelectedSquare">@color/colorEntryText</color>
     <color name="colorHighlightedSquare">#B6E3F6</color>
+    <color name="colorOnHighlightedSquare">@color/colorEntryText</color>
+    <color name="colorReferenced">#C8E6C9</color>
+    <color name="colorOnReferenced">@color/colorEntryText</color>
     <color name="colorEntryText">#000000</color>
     <color name="colorSolved">#4CAF50</color>
     <color name="colorInProgress">#FF9800</color>
@@ -20,7 +20,6 @@
     <color name="colorKeyboardLight">#AAAAAA</color>
     <color name="colorKeyboardBackground">#222222</color>
     <color name="colorEntryTextPencil">#888888</color>
-    <color name="colorReferenced">#C8E6C9</color>
     <color name="colorRichTeal">#00838F</color>
     <color name="colorRichGreen">#2E7D32</color>
 </resources>

@@ -20,7 +20,7 @@
             android:background="@color/cell_background"
             android:gravity="center"
             android:text="@{cellViewModel.contents}"
-            android:textColor="@color/entry_text"
+            android:textColor="?attr/colorEntryText"
             android:typeface="sans"
             android:fontFamily="@string/default_font_family"
             app:autoSizeMaxTextSize="100sp"
@@ -35,7 +35,8 @@
             custom:isPencil="@{cellViewModel.pencil}"
             custom:isReferenced="@{cellViewModel.referenced}"
             custom:isRevealed="@{cellViewModel.revealed}"
-            custom:isSelected="@{cellViewModel.selected}" />
+            custom:isSelected="@{cellViewModel.selected}"
+            />
 
         <!--            android:text="@{cellViewModel.clueNumber == 0 ? null : String.valueOf(cellViewModel.clueNumber)}"-->
 <!--        <TextView-->

@@ -16,7 +16,8 @@
         android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".activities.PuzzleFragment">
+        tools:context=".activities.PuzzleFragment"
+        android:background="?attr/colorSecondaryContainer">
 
         <io.github.leffinger.crossyourheart.views.PuzzleView
             android:id="@+id/puzzle"
@@ -31,25 +32,36 @@
 
         <ImageButton
             android:id="@+id/prev"
-            android:contentDescription="@string/previous_clue"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
+            android:contentDescription="@string/previous_clue"
             android:scaleType="fitXY"
             android:src="@drawable/double_left_arrow"
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/clue" />
+            app:layout_constraintTop_toTopOf="@id/clue"
+            android:background="?attr/colorSecondary"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:layout_marginStart="4dp"
+            android:paddingHorizontal="8dp"
+            app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square"
+            />
 
         <ImageButton
             android:id="@+id/prev_cell"
-            android:contentDescription="@string/previous_cell"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
+            android:contentDescription="@string/previous_cell"
             android:scaleType="fitXY"
             android:src="@drawable/single_left_arrow"
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintStart_toEndOf="@id/prev"
-            app:layout_constraintTop_toTopOf="@id/clue" />
+            app:layout_constraintTop_toTopOf="@id/clue"
+            android:background="?attr/colorSecondary"
+            android:layout_margin="4dp"
+            android:paddingHorizontal="8dp"
+            app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 
         <TextView
             android:id="@+id/clue"
@@ -59,6 +71,7 @@
             android:gravity="center"
             android:text="@{@string/clue_format(viewModel.currentClueNumber, viewModel.currentClueText)}"
             android:textSize="18sp"
+            android:textColor="?attr/colorOnSecondaryContainer"
             app:layout_constraintBottom_toTopOf="@id/keyboard"
             app:layout_constraintEnd_toStartOf="@id/next_cell"
             app:layout_constraintStart_toEndOf="@id/prev_cell"
@@ -74,7 +87,11 @@
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintEnd_toStartOf="@id/next"
             app:layout_constraintStart_toEndOf="@id/clue"
-            app:layout_constraintTop_toTopOf="@id/clue" />
+            app:layout_constraintTop_toTopOf="@id/clue"
+            android:background="?attr/colorSecondary"
+            android:layout_margin="4dp"
+            android:paddingHorizontal="8dp"
+            app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 
         <ImageButton
             android:id="@+id/next"
@@ -86,7 +103,13 @@
             app:layout_constraintBottom_toBottomOf="@id/clue"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/next_cell"
-            app:layout_constraintTop_toTopOf="@id/clue" />
+            app:layout_constraintTop_toTopOf="@id/clue"
+            android:background="?attr/colorSecondary"
+            android:layout_marginEnd="4dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingHorizontal="8dp"
+            app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 
         <android.inputmethodservice.KeyboardView
             android:id="@+id/keyboard"

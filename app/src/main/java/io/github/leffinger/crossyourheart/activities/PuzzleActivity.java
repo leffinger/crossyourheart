@@ -59,13 +59,11 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_container);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.outer_container), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, systemBars.top, 0, systemBars.bottom);
             return insets;
         });
-
-        setSupportActionBar(findViewById(R.id.toolbar));
 
         getSupportFragmentManager().beginTransaction()
                                    .replace(R.id.container, PuzzleLoadingFragment.newInstance())
