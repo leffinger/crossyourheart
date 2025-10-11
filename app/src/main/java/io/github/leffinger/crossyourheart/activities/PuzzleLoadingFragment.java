@@ -16,7 +16,7 @@ public class PuzzleLoadingFragment extends Fragment {
         return new PuzzleLoadingFragment();
     }
 
-    private PuzzleLoadingFragment() {
+    public PuzzleLoadingFragment() {
     }
 
     @Nullable

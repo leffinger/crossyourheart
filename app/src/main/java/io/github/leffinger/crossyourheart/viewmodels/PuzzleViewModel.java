@@ -135,6 +135,8 @@ public class PuzzleViewModel extends ViewModel {
     @SuppressLint("StaticFieldLeak")
     public void initialize(AbstractPuzzleFile puzzleFile, File file, boolean startWithDownClues,
                            boolean downsOnlyMode) {
+        Log.i(TAG, "initialize: " + puzzleFile);
+
         if (!mInitialized.compareAndSet(false, true)) {
             // already initialized
             return;

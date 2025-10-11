@@ -54,6 +54,12 @@
             app:key="@string/preference_enable_haptic_feedback"
             app:singleLineTitle="false" />
 
+        <ListPreference
+            android:title="@string/color_theme"
+            app:key="@string/preference_theme_list"
+            android:entries="@array/theme_entries"
+            android:entryValues="@array/theme_values" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

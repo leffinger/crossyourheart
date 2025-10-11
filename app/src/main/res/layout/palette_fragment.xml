@@ -1,31 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:custom="http://schemas.android.com/apk/res-auto">
+<androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
+    <io.github.leffinger.crossyourheart.views.CellView
         android:id="@+id/normal_text_not_highlighted"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/colorWhiteSquare"
         android:text="@string/sample_text"
-        android:textColor="@color/colorEntryText"
         android:textSize="48sp"
+        android:textColor="@color/entry_text"
+        android:background="@color/cell_background"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
+    <io.github.leffinger.crossyourheart.views.CellView
         android:id="@+id/incorrect_not_highlighted"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/colorWhiteSquare"
         android:text="@string/sample_text"
-        android:textColor="@color/colorMarkedIncorrect"
         android:textSize="48sp"
         app:layout_constraintStart_toEndOf="@id/normal_text_not_highlighted"
         app:layout_constraintTop_toTopOf="parent" />
-
+<!--
     <TextView
         android:id="@+id/revealed_not_highlighted"
         android:layout_width="wrap_content"
@@ -47,18 +48,20 @@
         android:textSize="48sp"
         app:layout_constraintStart_toEndOf="@id/revealed_not_highlighted"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
+-->
+    <io.github.leffinger.crossyourheart.views.CellView
         android:id="@+id/normal_text_highlighted"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/colorHighlightedSquare"
         android:text="@string/sample_text"
-        android:textColor="@color/colorEntryText"
         android:textSize="48sp"
+        android:enabled="false"
+        custom:isHighlighted="true"
+        android:textColor="@color/entry_text"
+        android:background="@color/cell_background"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/normal_text_not_highlighted" />
-
+<!--
     <TextView
         android:id="@+id/incorrect_highlighted"
         android:layout_width="wrap_content"
@@ -98,7 +101,7 @@
         android:layout_height="wrap_content"
         android:background="@color/colorSelectedSquare"
         android:text="@string/sample_text"
-        android:textColor="@color/colorEntryText"
+        android:textColor="@color/colorEntryTextDefault"
         android:textSize="48sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/normal_text_highlighted" />
@@ -142,7 +145,7 @@
         android:layout_height="wrap_content"
         android:background="@color/colorReferenced"
         android:text="@string/sample_text"
-        android:textColor="@color/colorEntryText"
+        android:textColor="@color/colorEntryTextDefault"
         android:textSize="48sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
@@ -179,6 +182,7 @@
         android:textSize="48sp"
         app:layout_constraintStart_toEndOf="@id/revealed_selected"
         app:layout_constraintTop_toBottomOf="@id/normal_text_selected" />
-
+-->
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

@@ -1,5 +1,8 @@
 package io.github.leffinger.crossyourheart.activities;
 
+import static android.app.Activity.RESULT_OK;
+import static android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE;
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -14,9 +17,6 @@ import androidx.fragment.app.DialogFragment;
 
 import io.github.leffinger.crossyourheart.R;
 import io.github.leffinger.crossyourheart.databinding.DialogRebusBinding;
-
-import static android.app.Activity.RESULT_OK;
-import static android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE;
 
 public class RebusFragment extends DialogFragment implements DialogInterface.OnClickListener {
     private static final String ARG_CONTENTS = "contents";

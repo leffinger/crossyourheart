@@ -3,24 +3,24 @@ package io.github.leffinger.crossyourheart.views;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.util.AttributeSet;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.databinding.BindingAdapter;
 
-import com.google.android.material.color.MaterialColors;
-
 import java.util.Arrays;
 
 import io.github.leffinger.crossyourheart.R;
-import io.github.leffinger.crossyourheart.viewmodels.CellViewModel;
 
 public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private int mCellNumber = 0;
     private final Paint mNumberPaint = new Paint();
     private final Paint mCirclePaint = new Paint();
     private final Paint mIncorrectPaint = new Paint();
+    private final Paint mCorrectPaint = new Paint();
+    private final Paint mRevealedPaint = new Paint();
 
     private boolean mIsSelected;
     private boolean mIsCircled;
@@ -31,17 +31,22 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     private boolean mIsPencil;
     private boolean mIsReferenced;
 
+    private final Path reusablePath = new Path();
+
     public CellView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
 
-        mNumberPaint.setColor(MaterialColors.getColor(this, R.attr.colorEntryText));
         mNumberPaint.setStyle(Paint.Style.FILL);
-
-        mCirclePaint.setColor(getResources().getColor(R.color.colorBlackSquare, null));
         mCirclePaint.setStyle(Paint.Style.STROKE);
 
         mIncorrectPaint.setColor(getResources().getColor(R.color.colorIncorrectSlash, null));
         mIncorrectPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+
+        mCorrectPaint.setColor(getResources().getColor(R.color.colorCorrectTag, null));
+        mCorrectPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+
+        mRevealedPaint.setColor(getResources().getColor(R.color.colorRevealedTag, null));
+        mRevealedPaint.setStyle(Paint.Style.FILL_AND_STROKE);
     }
 
     public void setCellNumber(int cellNumber) {
@@ -128,14 +133,14 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
     public void setMarkedCorrect(boolean markedCorrect) {
         if (mIsMarkedCorrect != markedCorrect) {
             mIsMarkedCorrect = markedCorrect;
-            refreshDrawableState();
+            invalidate();
         }
     }
 
     public void setRevealed(boolean isRevealed) {
         if (mIsRevealed != isRevealed) {
             mIsRevealed = isRevealed;
-            refreshDrawableState();
+            invalidate();
         }
     }
 
@@ -197,24 +202,43 @@ public class CellView extends androidx.appcompat.widget.AppCompatTextView {
         super.onDraw(canvas);
 
         int width = getWidth();
+        int height = getHeight();
+
+        // Current text color with alpha removed.
+        int colorWithoutAlpha = getCurrentTextColor() | 0xFF000000;
 
         if (mCellNumber > 0) {
             float padding = width * 0.05f;
-            float height = width * 0.3f;
-            mNumberPaint.setColor(getCurrentTextColor());
-            mNumberPaint.setTextSize(height);
-            canvas.drawText(String.valueOf(mCellNumber), padding, height, mNumberPaint);
+            float numberHeight = width * 0.3f;
+            mNumberPaint.setColor(colorWithoutAlpha);
+            mNumberPaint.setTextSize(numberHeight);
+            canvas.drawText(String.valueOf(mCellNumber), padding, numberHeight, mNumberPaint);
         }
 
         if (mIsCircled) {
             float radius = width / 2f;
+            mCirclePaint.setColor(colorWithoutAlpha);
             mCirclePaint.setStrokeWidth(width * 0.02f);
-            canvas.drawCircle(radius, radius, radius, mCirclePaint);
+            canvas.drawCircle(radius, radius, radius * .95f, mCirclePaint);
         }
 
-        if (mIsMarkedIncorrect) {
+        if (mIsRevealed) {
+            reusablePath.reset();
+            reusablePath.moveTo(width * 0.7f, 0);
+            reusablePath.lineTo(width, 0);
+            reusablePath.lineTo(width, height * 0.3f);
+            reusablePath.close();
+            canvas.drawPath(reusablePath, mRevealedPaint);
+        } else if (mIsMarkedCorrect) {
+            reusablePath.reset();
+            reusablePath.moveTo(width * 0.7f, 0);
+            reusablePath.lineTo(width, 0);
+            reusablePath.lineTo(width, height * 0.3f);
+            reusablePath.close();
+            canvas.drawPath(reusablePath, mCorrectPaint);
+        } else if (mIsMarkedIncorrect) {
             mIncorrectPaint.setStrokeWidth(width * 0.05f);
-            canvas.drawLine(width, 0, 0, width, mIncorrectPaint);
+            canvas.drawLine(width, 0, 0, height, mIncorrectPaint);
         }
     }
 }

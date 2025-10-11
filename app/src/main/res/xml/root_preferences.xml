@@ -20,6 +20,12 @@
         android:entryValues="@array/start_in_downs_only_mode_values"
         app:singleLineTitle="false" />
 
+    <ListPreference
+        android:title="@string/color_theme"
+        app:key="@string/preference_theme_list"
+        android:entries="@array/theme_entries"
+        android:entryValues="@array/theme_values" />
+
 <!--    <ListPreference-->
 <!--        android:title="Font selection"-->
 <!--        android:key="@string/preference_font_selection"-->

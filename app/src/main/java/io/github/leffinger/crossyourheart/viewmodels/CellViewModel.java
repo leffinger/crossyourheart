@@ -1,5 +1,6 @@
 package io.github.leffinger.crossyourheart.viewmodels;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -124,10 +125,9 @@ public class CellViewModel {
         return mContents;
     }
 
-    public String setContents(String newContents, boolean pencil) {
-        String oldContents = mContents.getValue();
-        if (mRevealed.getValue()) {
-            return oldContents;
+    public void setContents(String newContents, boolean pencil) {
+        if (mRevealed.getValue() || mMarkedCorrect.getValue()) {
+            return;
         }
         mPencil.setValue(pencil);
         mMarkedIncorrect.setValue(false);
@@ -136,7 +136,6 @@ public class CellViewModel {
 
         // this triggers updates, e.g. autocheck, so do it last
         mContents.setValue(newContents);
-        return oldContents;
     }
 
     public LiveData<Boolean> isHighlighted() {
@@ -161,18 +160,21 @@ public class CellViewModel {
         }
         if (mPuzzleViewModel.isCorrect(mRow, mCol)) {
             mMarkedCorrect.setValue(true);
+            mPencil.setValue(false);
         } else {
             mMarkedIncorrect.setValue(true);
         }
     }
 
     public void revealContents() {
-        if (!mPuzzleViewModel.isCorrect(mRow, mCol)) {
-            mMarkedIncorrect.setValue(true);
+        mPencil.setValue(false);
+        if (mPuzzleViewModel.isCorrect(mRow, mCol)) {
+            mMarkedCorrect.setValue(true);
+        } else {
+            mRevealed.setValue(true);
         }
         String solution = mPuzzleViewModel.getSolution(mRow, mCol);
         mContents.setValue(solution);
-        mRevealed.setValue(true);
     }
 
     public LiveData<Boolean> getSelected() {
@@ -193,6 +195,7 @@ public class CellViewModel {
         mPencil.setValue(false);
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "CellViewModel{" + "mRow=" + mRow + ", mCol=" + mCol + '}';

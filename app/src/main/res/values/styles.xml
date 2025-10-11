@@ -1,28 +1,24 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.Material3.DayNight">
-        <!-- Customize your theme here. -->
-<!--        <item name="colorPrimary">@color/colorPrimary</item>-->
-<!--        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>-->
-<!--        <item name="colorAccent">@color/colorAccent</item>-->
-<!--        <item name="colorButtonNormal">@color/colorPrimaryLight</item>-->
-<!--        <item name="android:windowIsTranslucent">true</item>-->
-<!--        <item name="cardBackgroundColor">#ffffff</item>-->
-<!--        <item name="actionBarTheme">@style/Widget.Material3.Toolbar.Surface</item>-->
-<!--        <item name="cardBackgroundColor">?attr/colorPrimary</item>-->
-<!--        <item name="statusBarBackground">?attr/colorPrimary</item>-->
+    <style name="BaseAppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="colorEntryText">@color/entry_text</item>
+        <item name="toolbarStyle">@style/AppTheme.Custom.Toolbar</item>
+        <item name="toolbarTextAndIconsColor">?attr/colorOnPrimaryContainer</item>
+        <item name="android:colorControlNormal">?attr/toolbarTextAndIconsColor</item>
     </style>
+
+    <style name="AppTheme" parent="BaseAppTheme" />
 
     <style name="AppTheme.Starting" parent="AppTheme">
         <item name="postSplashScreenTheme">@style/AppTheme</item>  # Required.
     </style>
 
-    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.Material3" />
-
-    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.DayNight" />
+    <style name="AppTheme.Custom.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">?attr/colorPrimaryContainer</item>
+        <item name="android:textColor">?attr/colorOnPrimaryContainer</item>
+        <item name="titleTextColor">?attr/colorOnPrimaryContainer</item>
+    </style>
 
 </resources>

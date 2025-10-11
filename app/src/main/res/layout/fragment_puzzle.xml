@@ -41,9 +41,10 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/clue"
             android:background="?attr/colorSecondary"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:layout_marginStart="4dp"
+            android:elevation="4dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="8dp"
             android:paddingHorizontal="8dp"
             app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square"
             />
@@ -52,15 +53,17 @@
             android:id="@+id/prev_cell"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
+            android:layout_margin="8dp"
+            android:background="?attr/colorSecondary"
             android:contentDescription="@string/previous_cell"
+            android:elevation="4dp"
+            android:paddingHorizontal="8dp"
             android:scaleType="fitXY"
             android:src="@drawable/single_left_arrow"
             app:layout_constraintBottom_toBottomOf="@id/clue"
+            app:layout_constraintEnd_toStartOf="@+id/clue"
             app:layout_constraintStart_toEndOf="@id/prev"
             app:layout_constraintTop_toTopOf="@id/clue"
-            android:background="?attr/colorSecondary"
-            android:layout_margin="4dp"
-            android:paddingHorizontal="8dp"
             app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 
         <TextView
@@ -89,7 +92,8 @@
             app:layout_constraintStart_toEndOf="@id/clue"
             app:layout_constraintTop_toTopOf="@id/clue"
             android:background="?attr/colorSecondary"
-            android:layout_margin="4dp"
+            android:elevation="4dp"
+            android:layout_margin="8dp"
             android:paddingHorizontal="8dp"
             app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 
@@ -105,9 +109,10 @@
             app:layout_constraintStart_toEndOf="@id/next_cell"
             app:layout_constraintTop_toTopOf="@id/clue"
             android:background="?attr/colorSecondary"
-            android:layout_marginEnd="4dp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
+            android:elevation="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
             android:paddingHorizontal="8dp"
             app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.IconButton.Medium.Square" />
 

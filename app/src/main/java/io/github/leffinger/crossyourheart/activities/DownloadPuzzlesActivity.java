@@ -4,11 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import io.github.leffinger.crossyourheart.R;
 
-public class DownloadPuzzlesActivity extends AppCompatActivity {
+public class DownloadPuzzlesActivity extends BaseActivity {
 
     public static Intent newIntent(Context context) {
         Intent intent = new Intent(context, DownloadPuzzlesActivity.class);
@@ -18,7 +16,6 @@ public class DownloadPuzzlesActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_container);
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.container, DownloadPuzzlesFragment.newInstance()).commitNow();
     }

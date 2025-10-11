@@ -203,7 +203,6 @@ public class PuzzleListFragment extends Fragment {
         }, getViewLifecycleOwner());
     }
 
-    @Override
     public void onDestroy() {
         super.onDestroy();
         Log.i(TAG, "Closing database");

@@ -11,5 +11,5 @@
         <attr name="isReferenced" format="boolean" />
     </declare-styleable>
 
-    <attr name="colorEntryText" format="color" />
+    <attr name="toolbarTextAndIconsColor" format="color" />
 </resources>

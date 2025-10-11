@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:custom="http://schemas.android.com/apk/res-auto">
-    <item android:color="@color/colorBlackSquare" android:state_enabled="false" />
+    <item android:color="@android:color/black" android:state_enabled="false" />
     <item android:color="@color/colorSelectedSquare" custom:isSelected="true" />
     <item android:color="@color/colorHighlightedSquare" custom:isHighlighted="true" />
     <item android:color="@color/colorReferenced" custom:isReferenced="true" />
-    <item android:color="@color/colorWhiteSquare" />
+    <item android:color="?attr/colorSurface" />
 </selector>

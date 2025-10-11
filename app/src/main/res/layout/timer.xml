@@ -11,8 +11,9 @@
             android:id="@+id/timer"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:textSize="20sp"
+            android:textColor="?attr/toolbarTextAndIconsColor"
             android:gravity="center_vertical"
-            android:textSize="18sp"
             app:layout_constraintStart_toStartOf="parent" />
 
         <ImageView
@@ -20,6 +21,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"
+            android:gravity="center"
             android:src="@drawable/solved_mini"
             app:layout_constraintStart_toEndOf="@id/timer" />
 

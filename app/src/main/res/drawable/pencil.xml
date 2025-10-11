@@ -3,7 +3,7 @@
     android:height="24dp"
     android:viewportWidth="576"
     android:viewportHeight="576"
-    android:tint="?attr/colorOnSurface">
+    android:tint="?attr/toolbarTextAndIconsColor">
     <group>
         <path
             android:fillColor="@android:color/white"

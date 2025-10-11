@@ -8,17 +8,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
@@ -29,6 +24,7 @@ import androidx.preference.PreferenceManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 
 import io.github.leffinger.crossyourheart.R;
@@ -41,7 +37,7 @@ import io.github.leffinger.crossyourheart.room.Puzzle;
 import io.github.leffinger.crossyourheart.room.PuzzleDao;
 import io.github.leffinger.crossyourheart.viewmodels.PuzzleViewModel;
 
-public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.Callbacks {
+public class PuzzleActivity extends BaseActivity implements PuzzleFragment.Callbacks {
     public static final String KEY_PUZZLE = "puzzle";
     private static final String TAG = "PuzzleActivity";
     private Puzzle mPuzzle;
@@ -57,16 +53,10 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_container);
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(0, systemBars.top, 0, systemBars.bottom);
-            return insets;
-        });
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 
         getSupportFragmentManager().beginTransaction()
-                                   .replace(R.id.container, PuzzleLoadingFragment.newInstance())
+                                   .replace(R.id.container, PuzzleLoadingFragment.newInstance(), "my_puzzle_fragment_tag")
                                    .commitNow();
 
         if (savedInstanceState != null) {
@@ -144,7 +134,6 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
                     long elapsedTime = Math.round(
                             (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) /
                                     1000.0);
-                    Log.i(TAG, "STOPPING TIMER AT " + elapsedTime + " SECONDS");
                     mPuzzleViewModel.getTimerInfo()
                                     .setValue(new AbstractPuzzleFile.TimerInfo(elapsedTime, false));
 
@@ -170,7 +159,6 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
 
             if (timerInfo.elapsedTimeSecs == 0L && timerInfo.isRunning) {
                 // Puzzle was reset; restart timer from beginning.
-                Log.i(TAG, "RESTARTING TIMER AT 0");
                 mTimerBinding.timer.setBase(SystemClock.elapsedRealtime());
                 mTimerBinding.timer.start();
             }
@@ -210,7 +198,6 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
                     return;
                 }
 
-                Log.i(TAG, "STARTING TIMER AT " + timerInfo.elapsedTimeSecs + " SECONDS");
                 mTimerBinding.timer.setBase(
                         SystemClock.elapsedRealtime() - (timerInfo.elapsedTimeSecs * 1000));
                 if (timerInfo.isRunning) {
@@ -230,7 +217,6 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
         if (timerInfo != null && timerInfo.isRunning) {
             long elapsedTime =
                     (SystemClock.elapsedRealtime() - mTimerBinding.timer.getBase()) / 1000;
-            Log.i(TAG, "PAUSING TIMER AT " + elapsedTime + " SECONDS");
             mPuzzleViewModel.getTimerInfo()
                             .setValue(new AbstractPuzzleFile.TimerInfo(elapsedTime, true));
             mTimerBinding.timer.stop();
@@ -238,8 +224,12 @@ public class PuzzleActivity extends AppCompatActivity implements PuzzleFragment.
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
     public void onBackPressed() {
-        Log.i("LAURA", "PuzzleActivity.onBackPressed");
         FragmentManager fragmentManager = getSupportFragmentManager();
         if (fragmentManager.getBackStackEntryCount() > 1) {
             fragmentManager.popBackStackImmediate();

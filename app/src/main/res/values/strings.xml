@@ -75,4 +75,5 @@
     <string name="puzzle_word_count">Word count: %d</string>
     <string name="puzzle_average_word_length">Average word length: %.1f</string>
     <string name="rebus_title">Rebus entry</string>
+    <string name="color_theme">NEW! Night mode</string>
 </resources>

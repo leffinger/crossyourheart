@@ -11,7 +11,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
-import android.graphics.Typeface;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
@@ -39,6 +38,8 @@ import androidx.lifecycle.ViewModelStoreOwner;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.color.MaterialColors;
 
 import java.io.IOException;
 import java.util.List;
@@ -78,11 +79,9 @@ public class PuzzleFragment extends Fragment {
 
     // View and model state.
     private FragmentPuzzleBinding mFragmentPuzzleBinding;
-    private GridLayoutManager mGridLayoutManager;
     private CellAdapter mCellAdapter;
     private Menu mMenu;
     private boolean mUsePencil;
-    private Typeface mTypeface;
 
     // State that is only available when the fragment is attached.
     private Database mDatabase;
@@ -100,7 +99,6 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onAttach(@NonNull Context context) {
-        Log.i(TAG, "onAttach");
         super.onAttach(context);
 
         // Attach activity- and application-dependent state.
@@ -113,7 +111,6 @@ public class PuzzleFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        Log.i(TAG, "Closing database");
         mDatabase.close();
         mDatabase = null;
         mPuzzleViewModel = null;
@@ -122,7 +119,6 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
-        Log.e(TAG, "onCreate");
         super.onCreate(savedInstanceState);
 
         Bundle bundle;
@@ -134,9 +130,6 @@ public class PuzzleFragment extends Fragment {
 
         mCellAdapter =
                 new CellAdapter(mPuzzleViewModel.getNumColumns(), mPuzzleViewModel.getNumRows());
-        mTypeface = Typeface.create(
-                mPreferences.getString(getString(R.string.preference_font_selection),
-                        getString(R.string.default_font_family)), Typeface.NORMAL);
         mUsePencil = bundle.getBoolean(ARG_USE_PENCIL, false);
         mInitialDownsOnlyMode = bundle.getBoolean(ARG_DOWNS_ONLY_MODE,
                 mPuzzleViewModel.isDownsOnlyMode().getValue());
@@ -153,8 +146,9 @@ public class PuzzleFragment extends Fragment {
         mFragmentPuzzleBinding.setLifecycleOwner(getActivity());
         mFragmentPuzzleBinding.puzzle.setPuzzleSize(mPuzzleViewModel.getNumRows(), mPuzzleViewModel.getNumColumns());
 
-        mGridLayoutManager = new GridLayoutManager(getActivity(), mPuzzleViewModel.getNumColumns(),
-                GridLayoutManager.VERTICAL, false);
+        GridLayoutManager mGridLayoutManager =
+                new GridLayoutManager(getActivity(), mPuzzleViewModel.getNumColumns(),
+                        GridLayoutManager.VERTICAL, false);
         mFragmentPuzzleBinding.puzzle.setLayoutManager(mGridLayoutManager);
         mFragmentPuzzleBinding.puzzle.setAdapter(mCellAdapter);
 
@@ -178,8 +172,8 @@ public class PuzzleFragment extends Fragment {
 
     @Override
     public void onResume() {
-        Log.i(TAG, "onResume");
         super.onResume();
+
         if (isDetached()) {
             return;
         }
@@ -355,11 +349,12 @@ public class PuzzleFragment extends Fragment {
     private void configureUsePencilMenuItem() {
         MenuItem item = mMenu.findItem(R.id.pencil);
         item.setChecked(mUsePencil);
-//        if (mUsePencil) {
-//            item.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.XOR);
-//        } else {
-//            item.getIcon().clearColorFilter();
-//        }
+        int toggleColor = MaterialColors.getColor(mFragmentPuzzleBinding.getRoot(), R.attr.colorPrimary);
+        if (mUsePencil) {
+            item.getIcon().setColorFilter(toggleColor, PorterDuff.Mode.XOR);
+        } else {
+            item.getIcon().clearColorFilter();
+        }
     }
 
     private void configureDownsOnlyModeMenuItem(boolean downsOnlyMode) {
@@ -422,10 +417,7 @@ public class PuzzleFragment extends Fragment {
             super(binding.getRoot());
             mBinding = binding;
 
-//            mBinding.entry.setTypeface(mTypeface);
-
             mBinding.getRoot().setOnClickListener(view -> {
-                Log.i("LAURA", "Received click for cell: " + mBinding.getCellViewModel());
                 mPuzzleViewModel.selectCell(mBinding.getCellViewModel());
             });
         }

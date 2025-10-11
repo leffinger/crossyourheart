@@ -14,4 +14,5 @@
     <string name="preference_unless_current_square_is_filled">unlessCurrentSquareIsFilled</string>
     <string name="preference_font_selection">fontSelection</string>
     <string name="preference_autocheck_mode">autocheckMode</string>
+    <string name="preference_theme_list">themeList</string>
 </resources>

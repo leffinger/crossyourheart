@@ -13,12 +13,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 
@@ -42,7 +37,7 @@ import io.github.leffinger.crossyourheart.viewmodels.PuzzleInfoViewModel;
  * Base activity that handles implicit intents and displays the puzzle list if no intent is
  * specified.
  */
-public class MainActivity extends AppCompatActivity implements PuzzleListFragment.Callbacks {
+public class MainActivity extends BaseActivity implements PuzzleListFragment.Callbacks {
     public static final String TAG = "MainActivity";
     public static final String ARG_PUZZLE = "puzzle";
     private Puzzle mPuzzle;
@@ -60,16 +55,8 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         SplashScreen.installSplashScreen(this);
-        setContentView(R.layout.activity_container);
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container),
-                (v, insets) -> {
-                    Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-                    v.setPadding(0, systemBars.top, 0, systemBars.bottom);
-                    return insets;
-                });
+        super.onCreate(savedInstanceState);
 
         if (IOUtil.getPuzzleDir(this).mkdir()) {
             Log.i(TAG, "Created puzzle dir: " + IOUtil.getPuzzleDir(this));
@@ -93,40 +80,11 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
                        .putBoolean(getString(R.string.preference_intro_puzzle_copied), true)
                        .apply();
         }
-
-        if (preferences.getBoolean(getString(R.string.preference_start_tutorial_on_open), true)) {
-            // Show tutorial the first time the app is opened.
-            startActivity(new Intent(this, TutorialActivity.class));
-            preferences.edit()
-                       .putBoolean(getString(R.string.preference_start_tutorial_on_open), false)
-                       .apply();
-        } else if (savedInstanceState != null && savedInstanceState.containsKey(ARG_PUZZLE)) {
-            mPuzzle = (Puzzle) savedInstanceState.getSerializable(ARG_PUZZLE);
-            startActivity(PuzzleActivity.newIntent(this, mPuzzle));
-        } else if (getIntent() == null || getIntent().getData() == null) {
-            PuzzleListFragment fragment = PuzzleListFragment.newInstance();
-            getSupportFragmentManager().beginTransaction()
-                                       .replace(R.id.container, fragment)
-                                       .commitNow();
-        } else {
-            // Load the external file specified by the implicit intent.
-            Uri uri = getIntent().getData();
-            onMultipleUrisSelected(Collections.singletonList(uri));
-        }
     }
 
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        if (mPuzzle != null) {
-            outState.putSerializable(ARG_PUZZLE, mPuzzle);
-        }
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mDatabase.close();
+    protected void onRestart() {
+        super.onRestart();
+        mDatabase = Database.getInstance(getApplicationContext());
     }
 
     @Override
@@ -137,6 +95,35 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
             PuzzleListFragment fragment = PuzzleListFragment.newInstance();
             fragmentManager.beginTransaction().replace(R.id.container, fragment).commitNow();
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        if (preferences.getBoolean(getString(R.string.preference_start_tutorial_on_open), true)) {
+            // Show tutorial the first time the app is opened.
+            startActivity(new Intent(this, TutorialActivity.class));
+            preferences.edit()
+                       .putBoolean(getString(R.string.preference_start_tutorial_on_open), false)
+                       .apply();
+        } else if (intent == null || intent.getData() == null) {
+            PuzzleListFragment fragment = PuzzleListFragment.newInstance();
+            getSupportFragmentManager().beginTransaction()
+                                       .replace(R.id.container, fragment)
+                                       .commitNow();
+        } else {
+            // Load the external file specified by the implicit intent.
+            Uri uri = intent.getData();
+            onMultipleUrisSelected(Collections.singletonList(uri));
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mDatabase.close();
     }
 
     @Override
@@ -256,5 +243,4 @@ public class MainActivity extends AppCompatActivity implements PuzzleListFragmen
     public void onDownloadSelected() {
         startActivity(DownloadPuzzlesActivity.newIntent(this));
     }
-
 }
